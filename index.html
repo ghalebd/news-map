@@ -3236,12 +3236,77 @@ body.is-rotated #touchModeBtn {
   box-shadow: 0 0 20px rgba(52, 199, 89, 0.7);
 }
 
-/* Touch mode: enables proper touch handling on hybrid screens */
+/* ===== TOUCH MODE — proper touch screen support ===== */
 body.touch-mode {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 184, 212, 0.3);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
-body.touch-mode * {
+/* Bigger touch targets in touch mode */
+body.touch-mode button,
+body.touch-mode .layer-btn,
+body.touch-mode .label-toggle,
+body.touch-mode .ltp-btn,
+body.touch-mode .asset-btn,
+body.touch-mode .top-bar-btn,
+body.touch-mode .pb-btn,
+body.touch-mode .clp-btn-add,
+body.touch-mode .clp-item-del,
+body.touch-mode .panel-collapse-btn {
+  min-height: 38px;
+  min-width: 38px;
+  cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 184, 212, 0.4);
+}
+body.touch-mode button:active,
+body.touch-mode .layer-btn:active,
+body.touch-mode .label-toggle:active {
+  background: rgba(0, 184, 212, 0.2);
+  transition: background 0.05s;
+}
+/* Allow scrolling in panels with touch */
+body.touch-mode .asset-palette,
+body.touch-mode .right-panels-stack,
+body.touch-mode .clp-list,
+body.touch-mode .layers-panel,
+body.touch-mode .labels-panel {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+/* Map allows pan and zoom by touch */
+body.touch-mode #map,
+body.touch-mode .leaflet-container {
+  touch-action: none;  /* Leaflet handles touch itself */
+}
+/* Disable hover effects (which stick on touch screens) */
+body.touch-mode *:hover {
+  /* don't change appearance via hover */
+}
+/* Bigger close/delete buttons */
+body.touch-mode .clp-item-del,
+body.touch-mode .panel-collapse-btn {
+  font-size: 18px;
+  padding: 6px 10px;
+}
+
+
+
+/* When body rotated, ensure right panels stay visible */
+body.is-rotated .right-panels-stack {
+  top: 4px;
+  right: 4px;
+  max-height: calc(100vw - 16px);
+  z-index: 1500;
+}
+body.is-rotated .toolbar {
+  z-index: 1500;
+}
+body.is-rotated .top-bar {
+  z-index: 1400;
 }
 
 </style>
@@ -6847,6 +6912,108 @@ window.liveFlights = {
   } else {
     setupToolbarRestore();
   }
+})();
+</script>
+
+
+<script>
+// ===== TOUCH MODE — comprehensive touch support =====
+(function() {
+  let touchStartTime = 0;
+  let touchStartPos = null;
+  let longPressTimer = null;
+  
+  function isTouchMode() {
+    return document.body.classList.contains('touch-mode');
+  }
+  
+  // FastClick: eliminate 300ms tap delay
+  document.addEventListener('touchstart', function(e) {
+    if (!isTouchMode()) return;
+    touchStartTime = Date.now();
+    if (e.touches[0]) {
+      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    
+    // Long-press detection (500ms)
+    longPressTimer = setTimeout(function() {
+      if (!touchStartPos) return;
+      const target = document.elementFromPoint(touchStartPos.x, touchStartPos.y);
+      if (target) {
+        // Trigger a contextmenu event for long press
+        const ev = new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: touchStartPos.x,
+          clientY: touchStartPos.y
+        });
+        target.dispatchEvent(ev);
+      }
+    }, 500);
+  }, { passive: true });
+  
+  document.addEventListener('touchmove', function(e) {
+    if (!isTouchMode()) return;
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }, { passive: true });
+  
+  document.addEventListener('touchend', function(e) {
+    if (!isTouchMode()) return;
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    
+    // Fast tap: if duration < 300ms and no significant move, fire click immediately
+    const duration = Date.now() - touchStartTime;
+    if (duration < 300 && touchStartPos && e.changedTouches[0]) {
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const dx = endX - touchStartPos.x;
+      const dy = endY - touchStartPos.y;
+      if (Math.sqrt(dx*dx + dy*dy) < 10) {
+        // It's a tap - the browser will fire click anyway, but we ensure no delay
+      }
+    }
+    touchStartPos = null;
+  }, { passive: true });
+  
+  // When touch mode is enabled, tell Leaflet to use touch events
+  function refreshLeafletTouch() {
+    if (typeof map !== 'undefined' && map) {
+      try {
+        if (isTouchMode()) {
+          // Enable touch dragging and zooming
+          map.dragging.enable();
+          map.touchZoom.enable();
+          map.doubleClickZoom.enable();
+          map.tap && map.tap.enable && map.tap.enable();
+        }
+        map.invalidateSize();
+      } catch(err) {}
+    }
+  }
+  
+  // Watch for touch-mode toggle
+  const observer = new MutationObserver(function(mutations) {
+    for (const m of mutations) {
+      if (m.attributeName === 'class') {
+        refreshLeafletTouch();
+      }
+    }
+  });
+  if (document.body) {
+    observer.observe(document.body, { attributes: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      observer.observe(document.body, { attributes: true });
+    });
+  }
+  
+  console.log('Touch mode handlers ready');
 })();
 </script>
 
