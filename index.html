@@ -3169,7 +3169,7 @@ body.is-rotated #rotateScreenBtn:active {
 </style>
 </head>
 <body>
-<button id="rotateScreenBtn" title="Rotate screen">⟳</button>
+<button id="rotateScreenBtn" title="Rotate screen" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
 
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
