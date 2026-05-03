@@ -3415,17 +3415,6 @@ body.is-rotated #touchModeBtn {
 
 
 
-/* When body is rotated, assets need to compensate so they point visually correct */
-body.is-rotated .asset-wrapper {
-  transform: rotate(calc(var(--rot, 0deg) + 90deg)) scale(var(--zoom-scale, 1));
-}
-body.is-rotated .ship-icon-wrapper {
-  transform: rotate(calc(var(--rot, 0deg) + 90deg)) scale(var(--zoom-scale, 1));
-}
-body.is-rotated .plane-marker {
-  transform: rotate(calc(var(--rot, 0deg) + 90deg)) scale(var(--zoom-scale, 1));
-}
-
 </style>
 </head>
 <body>
@@ -7372,6 +7361,122 @@ window.liveFlights = {
   });
   
   console.log('Drag fix for rotated mode loaded');
+})();
+</script>
+
+<script>
+// ===== Touch Drag-and-Drop for Assets in touch mode =====
+(function() {
+  let dragState = null;
+  
+  function isTouchModeActive() {
+    return document.body.classList.contains('touch-mode');
+  }
+  
+  function startDrag(e) {
+    if (!isTouchModeActive()) return;
+    if (e.touches.length !== 1) return;
+    
+    const btn = e.target.closest('.asset-btn');
+    if (!btn) return;
+    
+    const assetType = btn.dataset.asset;
+    if (!assetType) return;
+    
+    const t = e.touches[0];
+    
+    // Create floating ghost preview
+    const ghost = document.createElement('div');
+    ghost.className = 'asset-drag-ghost';
+    ghost.style.cssText = 'position:fixed;z-index:99999;width:64px;height:64px;pointer-events:none;left:' + (t.clientX - 32) + 'px;top:' + (t.clientY - 32) + 'px;background:rgba(0,184,212,0.25);border:2px dashed #00b8d4;border-radius:8px;display:flex;align-items:center;justify-content:center;';
+    
+    // Copy preview image from button
+    const previewImg = btn.querySelector('img');
+    if (previewImg) {
+      const ghostImg = previewImg.cloneNode(true);
+      ghostImg.style.cssText = 'width:48px;height:48px;object-fit:contain;';
+      ghost.appendChild(ghostImg);
+    } else {
+      ghost.textContent = '📍';
+      ghost.style.fontSize = '32px';
+    }
+    
+    document.body.appendChild(ghost);
+    
+    dragState = { type: assetType, ghost: ghost };
+    
+    // Set the selected asset type so a regular tap-to-place would also work
+    if (typeof window.selectedAssetType !== 'undefined') {
+      window.selectedAssetType = assetType;
+    }
+  }
+  
+  function moveDrag(e) {
+    if (!dragState || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    dragState.ghost.style.left = (t.clientX - 32) + 'px';
+    dragState.ghost.style.top = (t.clientY - 32) + 'px';
+    e.preventDefault();
+  }
+  
+  function endDrag(e) {
+    if (!dragState) return;
+    
+    const t = (e.changedTouches && e.changedTouches[0]) || null;
+    if (t && typeof map !== 'undefined' && map) {
+      // Hide ghost to find element below
+      dragState.ghost.style.display = 'none';
+      const target = document.elementFromPoint(t.clientX, t.clientY);
+      
+      // Check if dropped on map
+      const onMap = target && (target.id === 'map' || (target.closest && target.closest('#map')));
+      if (onMap) {
+        try {
+          const rect = map.getContainer().getBoundingClientRect();
+          let cx = t.clientX - rect.left;
+          let cy = t.clientY - rect.top;
+          const ll = map.containerPointToLatLng([cx, cy]);
+          
+          // Try to call the existing placeAsset function
+          if (typeof window.placeAsset === 'function') {
+            window.placeAsset(ll, dragState.type, 0);
+          } else if (typeof placeAsset === 'function') {
+            placeAsset(ll, dragState.type, 0);
+          } else {
+            // Fallback: simulate map click which the asset tool will handle
+            window.selectedAssetType = dragState.type;
+            if (typeof setTool === 'function') setTool('asset');
+            map.fire('click', { 
+              latlng: ll, 
+              containerPoint: L.point(cx, cy),
+              originalEvent: { clientX: t.clientX, clientY: t.clientY }
+            });
+          }
+          console.log('Dropped asset:', dragState.type, 'at', ll);
+        } catch(err) { 
+          console.error('Drop failed:', err); 
+        }
+      }
+    }
+    
+    if (dragState.ghost && dragState.ghost.parentNode) {
+      dragState.ghost.parentNode.removeChild(dragState.ghost);
+    }
+    dragState = null;
+  }
+  
+  // Attach to document so it catches palette buttons even if dynamic
+  document.addEventListener('touchstart', startDrag, { passive: false, capture: true });
+  document.addEventListener('touchmove', moveDrag, { passive: false, capture: true });
+  document.addEventListener('touchend', endDrag, { passive: false, capture: true });
+  document.addEventListener('touchcancel', function() { 
+    if (dragState && dragState.ghost && dragState.ghost.parentNode) {
+      dragState.ghost.parentNode.removeChild(dragState.ghost);
+    }
+    dragState = null;
+  }, { passive: true });
+  
+  console.log('Touch drag-and-drop for assets ready');
 })();
 </script>
 
