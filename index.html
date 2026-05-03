@@ -3105,30 +3105,10 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION — use viewport dimensions swap (no transform) ===== */
-/* When rotated, we visually rotate via transform but reset Leaflet's container */
 
-html.is-rotated, html.is-rotated body {
-  width: 100vh !important;
-  height: 100vw !important;
-  overflow: hidden !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
 
-html.is-rotated body {
-  transform: rotate(90deg) translate(0, -100vh);
-  transform-origin: top left;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
 
-/* Rotate button — keep it accessible. Counter-rotate it so it stays visually correct */
-html.is-rotated #rotateScreenBtn {
-  /* Button rotates with body but we want it on screen so let it rotate */
-}
-
+/* ===== SCREEN ROTATION — touch axis remap, NO visual rotation ===== */
 #rotateScreenBtn {
   position: fixed;
   top: 64px;
@@ -3144,21 +3124,16 @@ html.is-rotated #rotateScreenBtn {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  transition: transform 0.2s, background 0.15s, box-shadow 0.2s;
+  transition: transform 0.2s, background 0.15s;
   box-shadow: 0 4px 16px rgba(0, 184, 212, 0.4);
   user-select: none;
   pointer-events: auto !important;
-  -webkit-user-select: none;
   touch-action: manipulation;
 }
-#rotateScreenBtn:hover {
-  background: #00d4f0;
-  transform: scale(1.08);
-}
+#rotateScreenBtn:hover { background: #00d4f0; transform: scale(1.08); }
 #rotateScreenBtn:active { transform: scale(0.95); }
 #rotateScreenBtn.is-on {
   background: #ff9500;
-  border-color: rgba(255,255,255,0.4);
   box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
 }
 
@@ -6665,43 +6640,94 @@ window.liveFlights = {
 
 
 // =====================================================================
-// SCREEN ROTATION
+// TOUCH/MOUSE AXIS REMAP — for physically rotated screen
+// Screen rotated 90° LEFT physically. Remap touch coords without visual rotation.
 // =====================================================================
-(function setupRotateScreen() {
-  function setupRotate() {
+(function setupTouchRemap() {
+  let touchRemapEnabled = false;
+  
+  // Override coordinate properties on pointer/mouse/touch events
+  function remapEvent(e) {
+    if (!touchRemapEnabled) return;
+    // Only remap events on the map element
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+    
+    // For screen rotated 90° LEFT (counterclockwise), we need to apply 90° RIGHT to events:
+    // newX = y, newY = (viewport.width - x)
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    
+    // Remap clientX/clientY
+    const oldX = e.clientX;
+    const oldY = e.clientY;
+    if (typeof oldX === 'number' && typeof oldY === 'number') {
+      try {
+        Object.defineProperty(e, 'clientX', { value: oldY, configurable: true });
+        Object.defineProperty(e, 'clientY', { value: w - oldX, configurable: true });
+      } catch(e) {}
+    }
+    
+    // Touch events have changedTouches/touches arrays
+    if (e.touches) {
+      for (let i = 0; i < e.touches.length; i++) {
+        const t = e.touches[i];
+        try {
+          Object.defineProperty(t, 'clientX', { value: t.clientY, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: w - t.clientX, configurable: true });
+        } catch(err) {}
+      }
+    }
+  }
+  
+  // Intercept events at capture phase BEFORE Leaflet sees them
+  ['pointerdown', 'pointermove', 'pointerup', 'mousedown', 'mousemove', 'mouseup',
+   'touchstart', 'touchmove', 'touchend', 'click', 'wheel'].forEach(type => {
+    document.addEventListener(type, remapEvent, { capture: true, passive: false });
+  });
+  
+  function setupBtn() {
     const btn = document.getElementById('rotateScreenBtn');
     if (!btn) {
-      setTimeout(setupRotate, 500);
+      setTimeout(setupBtn, 500);
       return;
     }
     
-    function doRotate(e) {
+    function toggle(e) {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
       }
-      const isRotated = document.documentElement.classList.toggle('is-rotated');
-      btn.classList.toggle('is-on', isRotated);
-      console.log('Rotation:', isRotated ? 'ON' : 'OFF');
+      touchRemapEnabled = !touchRemapEnabled;
+      btn.classList.toggle('is-on', touchRemapEnabled);
+      console.log('Touch remap:', touchRemapEnabled ? 'ON' : 'OFF');
       
-      // Trigger Leaflet to recalculate
       setTimeout(function() {
         if (typeof map !== 'undefined' && map.invalidateSize) {
-          try { map.invalidateSize({pan: false, animate: false}); } catch(e) {}
+          try { map.invalidateSize({pan: false}); } catch(e) {}
         }
-        try { window.dispatchEvent(new Event('resize')); } catch(e) {}
-      }, 400);
+      }, 200);
     }
     
-    btn.addEventListener('click', doRotate);
+    btn.onclick = toggle;
+    btn.addEventListener('click', toggle, true);
+    btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
     
-    console.log('Rotate button ready');
+    if (typeof L !== 'undefined') {
+      try {
+        L.DomEvent.disableClickPropagation(btn);
+        L.DomEvent.disableScrollPropagation(btn);
+      } catch(e) {}
+    }
+    
+    console.log('Touch remap button ready');
   }
   
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupRotate);
+    document.addEventListener('DOMContentLoaded', setupBtn);
   } else {
-    setupRotate();
+    setupBtn();
   }
 })();
 
