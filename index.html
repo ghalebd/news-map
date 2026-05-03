@@ -7051,30 +7051,129 @@ window.liveFlights = {
 
 
 <script>
-// ===== TOUCH MODE — comprehensive touch support =====
+// ===== TOUCH MODE — comprehensive touch support with pinch zoom =====
 (function() {
   let touchStartTime = 0;
   let touchStartPos = null;
   let longPressTimer = null;
+  let lastTapTime = 0;
+  let lastTapPos = null;
   
   function isTouchMode() {
     return document.body.classList.contains('touch-mode');
   }
   
-  // FastClick: eliminate 300ms tap delay
+  // ============ PINCH ZOOM HANDLER (2-finger zoom) ============
+  // Track 2-finger pinch on map specifically
+  const mapEl = document.getElementById('map');
+  let initialDistance = null;
+  let initialZoom = null;
+  let pinchCenter = null;
+  
+  function getDistance(t1, t2) {
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  
+  function setupPinchZoom() {
+    if (typeof map === 'undefined' || !map) {
+      setTimeout(setupPinchZoom, 500);
+      return;
+    }
+    const container = map.getContainer();
+    
+    container.addEventListener('touchstart', function(e) {
+      if (!isTouchMode()) return;
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        initialDistance = getDistance(e.touches[0], e.touches[1]);
+        initialZoom = map.getZoom();
+        // Pinch center in screen coords
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const rect = container.getBoundingClientRect();
+        pinchCenter = map.containerPointToLatLng([cx - rect.left, cy - rect.top]);
+      }
+    }, { passive: false });
+    
+    container.addEventListener('touchmove', function(e) {
+      if (!isTouchMode()) return;
+      if (e.touches.length === 2 && initialDistance !== null) {
+        e.preventDefault();
+        const newDistance = getDistance(e.touches[0], e.touches[1]);
+        const scale = newDistance / initialDistance;
+        // Each doubling = +1 zoom, each halving = -1 zoom
+        const zoomDelta = Math.log2(scale);
+        const newZoom = Math.max(1, Math.min(18, initialZoom + zoomDelta));
+        map.setZoomAround(pinchCenter, newZoom, { animate: false });
+      }
+    }, { passive: false });
+    
+    container.addEventListener('touchend', function(e) {
+      if (e.touches.length < 2) {
+        initialDistance = null;
+        initialZoom = null;
+        pinchCenter = null;
+      }
+    }, { passive: true });
+    
+    console.log('Pinch zoom enabled');
+  }
+  setupPinchZoom();
+  
+  // ============ DOUBLE-TAP TO ZOOM ============
+  document.addEventListener('touchend', function(e) {
+    if (!isTouchMode()) return;
+    if (e.changedTouches.length !== 1) return;
+    const now = Date.now();
+    const t = e.changedTouches[0];
+    const pos = { x: t.clientX, y: t.clientY };
+    
+    if (now - lastTapTime < 300 && lastTapPos) {
+      const dx = pos.x - lastTapPos.x;
+      const dy = pos.y - lastTapPos.y;
+      if (Math.sqrt(dx*dx + dy*dy) < 30) {
+        // Double tap detected
+        if (typeof map !== 'undefined' && map) {
+          const rect = map.getContainer().getBoundingClientRect();
+          if (pos.x >= rect.left && pos.x <= rect.right && 
+              pos.y >= rect.top && pos.y <= rect.bottom) {
+            const ll = map.containerPointToLatLng([pos.x - rect.left, pos.y - rect.top]);
+            map.setZoomAround(ll, map.getZoom() + 1, { animate: true });
+            e.preventDefault();
+          }
+        }
+        lastTapTime = 0;
+        lastTapPos = null;
+        return;
+      }
+    }
+    lastTapTime = now;
+    lastTapPos = pos;
+  }, { passive: false });
+  
+  // ============ TWO-FINGER TAP for zoom out ============
+  let twoFingerTapStart = null;
   document.addEventListener('touchstart', function(e) {
     if (!isTouchMode()) return;
+    if (e.touches.length === 2) {
+      twoFingerTapStart = { time: Date.now(), moved: false };
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      twoFingerTapStart.x = cx;
+      twoFingerTapStart.y = cy;
+    }
+    
     touchStartTime = Date.now();
     if (e.touches[0]) {
       touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
     
-    // Long-press detection (500ms)
     longPressTimer = setTimeout(function() {
       if (!touchStartPos) return;
       const target = document.elementFromPoint(touchStartPos.x, touchStartPos.y);
       if (target) {
-        // Trigger a contextmenu event for long press
         const ev = new MouseEvent('contextmenu', {
           bubbles: true,
           cancelable: true,
@@ -7088,6 +7187,15 @@ window.liveFlights = {
   
   document.addEventListener('touchmove', function(e) {
     if (!isTouchMode()) return;
+    if (twoFingerTapStart && e.touches.length === 2) {
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const dx = cx - twoFingerTapStart.x;
+      const dy = cy - twoFingerTapStart.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 10) {
+        twoFingerTapStart.moved = true;
+      }
+    }
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
@@ -7096,58 +7204,56 @@ window.liveFlights = {
   
   document.addEventListener('touchend', function(e) {
     if (!isTouchMode()) return;
+    
+    // Two-finger tap (without pinch) = zoom out
+    if (twoFingerTapStart && e.touches.length === 0 && !twoFingerTapStart.moved) {
+      const elapsed = Date.now() - twoFingerTapStart.time;
+      if (elapsed < 250 && typeof map !== 'undefined' && map) {
+        map.setZoom(map.getZoom() - 1, { animate: true });
+        e.preventDefault();
+      }
+    }
+    if (e.touches.length === 0) twoFingerTapStart = null;
+    
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
     }
-    
-    // Fast tap: if duration < 300ms and no significant move, fire click immediately
-    const duration = Date.now() - touchStartTime;
-    if (duration < 300 && touchStartPos && e.changedTouches[0]) {
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      const dx = endX - touchStartPos.x;
-      const dy = endY - touchStartPos.y;
-      if (Math.sqrt(dx*dx + dy*dy) < 10) {
-        // It's a tap - the browser will fire click anyway, but we ensure no delay
-      }
-    }
     touchStartPos = null;
-  }, { passive: true });
+  }, { passive: false });
   
-  // When touch mode is enabled, tell Leaflet to use touch events
-  function refreshLeafletTouch() {
-    if (typeof map !== 'undefined' && map) {
-      try {
-        if (isTouchMode()) {
-          // Enable touch dragging and zooming
-          map.dragging.enable();
-          map.touchZoom.enable();
-          map.doubleClickZoom.enable();
-          map.tap && map.tap.enable && map.tap.enable();
-        }
-        map.invalidateSize();
-      } catch(err) {}
+  // ============ Enable Leaflet's built-in touch features ============
+  function enableLeafletTouch() {
+    if (typeof map === 'undefined' || !map) {
+      setTimeout(enableLeafletTouch, 500);
+      return;
     }
+    try {
+      if (isTouchMode()) {
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        if (map.tap && map.tap.enable) map.tap.enable();
+        if (map.boxZoom && map.boxZoom.disable) map.boxZoom.disable();
+      }
+      map.invalidateSize();
+    } catch(err) {}
   }
+  enableLeafletTouch();
   
   // Watch for touch-mode toggle
   const observer = new MutationObserver(function(mutations) {
     for (const m of mutations) {
       if (m.attributeName === 'class') {
-        refreshLeafletTouch();
+        enableLeafletTouch();
       }
     }
   });
   if (document.body) {
     observer.observe(document.body, { attributes: true });
-  } else {
-    document.addEventListener('DOMContentLoaded', function() {
-      observer.observe(document.body, { attributes: true });
-    });
   }
   
-  console.log('Touch mode handlers ready');
+  console.log('Touch mode handlers ready (pinch zoom, double-tap, two-finger zoom-out, long-press)');
 })();
 </script>
 
