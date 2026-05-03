@@ -3125,52 +3125,32 @@ body.rotate-portrait .leaflet-container {
 
 
 
-/* ===== SCREEN ROTATION — simple wrapper approach ===== */
-body.is-rotated {
-  overflow: hidden;
-}
-body.is-rotated #map,
-body.is-rotated .top-bar,
-body.is-rotated .toolbar,
-body.is-rotated .right-panels-stack,
-body.is-rotated .color-palette,
-body.is-rotated .asset-palette,
-body.is-rotated .storyboard-panel,
-body.is-rotated .presenter-bar,
-body.is-rotated .bottom-strip,
-body.is-rotated .brand-header,
-body.is-rotated .zoom-controls,
-body.is-rotated .rotate-btn {
-  /* Wrap content in rotation */
-}
 
-/* Container that holds everything to be rotated */
-body.is-rotated::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: -1;
-}
 
-/* Apply rotation to the body itself when class is added */
-body.is-rotated {
-  width: 100vh;
-  height: 100vw;
+
+
+/* ===== SCREEN ROTATION ===== */
+/* Rotate everything EXCEPT the rotate button itself */
+body.is-rotated #rotationWrapper {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) rotate(90deg);
+  width: 100vh;
+  height: 100vw;
+  transform: translate(-50%, -50%) rotate(-90deg);
   transform-origin: center center;
 }
 
+body.is-rotated {
+  overflow: hidden;
+}
+
+/* Rotate button stays fixed regardless of rotation */
 .rotate-btn {
   position: fixed;
   top: 16px;
   right: 220px;
-  z-index: 5000;
+  z-index: 9999;
   width: 40px; height: 40px;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -3184,6 +3164,7 @@ body.is-rotated {
   transition: background 0.15s, color 0.15s;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   user-select: none;
+  pointer-events: auto;
 }
 .rotate-btn:hover {
   background: var(--accent);
@@ -3198,6 +3179,9 @@ body.is-rotated {
 </style>
 </head>
 <body>
+<button class="rotate-btn" id="rotateScreenBtn" title="Rotate screen left">⟳</button>
+<div id="rotationWrapper">
+
 
   <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
@@ -3278,7 +3262,6 @@ body.is-rotated {
 </div>
 
 
-<button class="rotate-btn" id="rotateScreenBtn" title="Rotate screen 90° (vertical mode)">⟳</button>
 
 <div id="map"></div>
 
@@ -6703,14 +6686,15 @@ window.liveFlights = {
 })();
 
 
+
+
 // =====================================================================
-// SCREEN ROTATION — uses document-level capture to bypass other handlers
+// SCREEN ROTATION — left rotation, button NOT rotated
 // =====================================================================
 (function setupRotateScreen() {
   function setupRotate() {
     const btn = document.getElementById('rotateScreenBtn');
     if (!btn) {
-      console.warn('rotate button missing, retrying...');
       setTimeout(setupRotate, 500);
       return;
     }
@@ -6723,7 +6707,6 @@ window.liveFlights = {
       }
       const isRotated = document.body.classList.toggle('is-rotated');
       btn.classList.toggle('is-on', isRotated);
-      console.log('Rotation toggled:', isRotated);
       
       setTimeout(function() {
         if (typeof map !== 'undefined' && map.invalidateSize) {
@@ -6734,9 +6717,7 @@ window.liveFlights = {
     
     btn.onclick = doRotate;
     btn.addEventListener('click', doRotate, true);
-    btn.addEventListener('pointerdown', function(e) {
-      e.stopPropagation();
-    }, true);
+    btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
     
     if (typeof L !== 'undefined') {
       try {
@@ -6744,8 +6725,6 @@ window.liveFlights = {
         L.DomEvent.disableScrollPropagation(btn);
       } catch(e) {}
     }
-    
-    console.log('Rotate button wired up');
   }
   
   if (document.readyState === 'loading') {
@@ -6757,5 +6736,6 @@ window.liveFlights = {
 
 </script>
 
+</div>
 </body>
 </html>
