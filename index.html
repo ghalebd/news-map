@@ -3114,49 +3114,7 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION — full viewport rotation, mouse axis stays correct ===== */
-body.is-rotated {
-  overflow: hidden;
-  width: 100vh;
-  height: 100vw;
-  position: fixed;
-  top: calc(50vh - 50vw);
-  left: calc(50vw - 50vh);
-  transform: rotate(90deg);
-  transform-origin: 50% 50%;
-}
 
-/* Rotate button stays clickable, fixed to physical screen corner */
-#rotateScreenBtn {
-  position: fixed;
-  top: 64px;
-  left: 16px;
-  z-index: 99999;
-  width: 44px; height: 44px;
-  background: #00b8d4;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 10px;
-  color: white;
-  cursor: pointer;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: bold;
-  box-shadow: 0 4px 16px rgba(0, 184, 212, 0.5);
-  user-select: none;
-  pointer-events: auto !important;
-  touch-action: manipulation;
-  padding: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1;
-}
-#rotateScreenBtn:hover { background: #00d4f0; }
-#rotateScreenBtn:active { transform: scale(0.95); }
-#rotateScreenBtn.is-on {
-  background: #ff9500;
-  box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
-}
 
 /* When rotated, button rotates with body — counter-rotate it back so it stays readable */
 body.is-rotated #rotateScreenBtn {
@@ -3197,62 +3155,171 @@ body.is-rotated #rotateScreenBtn:active {
   box-shadow: 0 0 20px rgba(52, 199, 89, 0.7);
 }
 
+
+/* ===== SCREEN ROTATION ===== */
+body.is-rotated {
+  overflow: hidden;
+  width: 100vh;
+  height: 100vw;
+  position: fixed;
+  top: calc(50vh - 50vw);
+  left: calc(50vw - 50vh);
+  transform: rotate(90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Fix mouse axis when rotated: install handler that compensates */
+/* This is done in JS - see __screenRotated handler */
+
+/* Rotate button — counter-rotate so it stays readable */
+body.is-rotated #rotateScreenBtn,
+body.is-rotated #touchModeBtn {
+  transform: rotate(-90deg);
+}
+
+#rotateScreenBtn {
+  position: fixed;
+  top: 64px;
+  left: 16px;
+  z-index: 99999;
+  width: 44px; height: 44px;
+  background: #00b8d4;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: bold;
+  box-shadow: 0 4px 16px rgba(0, 184, 212, 0.5);
+  user-select: none;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1;
+}
+#rotateScreenBtn:hover { background: #00d4f0; }
+#rotateScreenBtn.is-on {
+  background: #ff9500;
+  box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
+}
+
+#touchModeBtn {
+  position: fixed;
+  top: 64px;
+  left: 70px;
+  z-index: 99999;
+  width: 44px; height: 44px;
+  background: #5856d6;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 16px rgba(88, 86, 214, 0.5);
+  user-select: none;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1;
+}
+#touchModeBtn:hover { background: #6864e6; }
+#touchModeBtn.is-on {
+  background: #34c759;
+  box-shadow: 0 0 20px rgba(52, 199, 89, 0.7);
+}
+
+/* Touch mode: enables proper touch handling on hybrid screens */
+body.touch-mode {
+  touch-action: manipulation;
+}
+body.touch-mode * {
+  touch-action: manipulation;
+}
+
 </style>
 </head>
 <body>
-<button id="rotateScreenBtn" title="Rotate screen" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
-<button id="touchModeBtn" title="Touch mode (remap touch coords)" onclick="(function(b){window.__touchRemap=!window.__touchRemap;b.classList.toggle('is-on',window.__touchRemap);console.log('Touch remap:',window.__touchRemap);})(this);return false;">✋</button>
+<button id="rotateScreenBtn" title="Rotate screen 90°" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
+<button id="touchModeBtn" title="Touch Mode (for touch screens)" onclick="(function(b){var on=document.body.classList.toggle('touch-mode');b.classList.toggle('is-on',on);window.__touchMode=on;console.log('Touch mode:',on);})(this);return false;">✋</button>
+
 <script>
-// Coordinate remap for rotated screen
+// Mouse axis compensation when screen is rotated 90deg via CSS
+// Without this, dragging the map goes the wrong direction.
 (function() {
-  // For body rotated 90deg clockwise:
-  // - Visual right is physical down → mouse moving right should = map moving right
-  // - But after CSS rotate(90), Leaflet's hit-testing puts events at wrong logical coords
-  // Solution: remap clientX/clientY before events reach Leaflet
+  function isRotated() {
+    return document.body.classList.contains('is-rotated');
+  }
   
-  function remap(e) {
-    if (!window.__touchRemap) return;
-    if (e.__remapped) return;
+  function compensate(e) {
+    if (!isRotated()) return;
+    if (e.__compensated) return;
     
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const ox = e.clientX;
-    const oy = e.clientY;
+    const x = e.clientX;
+    const y = e.clientY;
     
-    // Try formula 4: nx = oy, ny = h - ox
-    const nx = oy;
-    const ny = h - ox;
+    // Body is rotated 90deg clockwise via CSS.
+    // The visual coordinates the user sees are (x, y) on physical screen.
+    // But Leaflet sees them through the rotated transform — they need pre-rotation.
+    // For body rotated +90deg, we counter-rotate event coords -90deg:
+    // newX = h - y, newY = x  (this should match visual direction)
+    const nx = h - y;
+    const ny = x;
     
     try {
-      Object.defineProperty(e, 'clientX', { value: nx, configurable: true, writable: false });
-      Object.defineProperty(e, 'clientY', { value: ny, configurable: true, writable: false });
-      Object.defineProperty(e, 'pageX', { value: nx, configurable: true, writable: false });
-      Object.defineProperty(e, 'pageY', { value: ny, configurable: true, writable: false });
+      Object.defineProperty(e, 'clientX', { value: nx, configurable: true });
+      Object.defineProperty(e, 'clientY', { value: ny, configurable: true });
+      Object.defineProperty(e, 'pageX', { value: nx, configurable: true });
+      Object.defineProperty(e, 'pageY', { value: ny, configurable: true });
     } catch(err) {}
     
     if (e.touches) {
       for (let i = 0; i < e.touches.length; i++) {
         const t = e.touches[i];
-        const tox = t.clientX, toy = t.clientY;
+        const tx = t.clientX, ty = t.clientY;
         try {
-          Object.defineProperty(t, 'clientX', { value: toy, configurable: true });
-          Object.defineProperty(t, 'clientY', { value: h - tox, configurable: true });
+          Object.defineProperty(t, 'clientX', { value: h - ty, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: tx, configurable: true });
         } catch(err) {}
       }
     }
     
-    e.__remapped = true;
+    e.__compensated = true;
   }
   
-  // Capture phase BEFORE Leaflet
-  const events = ['mousedown','mousemove','mouseup','click','dblclick','contextmenu',
-                  'pointerdown','pointermove','pointerup','pointercancel',
-                  'touchstart','touchmove','touchend','touchcancel','wheel'];
-  events.forEach(function(t) {
-    window.addEventListener(t, remap, { capture: true, passive: false });
+  // Skip events on the buttons themselves so they still work
+  function shouldSkip(e) {
+    const t = e.target;
+    if (!t) return false;
+    return t.id === 'rotateScreenBtn' || t.id === 'touchModeBtn' ||
+           t.closest('#rotateScreenBtn') || t.closest('#touchModeBtn');
+  }
+  
+  function handler(e) {
+    if (shouldSkip(e)) return;
+    compensate(e);
+  }
+  
+  ['mousedown','mousemove','mouseup','click','dblclick','contextmenu',
+   'pointerdown','pointermove','pointerup','pointercancel',
+   'touchstart','touchmove','touchend','touchcancel','wheel'].forEach(function(t) {
+    window.addEventListener(t, handler, { capture: true, passive: false });
   });
 })();
 </script>
+
+
+
+
 
 
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
