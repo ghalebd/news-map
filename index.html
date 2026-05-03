@@ -3071,7 +3071,62 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION ===== */
+/* ===== SCREEN ROTATION — apply directly to wrapper ===== */
+#rotationWrapper {
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+  transition: transform 0.3s ease-out;
+}
+
+body.is-rotated {
+  overflow: hidden;
+}
+
+body.is-rotated #rotationWrapper {
+  width: 100vh;
+  height: 100vw;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin-top: 0;
+  margin-left: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.rotate-btn {
+  position: fixed;
+  top: 64px;
+  left: 76px;
+  z-index: 99999;
+  width: 44px; height: 44px;
+  background: var(--accent);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: transform 0.2s, background 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 184, 212, 0.4);
+  user-select: none;
+  pointer-events: auto !important;
+}
+.rotate-btn:hover {
+  background: #00d4f0;
+  transform: scale(1.08);
+}
+.rotate-btn:active {
+  transform: scale(0.95);
+}
+.rotate-btn.is-on {
+  background: #ff9500;
+  border-color: rgba(255,255,255,0.4);
+  box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
+}
+
 /* Rotate everything EXCEPT the rotate button itself */
 body.is-rotated #rotationWrapper {
   position: fixed;
@@ -6615,7 +6670,7 @@ window.liveFlights = {
 
 
 // =====================================================================
-// SCREEN ROTATION — left rotation, button NOT rotated
+// SCREEN ROTATION
 // =====================================================================
 (function setupRotateScreen() {
   function setupRotate() {
@@ -6633,17 +6688,23 @@ window.liveFlights = {
       }
       const isRotated = document.body.classList.toggle('is-rotated');
       btn.classList.toggle('is-on', isRotated);
+      console.log('Rotation:', isRotated ? 'ON' : 'OFF');
       
+      // Force reflow
+      document.body.offsetHeight;
+      
+      // Invalidate map size after transition
       setTimeout(function() {
         if (typeof map !== 'undefined' && map.invalidateSize) {
-          try { map.invalidateSize(); } catch(e) {}
+          try { map.invalidateSize({pan: false}); } catch(e) {}
         }
-      }, 450);
+      }, 400);
     }
     
     btn.onclick = doRotate;
     btn.addEventListener('click', doRotate, true);
     btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
+    btn.addEventListener('touchstart', function(e) { e.stopPropagation(); }, true);
     
     if (typeof L !== 'undefined') {
       try {
@@ -6651,6 +6712,8 @@ window.liveFlights = {
         L.DomEvent.disableScrollPropagation(btn);
       } catch(e) {}
     }
+    
+    console.log('Rotate button ready');
   }
   
   if (document.readyState === 'loading') {
