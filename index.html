@@ -6691,5 +6691,142 @@ window.liveFlights = {
 
 
 
+<script>
+// ===== TOUCH MODE =====
+window.toggleTouchMode = function(btn) {
+  const on = document.body.classList.toggle('touch-mode');
+  btn.classList.toggle('is-on', on);
+  console.log('Touch Mode:', on);
+  if (typeof map !== 'undefined' && map.invalidateSize) {
+    try { map.invalidateSize(); } catch(e) {}
+  }
+};
+
+(function() {
+  function isTouch() { return document.body.classList.contains('touch-mode'); }
+  
+  // Pinch zoom
+  let pinch = null;
+  function setupPinch() {
+    if (typeof map === 'undefined' || !map) { setTimeout(setupPinch, 500); return; }
+    const cont = map.getContainer();
+    cont.addEventListener('touchstart', function(e) {
+      if (!isTouch() || e.touches.length !== 2) return;
+      e.preventDefault();
+      const t1 = e.touches[0], t2 = e.touches[1];
+      const cx = (t1.clientX + t2.clientX) / 2;
+      const cy = (t1.clientY + t2.clientY) / 2;
+      const r = cont.getBoundingClientRect();
+      pinch = {
+        dist: Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY),
+        zoom: map.getZoom(),
+        center: map.containerPointToLatLng([cx - r.left, cy - r.top])
+      };
+    }, { passive: false });
+    cont.addEventListener('touchmove', function(e) {
+      if (!isTouch() || !pinch || e.touches.length !== 2) return;
+      e.preventDefault();
+      const t1 = e.touches[0], t2 = e.touches[1];
+      const newD = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const newZ = Math.max(1, Math.min(18, pinch.zoom + Math.log2(newD / pinch.dist)));
+      map.setZoomAround(pinch.center, newZ, { animate: false });
+    }, { passive: false });
+    cont.addEventListener('touchend', function(e) { if (e.touches.length < 2) pinch = null; }, { passive: true });
+    console.log('Pinch zoom enabled');
+  }
+  setupPinch();
+  
+  // Double-tap zoom in
+  let lastTap = 0, lastTapPos = null;
+  document.addEventListener('touchend', function(e) {
+    if (!isTouch() || e.changedTouches.length !== 1) return;
+    const now = Date.now();
+    const t = e.changedTouches[0];
+    if (now - lastTap < 300 && lastTapPos &&
+        Math.hypot(t.clientX - lastTapPos.x, t.clientY - lastTapPos.y) < 30) {
+      if (typeof map !== 'undefined' && map) {
+        const r = map.getContainer().getBoundingClientRect();
+        if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+          const ll = map.containerPointToLatLng([t.clientX - r.left, t.clientY - r.top]);
+          map.setZoomAround(ll, map.getZoom() + 1, { animate: true });
+          e.preventDefault();
+        }
+      }
+      lastTap = 0; lastTapPos = null;
+      return;
+    }
+    lastTap = now;
+    lastTapPos = { x: t.clientX, y: t.clientY };
+  }, { passive: false });
+  
+  // Long-press for context menu
+  let lpTimer = null, lpStart = null;
+  document.addEventListener('touchstart', function(e) {
+    if (!isTouch() || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    lpStart = { x: t.clientX, y: t.clientY };
+    lpTimer = setTimeout(function() {
+      if (!lpStart) return;
+      const target = document.elementFromPoint(lpStart.x, lpStart.y);
+      if (target) {
+        target.dispatchEvent(new MouseEvent('contextmenu', {
+          bubbles: true, cancelable: true,
+          clientX: lpStart.x, clientY: lpStart.y
+        }));
+      }
+    }, 500);
+  }, { passive: true });
+  document.addEventListener('touchmove', function() {
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+  }, { passive: true });
+  document.addEventListener('touchend', function() {
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    lpStart = null;
+  }, { passive: true });
+  
+  // Drag-and-drop assets from palette to map
+  let dragAsset = null;
+  document.addEventListener('touchstart', function(e) {
+    if (!isTouch() || e.touches.length !== 1) return;
+    const btn = e.target.closest('.asset-btn');
+    if (!btn || !btn.dataset.asset) return;
+    const t = e.touches[0];
+    const ghost = document.createElement('div');
+    ghost.style.cssText = 'position:fixed;z-index:99999;width:64px;height:64px;left:' + (t.clientX-32) + 'px;top:' + (t.clientY-32) + 'px;background:rgba(0,184,212,0.3);border:2px dashed #00b8d4;border-radius:8px;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+    const img = btn.querySelector('img');
+    if (img) { const i = img.cloneNode(true); i.style.cssText = 'width:48px;height:48px;object-fit:contain;'; ghost.appendChild(i); }
+    document.body.appendChild(ghost);
+    dragAsset = { type: btn.dataset.asset, ghost: ghost };
+  }, { passive: false, capture: true });
+  document.addEventListener('touchmove', function(e) {
+    if (!dragAsset || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    dragAsset.ghost.style.left = (t.clientX - 32) + 'px';
+    dragAsset.ghost.style.top = (t.clientY - 32) + 'px';
+    e.preventDefault();
+  }, { passive: false, capture: true });
+  document.addEventListener('touchend', function(e) {
+    if (!dragAsset) return;
+    const t = e.changedTouches[0];
+    if (t && typeof map !== 'undefined' && map) {
+      dragAsset.ghost.style.display = 'none';
+      const target = document.elementFromPoint(t.clientX, t.clientY);
+      if (target && (target.id === 'map' || target.closest('#map'))) {
+        try {
+          const r = map.getContainer().getBoundingClientRect();
+          const ll = map.containerPointToLatLng([t.clientX - r.left, t.clientY - r.top]);
+          if (typeof window.placeAsset === 'function') window.placeAsset(ll, dragAsset.type, 0);
+          else if (typeof placeAsset === 'function') placeAsset(ll, dragAsset.type, 0);
+        } catch(err) { console.error(err); }
+      }
+    }
+    if (dragAsset.ghost.parentNode) dragAsset.ghost.parentNode.removeChild(dragAsset.ghost);
+    dragAsset = null;
+  }, { passive: false, capture: true });
+  
+  console.log('Touch mode handlers ready');
+})();
+</script>
+
 </body>
 </html>
