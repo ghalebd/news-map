@@ -3192,7 +3192,7 @@ body.is-rotated #rotateScreenBtn:active {
     // But Leaflet's container has its own coord system rotated -90
     // We pre-rotate the event coordinates 90deg counterclockwise:
     // newX = oy, newY = w - ox
-    const nx = h - oy;
+    const nx = w - oy;
     const ny = ox;
     
     try {
@@ -3207,7 +3207,7 @@ body.is-rotated #rotateScreenBtn:active {
         const t = e.touches[i];
         const tox = t.clientX, toy = t.clientY;
         try {
-          Object.defineProperty(t, 'clientX', { value: h - toy, configurable: true });
+          Object.defineProperty(t, 'clientX', { value: w - toy, configurable: true });
           Object.defineProperty(t, 'clientY', { value: tox, configurable: true });
         } catch(err) {}
       }
