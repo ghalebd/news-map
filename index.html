@@ -3104,7 +3104,29 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 /* Wrap the entire map+UI in a rotating container */
 /* Buttons stay accessible by counter-rotating */
 body.is-rotated #rotateScreenBtn,
-body.is-rotated </style>
+body.is-rotated 
+/* ============================================================
+   PERMANENT VERTICAL MODE — site is always rotated for use on
+   a physically rotated screen (rotated 90° to the left).
+   Site rotates -90° (counterclockwise) so it appears upright on
+   the rotated physical display.
+   ============================================================ */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body {
+  width: 100vh !important;
+  height: 100vw !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) rotate(-90deg) !important;
+  transform-origin: center center !important;
+}
+
+</style>
 </head>
 <body>
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
