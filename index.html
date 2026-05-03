@@ -3108,7 +3108,40 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION — touch axis remap, NO visual rotation ===== */
+
+
+
+/* ===== SCREEN ROTATION — rotate all elements individually ===== */
+body.rotate-portrait {
+  overflow: hidden;
+}
+body.rotate-portrait #map,
+body.rotate-portrait .toolbar,
+body.rotate-portrait .right-panels-stack,
+body.rotate-portrait .presenter-bar,
+body.rotate-portrait .bottom-strip,
+body.rotate-portrait .top-bar,
+body.rotate-portrait .brand-header,
+body.rotate-portrait .storyboard-panel,
+body.rotate-portrait .color-palette,
+body.rotate-portrait .asset-palette,
+body.rotate-portrait .zoom-controls,
+body.rotate-portrait .leaflet-container {
+  transform: rotate(90deg);
+  transform-origin: center center;
+}
+body.rotate-portrait #map,
+body.rotate-portrait .leaflet-container {
+  width: 100vh !important;
+  height: 100vw !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  margin-top: -50vw !important;
+  margin-left: -50vh !important;
+  transform: rotate(90deg) !important;
+}
+
 #rotateScreenBtn {
   position: fixed;
   top: 64px;
@@ -6638,98 +6671,6 @@ window.liveFlights = {
 
 
 
-
-// =====================================================================
-// TOUCH/MOUSE AXIS REMAP — for physically rotated screen
-// Screen rotated 90° LEFT physically. Remap touch coords without visual rotation.
-// =====================================================================
-(function setupTouchRemap() {
-  let touchRemapEnabled = false;
-  
-  // Override coordinate properties on pointer/mouse/touch events
-  function remapEvent(e) {
-    if (!touchRemapEnabled) return;
-    // Only remap events on the map element
-    const mapEl = document.getElementById('map');
-    if (!mapEl) return;
-    
-    // For screen rotated 90° LEFT (counterclockwise), we need to apply 90° RIGHT to events:
-    // newX = y, newY = (viewport.width - x)
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    
-    // Remap clientX/clientY
-    const oldX = e.clientX;
-    const oldY = e.clientY;
-    if (typeof oldX === 'number' && typeof oldY === 'number') {
-      try {
-        Object.defineProperty(e, 'clientX', { value: oldY, configurable: true });
-        Object.defineProperty(e, 'clientY', { value: w - oldX, configurable: true });
-      } catch(e) {}
-    }
-    
-    // Touch events have changedTouches/touches arrays
-    if (e.touches) {
-      for (let i = 0; i < e.touches.length; i++) {
-        const t = e.touches[i];
-        try {
-          Object.defineProperty(t, 'clientX', { value: t.clientY, configurable: true });
-          Object.defineProperty(t, 'clientY', { value: w - t.clientX, configurable: true });
-        } catch(err) {}
-      }
-    }
-  }
-  
-  // Intercept events at capture phase BEFORE Leaflet sees them
-  ['pointerdown', 'pointermove', 'pointerup', 'mousedown', 'mousemove', 'mouseup',
-   'touchstart', 'touchmove', 'touchend', 'click', 'wheel'].forEach(type => {
-    document.addEventListener(type, remapEvent, { capture: true, passive: false });
-  });
-  
-  function setupBtn() {
-    const btn = document.getElementById('rotateScreenBtn');
-    if (!btn) {
-      setTimeout(setupBtn, 500);
-      return;
-    }
-    
-    function toggle(e) {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      }
-      touchRemapEnabled = !touchRemapEnabled;
-      btn.classList.toggle('is-on', touchRemapEnabled);
-      console.log('Touch remap:', touchRemapEnabled ? 'ON' : 'OFF');
-      
-      setTimeout(function() {
-        if (typeof map !== 'undefined' && map.invalidateSize) {
-          try { map.invalidateSize({pan: false}); } catch(e) {}
-        }
-      }, 200);
-    }
-    
-    btn.onclick = toggle;
-    btn.addEventListener('click', toggle, true);
-    btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
-    
-    if (typeof L !== 'undefined') {
-      try {
-        L.DomEvent.disableClickPropagation(btn);
-        L.DomEvent.disableScrollPropagation(btn);
-      } catch(e) {}
-    }
-    
-    console.log('Touch remap button ready');
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupBtn);
-  } else {
-    setupBtn();
-  }
-})();
 
 </script>
 
