@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 80" preserveAspectRatio="xMidYMid meet">
+  <!-- Orange square with calligraphy mark -->
+  <rect x="0" y="0" width="80" height="80" fill="#F5A623"/>
+  <!-- Stylized Arabic "الجزيرة" calligraphy -->
+  <g fill="#fff" transform="translate(8 12)">
+    <path d="M28,8 C20,12 16,18 18,28 C20,32 26,34 32,30 C36,26 38,22 36,18 C34,16 30,16 28,18 L28,8 Z"/>
+    <path d="M14,38 C18,42 24,44 32,42 C42,40 48,36 50,30 C52,26 50,22 46,22 L46,28 C46,32 42,36 36,38 C28,40 22,38 18,34 L14,38 Z"/>
+    <ellipse cx="40" cy="50" rx="3" ry="2"/>
+    <ellipse cx="48" cy="50" rx="3" ry="2"/>
+    <path d="M22,52 C26,56 32,58 40,56 L40,60 C30,62 22,58 18,54 L22,52 Z"/>
+    <text x="32" y="14" fill="#F5A623" font-size="6" text-anchor="middle">الجزيرة</text>
+  </g>
+  <!-- "ALJAZEERA" text -->
+  <text x="100" y="55" fill="#F5A623" font-family="Arial Black, Helvetica, sans-serif" font-size="44" font-weight="900" letter-spacing="-1">ALJAZEERA</text>
+</svg>

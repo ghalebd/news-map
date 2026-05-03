@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 80">
+  <defs><filter id="th"><feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-opacity="0.5"/></filter></defs>
+  <g filter="url(#th)">
+    <path d="M6,8 Q16,2 26,8 L26,72 L6,72 Z" fill="#1a3a5a" stroke="#0a1a3a" stroke-width="0.5"/>
+    <rect x="8" y="58" width="16" height="12" fill="#fff" stroke="#aaa" stroke-width="0.3"/>
+    <!-- Pipes/manifold deck -->
+    <rect x="14" y="14" width="4" height="42" fill="#d4a149" opacity="0.7"/>
+    <circle cx="16" cy="20" r="2" fill="#a07a39"/>
+    <circle cx="16" cy="32" r="2" fill="#a07a39"/>
+    <circle cx="16" cy="44" r="2" fill="#a07a39"/>
+  </g>
+</svg>

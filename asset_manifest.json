@@ -1,0 +1,417 @@
+{
+  "air_defense_missile_system_armed_position": {
+    "name": "Air Defense Missile System Armed Position",
+    "cat": "ground",
+    "file": "air_defense_missile_system_armed_position.png"
+  },
+  "anti_aircraft_defense_unit_green": {
+    "name": "Anti Aircraft Defense Unit Green",
+    "cat": "ground",
+    "file": "anti_aircraft_defense_unit_green.png"
+  },
+  "anti_aircraft_defense_unit_green_2": {
+    "name": "Anti Aircraft Defense Unit Green (v2)",
+    "cat": "ground",
+    "file": "anti_aircraft_defense_unit_green_2.png"
+  },
+  "anti_aircraft_defense_unit_green_3": {
+    "name": "Anti Aircraft Defense Unit Green (v3)",
+    "cat": "ground",
+    "file": "anti_aircraft_defense_unit_green_3.png"
+  },
+  "anti_aircraft_defense_unit_green_4": {
+    "name": "Anti Aircraft Defense Unit Green (v4)",
+    "cat": "ground",
+    "file": "anti_aircraft_defense_unit_green_4.png"
+  },
+  "anti_aircraft_missile_launcher_on_alert": {
+    "name": "Anti-Aircraft Missile Launcher On Alert",
+    "cat": "ground",
+    "file": "anti_aircraft_missile_launcher_on_alert.png"
+  },
+  "armed_iron_dome_mobile_air_defense_system": {
+    "name": "Armed Iron Dome Mobile Air Defense System",
+    "cat": "ground",
+    "file": "armed_iron_dome_mobile_air_defense_system.png"
+  },
+  "armed_warship_naval_with_combat_helicopter": {
+    "name": "Armed Warship Naval With Combat Helicopter",
+    "cat": "naval",
+    "file": "armed_warship_naval_with_combat_helicopter.png"
+  },
+  "armed_warship_naval_with_combat_helicopter_2": {
+    "name": "Armed Warship Naval With Combat Helicopter (v2)",
+    "cat": "naval",
+    "file": "armed_warship_naval_with_combat_helicopter_2.png"
+  },
+  "army_vehicle": {
+    "name": "Army Vehicle",
+    "cat": "ground",
+    "file": "army_vehicle.png"
+  },
+  "attack_helicopter": {
+    "name": "Attack Helicopter",
+    "cat": "air",
+    "file": "attack_helicopter.png"
+  },
+  "attack_helicopter_2": {
+    "name": "Attack Helicopter (v2)",
+    "cat": "air",
+    "file": "attack_helicopter_2.png"
+  },
+  "balistic_missile": {
+    "name": "Balistic Missile",
+    "cat": "weapons",
+    "file": "balistic_missile.png"
+  },
+  "balistic_missile_2": {
+    "name": "Balistic Missile (v2)",
+    "cat": "weapons",
+    "file": "balistic_missile_2.png"
+  },
+  "ballistic_missile_fath_360": {
+    "name": "Ballistic Missile Fath-360",
+    "cat": "weapons",
+    "file": "ballistic_missile_fath_360.png"
+  },
+  "black_apocalypse_pickup_truck": {
+    "name": "Black Apocalypse Pickup Truck",
+    "cat": "ground",
+    "file": "black_apocalypse_pickup_truck.png"
+  },
+  "black_military_drone": {
+    "name": "Black Military Drone",
+    "cat": "air",
+    "file": "black_military_drone.png"
+  },
+  "black_military_drone_2": {
+    "name": "Black Military Drone (v2)",
+    "cat": "air",
+    "file": "black_military_drone_2.png"
+  },
+  "cartoon_attack_helicopter": {
+    "name": "Cartoon Attack Helicopter",
+    "cat": "air",
+    "file": "cartoon_attack_helicopter.png"
+  },
+  "combat_interceptor_fighter_jet_with_pilot_flying": {
+    "name": "Combat Interceptor Fighter Jet With Pilot Flying",
+    "cat": "air",
+    "file": "combat_interceptor_fighter_jet_with_pilot_flying.png"
+  },
+  "combat_interceptor_fighter_jet_with_pilot_flying_2": {
+    "name": "Combat Interceptor Fighter Jet With Pilot Flying (v2)",
+    "cat": "air",
+    "file": "combat_interceptor_fighter_jet_with_pilot_flying_2.png"
+  },
+  "combat_interceptor_fighter_jet": {
+    "name": "Combat Interceptor Fighter Jet",
+    "cat": "air",
+    "file": "combat_interceptor_fighter_jet.png"
+  },
+  "combat_interceptor_fighter_jet_2": {
+    "name": "Combat Interceptor Fighter Jet (v2)",
+    "cat": "air",
+    "file": "combat_interceptor_fighter_jet_2.png"
+  },
+  "combat_landing_vessel_with_helicopter": {
+    "name": "Combat Landing Vessel With Helicopter",
+    "cat": "naval",
+    "file": "combat_landing_vessel_with_helicopter.png"
+  },
+  "combat_landing_vessel_with_helicopter_2": {
+    "name": "Combat Landing Vessel With Helicopter (v2)",
+    "cat": "naval",
+    "file": "combat_landing_vessel_with_helicopter_2.png"
+  },
+  "combat_landing_vessel": {
+    "name": "Combat Landing Vessel",
+    "cat": "naval",
+    "file": "combat_landing_vessel.png"
+  },
+  "combat_landing_vessel_2": {
+    "name": "Combat Landing Vessel (v2)",
+    "cat": "naval",
+    "file": "combat_landing_vessel_2.png"
+  },
+  "combat_military_drone": {
+    "name": "Combat Military Drone",
+    "cat": "air",
+    "file": "combat_military_drone.png"
+  },
+  "combat_military_drone_2": {
+    "name": "Combat Military Drone (v2)",
+    "cat": "air",
+    "file": "combat_military_drone_2.png"
+  },
+  "drone": {
+    "name": "Drone",
+    "cat": "air",
+    "file": "drone.png"
+  },
+  "drone_2": {
+    "name": "Drone (v2)",
+    "cat": "air",
+    "file": "drone_2.png"
+  },
+  "equipped_military_soldier_in_green_camo_walking": {
+    "name": "Equipped Military Soldier in Green Camo Walking",
+    "cat": "ground",
+    "file": "equipped_military_soldier_in_green_camo_walking.png"
+  },
+  "field_inflatable_tent_camo": {
+    "name": "Field Inflatable Tent Camo",
+    "cat": "infra",
+    "file": "field_inflatable_tent_camo.png"
+  },
+  "generic_military_missile": {
+    "name": "Generic Military Missile",
+    "cat": "weapons",
+    "file": "generic_military_missile.png"
+  },
+  "generic_military_tactical_pickup_with_machine_gun_desert_camo": {
+    "name": "Generic Military Tactical Pickup With Machine Gun Desert Camo",
+    "cat": "ground",
+    "file": "generic_military_tactical_pickup_with_machine_gun_desert_camo.png"
+  },
+  "hospital_with_helipad": {
+    "name": "Hospital with Helipad",
+    "cat": "infra",
+    "file": "hospital_with_helipad.png"
+  },
+  "hospital_with_helipad_2": {
+    "name": "Hospital with Helipad (v2)",
+    "cat": "infra",
+    "file": "hospital_with_helipad_2.png"
+  },
+  "intercontinental_ballistic_missile": {
+    "name": "Intercontinental Ballistic Missile",
+    "cat": "weapons",
+    "file": "intercontinental_ballistic_missile.png"
+  },
+  "kamikaze_drone_shahed_238_white": {
+    "name": "Kamikaze Drone Shahed 238 White",
+    "cat": "air",
+    "file": "kamikaze_drone_shahed_238_white.png"
+  },
+  "kamikaze_drone_shahed_238_white_2": {
+    "name": "Kamikaze Drone Shahed 238 White (v2)",
+    "cat": "air",
+    "file": "kamikaze_drone_shahed_238_white_2.png"
+  },
+  "korean_tank_k2_camouflage_color_dirty": {
+    "name": "Korean Tank K2 Camouflage Color Dirty",
+    "cat": "ground",
+    "file": "korean_tank_k2_camouflage_color_dirty.png"
+  },
+  "korean_tank_k2_camouflage_color_dirty_2": {
+    "name": "Korean Tank K2 Camouflage Color Dirty (v2)",
+    "cat": "ground",
+    "file": "korean_tank_k2_camouflage_color_dirty_2.png"
+  },
+  "liquefied_natural_gas_terminal": {
+    "name": "Liquefied Natural Gas Terminal",
+    "cat": "infra",
+    "file": "liquefied_natural_gas_terminal.png"
+  },
+  "loitering_munition": {
+    "name": "Loitering Munition",
+    "cat": "air",
+    "file": "loitering_munition.png"
+  },
+  "mim_104_patriot_green": {
+    "name": "MIM 104 Patriot Green",
+    "cat": "ground",
+    "file": "mim_104_patriot_green.png"
+  },
+  "mim_104_patriot_green_2": {
+    "name": "MIM 104 Patriot Green (v2)",
+    "cat": "ground",
+    "file": "mim_104_patriot_green_2.png"
+  },
+  "main_battle_tank": {
+    "name": "Main Battle Tank",
+    "cat": "ground",
+    "file": "main_battle_tank.png"
+  },
+  "main_battle_tank_2": {
+    "name": "Main Battle Tank (v2)",
+    "cat": "ground",
+    "file": "main_battle_tank_2.png"
+  },
+  "main_battle_tank_3": {
+    "name": "Main Battle Tank (v3)",
+    "cat": "ground",
+    "file": "main_battle_tank_3.png"
+  },
+  "main_battle_tank_4": {
+    "name": "Main Battle Tank (v4)",
+    "cat": "ground",
+    "file": "main_battle_tank_4.png"
+  },
+  "medical_evacuation_quadcopter": {
+    "name": "Medical Evacuation Quadcopter",
+    "cat": "air",
+    "file": "medical_evacuation_quadcopter.png"
+  },
+  "medical_evacuation_quadcopter_2": {
+    "name": "Medical Evacuation Quadcopter (v2)",
+    "cat": "air",
+    "file": "medical_evacuation_quadcopter_2.png"
+  },
+  "military_attack_helicopter_with_weapon": {
+    "name": "Military Attack Helicopter with Weapon",
+    "cat": "air",
+    "file": "military_attack_helicopter_with_weapon.png"
+  },
+  "military_attack_helicopter_with_weapon_2": {
+    "name": "Military Attack Helicopter with Weapon (v2)",
+    "cat": "air",
+    "file": "military_attack_helicopter_with_weapon_2.png"
+  },
+  "military_drone": {
+    "name": "Military Drone",
+    "cat": "air",
+    "file": "military_drone.png"
+  },
+  "military_drone_2": {
+    "name": "Military Drone (v2)",
+    "cat": "air",
+    "file": "military_drone_2.png"
+  },
+  "military_half_ton_truck": {
+    "name": "Military Half-Ton Truck",
+    "cat": "ground",
+    "file": "military_half_ton_truck.png"
+  },
+  "military_missile_tactical_truck_in_combat_readiness": {
+    "name": "Military Missile Tactical Truck In Combat Readiness",
+    "cat": "ground",
+    "file": "military_missile_tactical_truck_in_combat_readiness.png"
+  },
+  "military_missile_tactical_truck_in_combat_readiness_2": {
+    "name": "Military Missile Tactical Truck In Combat Readiness (v2)",
+    "cat": "ground",
+    "file": "military_missile_tactical_truck_in_combat_readiness_2.png"
+  },
+  "military_tent": {
+    "name": "Military Tent",
+    "cat": "infra",
+    "file": "military_tent.png"
+  },
+  "military_transport_aircraft_scale_model": {
+    "name": "Military Transport Aircraft Scale Model",
+    "cat": "air",
+    "file": "military_transport_aircraft_scale_model.png"
+  },
+  "military_transport_aircraft_scale_model_2": {
+    "name": "Military Transport Aircraft Scale Model (v2)",
+    "cat": "air",
+    "file": "military_transport_aircraft_scale_model_2.png"
+  },
+  "multi_role_aircraft_grey_simplified": {
+    "name": "Multi-Role Aircraft Grey Simplified",
+    "cat": "air",
+    "file": "multi_role_aircraft_grey_simplified.png"
+  },
+  "multi_role_aircraft_grey_simplified_2": {
+    "name": "Multi-Role Aircraft Grey Simplified (v2)",
+    "cat": "air",
+    "file": "multi_role_aircraft_grey_simplified_2.png"
+  },
+  "nuclear_cooling_tower": {
+    "name": "Nuclear Cooling Tower",
+    "cat": "infra",
+    "file": "nuclear_cooling_tower.png"
+  },
+  "nuclear_explosion": {
+    "name": "Nuclear Explosion",
+    "cat": "weapons",
+    "file": "nuclear_explosion.png"
+  },
+  "nuclear_explosion_2": {
+    "name": "Nuclear Explosion (v2)",
+    "cat": "weapons",
+    "file": "nuclear_explosion_2.png"
+  },
+  "nuclear_power_plant_complex": {
+    "name": "Nuclear Power Plant Complex",
+    "cat": "infra",
+    "file": "nuclear_power_plant_complex.png"
+  },
+  "quonset_barrack": {
+    "name": "Quonset Barrack",
+    "cat": "infra",
+    "file": "quonset_barrack.png"
+  },
+  "quonset_barrack_2": {
+    "name": "Quonset Barrack (v2)",
+    "cat": "infra",
+    "file": "quonset_barrack_2.png"
+  },
+  "radiation": {
+    "name": "Radiation",
+    "cat": "weapons",
+    "file": "radiation.png"
+  },
+  "rockets_with_radar_camo_air_defence_system": {
+    "name": "Rockets with Radar Camo Air Defence System",
+    "cat": "ground",
+    "file": "rockets_with_radar_camo_air_defence_system.png"
+  },
+  "self_propelled_air_defense_missile_system": {
+    "name": "Self Propelled Air Defense Missile System",
+    "cat": "ground",
+    "file": "self_propelled_air_defense_missile_system.png"
+  },
+  "self_propelled_air_defense_missile_system_2": {
+    "name": "Self Propelled Air Defense Missile System (v2)",
+    "cat": "ground",
+    "file": "self_propelled_air_defense_missile_system_2.png"
+  },
+  "soldier_in_green_camo_with_night_vision_aiming": {
+    "name": "Soldier In Green Camo With Night Vision Aiming",
+    "cat": "ground",
+    "file": "soldier_in_green_camo_with_night_vision_aiming.png"
+  },
+  "t_80ud_main_battle_tank": {
+    "name": "T-80UD Main Battle Tank",
+    "cat": "ground",
+    "file": "t_80ud_main_battle_tank.png"
+  },
+  "t_80ud_main_battle_tank_2": {
+    "name": "T-80UD Main Battle Tank (v2)",
+    "cat": "ground",
+    "file": "t_80ud_main_battle_tank_2.png"
+  },
+  "tactical_ground_to_ground_ballistic_missile": {
+    "name": "Tactical Ground-To-Ground Ballistic Missile",
+    "cat": "weapons",
+    "file": "tactical_ground_to_ground_ballistic_missile.png"
+  },
+  "tactical_surveillance_gray_aircraft": {
+    "name": "Tactical Surveillance Gray Aircraft",
+    "cat": "air",
+    "file": "tactical_surveillance_gray_aircraft.png"
+  },
+  "tactical_surveillance_gray_aircraft_2": {
+    "name": "Tactical Surveillance Gray Aircraft (v2)",
+    "cat": "air",
+    "file": "tactical_surveillance_gray_aircraft_2.png"
+  },
+  "us_amphibious_assault_vehicle_with_30mm_gun_wet": {
+    "name": "US Amphibious Assault Vehicle With 30mm Gun Wet",
+    "cat": "ground",
+    "file": "us_amphibious_assault_vehicle_with_30mm_gun_wet.png"
+  },
+  "us_amphibious_assault_vehicle_with_30mm_gun_wet_2": {
+    "name": "US Amphibious Assault Vehicle With 30mm Gun Wet (v2)",
+    "cat": "ground",
+    "file": "us_amphibious_assault_vehicle_with_30mm_gun_wet_2.png"
+  },
+  "us_amphibious_combat_vehicle_acv_with_30mm_gun": {
+    "name": "US Amphibious Combat Vehicle ACV With 30mm Gun",
+    "cat": "ground",
+    "file": "us_amphibious_combat_vehicle_acv_with_30mm_gun.png"
+  }
+}
