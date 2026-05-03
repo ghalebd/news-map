@@ -3111,44 +3111,29 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION — rotate all elements individually ===== */
-body.rotate-portrait {
+
+
+
+/* ===== SCREEN ROTATION — full viewport rotation, mouse axis stays correct ===== */
+body.is-rotated {
   overflow: hidden;
-}
-body.rotate-portrait #map,
-body.rotate-portrait .toolbar,
-body.rotate-portrait .right-panels-stack,
-body.rotate-portrait .presenter-bar,
-body.rotate-portrait .bottom-strip,
-body.rotate-portrait .top-bar,
-body.rotate-portrait .brand-header,
-body.rotate-portrait .storyboard-panel,
-body.rotate-portrait .color-palette,
-body.rotate-portrait .asset-palette,
-body.rotate-portrait .zoom-controls,
-body.rotate-portrait .leaflet-container {
+  width: 100vh;
+  height: 100vw;
+  position: fixed;
+  top: calc(50vh - 50vw);
+  left: calc(50vw - 50vh);
   transform: rotate(90deg);
-  transform-origin: center center;
-}
-body.rotate-portrait #map,
-body.rotate-portrait .leaflet-container {
-  width: 100vh !important;
-  height: 100vw !important;
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  margin-top: -50vw !important;
-  margin-left: -50vh !important;
-  transform: rotate(90deg) !important;
+  transform-origin: 50% 50%;
 }
 
+/* Rotate button stays clickable, fixed to physical screen corner */
 #rotateScreenBtn {
   position: fixed;
   top: 64px;
-  left: 76px;
+  left: 16px;
   z-index: 99999;
   width: 44px; height: 44px;
-  background: var(--accent);
+  background: #00b8d4;
   border: 2px solid rgba(255,255,255,0.3);
   border-radius: 10px;
   color: white;
@@ -3156,24 +3141,36 @@ body.rotate-portrait .leaflet-container {
   display: flex !important;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  transition: transform 0.2s, background 0.15s;
-  box-shadow: 0 4px 16px rgba(0, 184, 212, 0.4);
+  font-size: 22px;
+  font-weight: bold;
+  box-shadow: 0 4px 16px rgba(0, 184, 212, 0.5);
   user-select: none;
   pointer-events: auto !important;
   touch-action: manipulation;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1;
 }
-#rotateScreenBtn:hover { background: #00d4f0; transform: scale(1.08); }
+#rotateScreenBtn:hover { background: #00d4f0; }
 #rotateScreenBtn:active { transform: scale(0.95); }
 #rotateScreenBtn.is-on {
   background: #ff9500;
   box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
 }
 
+/* When rotated, button rotates with body — counter-rotate it back so it stays readable */
+body.is-rotated #rotateScreenBtn {
+  transform: rotate(-90deg);
+}
+body.is-rotated #rotateScreenBtn:active {
+  transform: rotate(-90deg) scale(0.95);
+}
+
 </style>
 </head>
 <body>
 <button id="rotateScreenBtn" title="Rotate screen">⟳</button>
+
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
   <button class="pt-btn" data-pt="reset" title="Reset view">⌂</button>
