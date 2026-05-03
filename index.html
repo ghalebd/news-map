@@ -3414,6 +3414,18 @@ body.is-rotated #touchModeBtn {
 
 
 
+
+/* When body is rotated, assets need to compensate so they point visually correct */
+body.is-rotated .asset-wrapper {
+  transform: rotate(calc(var(--rot, 0deg) + 90deg)) scale(var(--zoom-scale, 1));
+}
+body.is-rotated .ship-icon-wrapper {
+  transform: rotate(calc(var(--rot, 0deg) + 90deg)) scale(var(--zoom-scale, 1));
+}
+body.is-rotated .plane-marker {
+  transform: rotate(calc(var(--rot, 0deg) + 90deg)) scale(var(--zoom-scale, 1));
+}
+
 </style>
 </head>
 <body>
@@ -7295,6 +7307,71 @@ window.liveFlights = {
   if (document.body) {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
+})();
+</script>
+
+
+<script>
+// ===== Drag fix for rotated body =====
+// When body is rotated +90deg, mouse events have physical coords but panel CSS
+// uses body's rotated coord system. This patches dragging to work correctly.
+(function() {
+  // Helper: convert physical client coords to body's rotated coord system
+  window.__physToBody = function(x, y) {
+    if (!document.body.classList.contains('is-rotated')) {
+      return { x: x, y: y };
+    }
+    // Body rotated +90deg clockwise via CSS transform
+    // Physical (x, y) maps to body's logical (h - y, x) where h = innerHeight
+    // Wait, need to think about this carefully.
+    //
+    // CSS: body { width: 100vh; height: 100vw; transform: rotate(90deg); }
+    // Body's own coordinate system has its origin at body's top-left
+    // When body is rotated 90deg clockwise, body's top-left moves to physical top-right
+    // So physical (px, py) corresponds to body's logical:
+    //   bodyX = py
+    //   bodyY = window.innerWidth - px
+    return {
+      x: y,
+      y: window.innerWidth - x
+    };
+  };
+  
+  // Override pointermove for drag handles ONLY (not the map)
+  // The drag handles have specific class names like .ltp-handle, .toolbar-handle, etc.
+  
+  // Instead of overriding, install a global pointermove interceptor that
+  // patches e.clientX/clientY for events fired on .ltp-handle, .panel-handle, etc.
+  function patchDragEvent(e) {
+    if (!document.body.classList.contains('is-rotated')) return;
+    if (e.__dragPatched) return;
+    
+    // Only patch if event is on a known drag handle
+    const target = e.target;
+    if (!target) return;
+    const isHandle = target.classList && (
+      target.classList.contains('ltp-handle') ||
+      target.classList.contains('panel-handle') ||
+      target.classList.contains('drag-handle') ||
+      target.closest && (target.closest('.ltp-handle') || target.closest('.panel-handle') || target.closest('.drag-handle'))
+    );
+    if (!isHandle) return;
+    
+    const remapped = window.__physToBody(e.clientX, e.clientY);
+    try {
+      Object.defineProperty(e, 'clientX', { value: remapped.x, configurable: true });
+      Object.defineProperty(e, 'clientY', { value: remapped.y, configurable: true });
+      Object.defineProperty(e, 'pageX', { value: remapped.x, configurable: true });
+      Object.defineProperty(e, 'pageY', { value: remapped.y, configurable: true });
+    } catch(err) {}
+    e.__dragPatched = true;
+  }
+  
+  ['pointerdown', 'pointermove', 'pointerup', 'mousedown', 'mousemove', 'mouseup'].forEach(function(t) {
+    window.addEventListener(t, patchDragEvent, { capture: true, passive: false });
+  });
+  
+  console.log('Drag fix for rotated mode loaded');
 })();
 </script>
 
