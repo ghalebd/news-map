@@ -3099,66 +3099,47 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION — apply to html element ===== */
-html.is-rotated {
-  overflow: hidden;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-  width: 100vh;
-  height: 100vw;
-  position: fixed;
-  top: calc(50vh - 50vw);
-  left: calc(50vw - 50vh);
+
+
+
+/* ===== SCREEN ROTATION — clean & working ===== */
+html.is-rotated, html.is-rotated body {
+  overflow: hidden !important;
+  width: 100vh !important;
+  height: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 html.is-rotated body {
-  width: 100%;
-  height: 100%;
-}
-
-/* Rotate button - keep it FIXED relative to viewport, NOT rotated */
-/* When html is rotated, the button rotates with it. We fix this by counter-rotating */
-html.is-rotated #rotateScreenBtn {
-  /* Stays fixed — but since it's inside rotated html, we accept it rotates too */
-}
-
-#rotateScreenBtn {
   position: fixed;
-  top: 64px;
-  left: 76px;
-  z-index: 99999;
-  width: 44px; height: 44px;
-  background: var(--accent);
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 10px;
-  color: white;
-  cursor: pointer;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  transition: transform 0.2s, background 0.15s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px rgba(0, 184, 212, 0.4);
-  user-select: none;
-  pointer-events: auto !important;
-  -webkit-user-select: none;
-  touch-action: manipulation;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center center;
+  width: 100vh !important;
+  height: 100vw !important;
 }
-#rotateScreenBtn:hover {
-  background: #00d4f0;
-  transform: scale(1.08);
+
+/* Make sure map fills the rotated body */
+html.is-rotated #map {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
 }
-#rotateScreenBtn:active { transform: scale(0.95); }
-#rotateScreenBtn.is-on {
-  background: #ff9500;
-  border-color: rgba(255,255,255,0.4);
-  box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
+
+/* Rotate button active state in top-bar */
+.top-bar-btn#rotateScreenBtn.is-on {
+  background: #ff9500 !important;
+  color: white !important;
+  box-shadow: 0 0 16px rgba(255, 149, 0, 0.6);
 }
 
 </style>
 </head>
 <body>
-<button class="rotate-btn" id="rotateScreenBtn" title="Rotate screen left">⟳</button>
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
   <button class="pt-btn" data-pt="reset" title="Reset view">⌂</button>
@@ -3258,7 +3239,7 @@ html.is-rotated #rotateScreenBtn {
   <input type="file" id="loadFile" accept=".json" style="display:none">
   <button class="top-bar-btn" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
   <button class="top-bar-btn" id="clearAllBtn">🗑</button>
-  <button class="top-bar-btn" id="rotateScreenBtn" title="Rotate screen left (90° counterclockwise)">⟲</button>
+  <button class="top-bar-btn" id="rotateScreenBtn" title="Rotate screen 90° left">⟲ Rotate</button>
   <button class="top-bar-btn" id="hideUIBtn" title="Hide all panels (H)">⌷ Hide UI</button>
   <button class="top-bar-btn primary" id="presenterBtn">▶ Presenter</button>
 </div>
@@ -6659,7 +6640,7 @@ window.liveFlights = {
 
 
 // =====================================================================
-// SCREEN ROTATION — toggle on html element
+// SCREEN ROTATION
 // =====================================================================
 (function setupRotateScreen() {
   function setupRotate() {
@@ -6673,37 +6654,24 @@ window.liveFlights = {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
       }
-      // Toggle on HTML element (rotates everything including fixed elements)
       const isRotated = document.documentElement.classList.toggle('is-rotated');
-      // Also toggle body class for backward compat
-      document.body.classList.toggle('rotate-portrait', isRotated);
       btn.classList.toggle('is-on', isRotated);
       console.log('Rotation:', isRotated ? 'ON' : 'OFF');
       
+      // Trigger Leaflet to recalculate
       setTimeout(function() {
         if (typeof map !== 'undefined' && map.invalidateSize) {
           try { map.invalidateSize({pan: false, animate: false}); } catch(e) {}
         }
-        // Trigger window resize so Leaflet recalculates
         try { window.dispatchEvent(new Event('resize')); } catch(e) {}
       }, 400);
     }
     
     btn.onclick = doRotate;
-    btn.addEventListener('click', doRotate, true);
-    btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
-    btn.addEventListener('touchstart', function(e) { e.stopPropagation(); }, {passive: false, capture: true});
+    btn.addEventListener('click', doRotate);
     
-    if (typeof L !== 'undefined') {
-      try {
-        L.DomEvent.disableClickPropagation(btn);
-        L.DomEvent.disableScrollPropagation(btn);
-      } catch(e) {}
-    }
-    
-    console.log('Rotate button ready (html rotation)');
+    console.log('Rotate button ready');
   }
   
   if (document.readyState === 'loading') {
