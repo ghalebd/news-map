@@ -375,7 +375,7 @@ body {
 
 /* ========== EDIT PANEL ========== */
 .edit-panel {
-  position: absolute; bottom: 24px; left: 50%;
+  position: absolute; bottom: 130px; left: 50%;
   transform: translateX(-50%); z-index: 1001;
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 14px; padding: 18px;
@@ -791,7 +791,7 @@ body.hide-all-panels .top-bar {
 
 /* ===== ASSET ROTATION PANEL ===== */
 .asset-edit-panel {
-  position: absolute; bottom: 16px; left: 50%;
+  position: absolute; bottom: 130px; left: 50%;
   transform: translateX(-50%) translateY(120%);
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 14px; padding: 14px 18px;
@@ -3095,9 +3095,83 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 /* Disable hover effects (which stick on touch screens) */
 /* Bigger close/delete buttons */
 /* When body rotated, ensure right panels stay visible */
+
+/* ===== TOUCH MODE BUTTON ===== */
+#touchModeBtn {
+  position: fixed;
+  top: 60px;
+  right: 8px;
+  z-index: 99999;
+  width: 44px; height: 44px;
+  background: #5856d6;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 4px 16px rgba(88, 86, 214, 0.4);
+  user-select: none;
+  pointer-events: auto;
+  touch-action: manipulation;
+  padding: 0;
+  line-height: 1;
+}
+#touchModeBtn:hover { background: #6864e6; }
+#touchModeBtn:active { transform: scale(0.95); }
+#touchModeBtn.is-on {
+  background: #34c759;
+  box-shadow: 0 0 20px rgba(52, 199, 89, 0.7);
+}
+
+/* ===== TOUCH MODE BEHAVIORS ===== */
+body.touch-mode {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 184, 212, 0.3);
+  -webkit-user-select: none;
+  user-select: none;
+}
+body.touch-mode button,
+body.touch-mode .layer-btn,
+body.touch-mode .label-toggle,
+body.touch-mode .ltp-btn,
+body.touch-mode .asset-btn,
+body.touch-mode .top-bar-btn,
+body.touch-mode .pb-btn,
+body.touch-mode .clp-btn-add,
+body.touch-mode .clp-item-del,
+body.touch-mode .panel-collapse-btn,
+body.touch-mode .pt-btn,
+body.touch-mode .rot-btn {
+  min-height: 38px;
+  min-width: 38px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 184, 212, 0.4);
+}
+body.touch-mode button:active,
+body.touch-mode .layer-btn:active {
+  background: rgba(0, 184, 212, 0.25);
+  transition: background 0.05s;
+}
+body.touch-mode #map,
+body.touch-mode .leaflet-container {
+  touch-action: none;
+}
+body.touch-mode .asset-palette,
+body.touch-mode .right-panels-stack,
+body.touch-mode .clp-list {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 </style>
 </head>
 <body>
+<button id="touchModeBtn" title="Touch Mode" onclick="window.toggleTouchMode(this);return false;">✋</button>
+
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
   <button class="pt-btn" data-pt="reset" title="Reset view">⌂</button>
