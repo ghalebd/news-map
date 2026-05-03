@@ -3446,7 +3446,7 @@ body.is-rotated .city-label {
 </style>
 </head>
 <body>
-<button id="rotateScreenBtn" title="Rotate screen 90°" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
+<button id="rotateScreenBtn" title="Rotate screen 90°" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);document.querySelectorAll('.toolbar,.layers-panel,.labels-panel,.live-tracking-panel,.custom-labels-panel,.storyboard-panel,.right-panels-stack,.color-palette,.asset-palette,.bottom-strip,.presenter-bar').forEach(function(p){p.style.left='';p.style.top='';p.style.right='';p.style.bottom='';});setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
 <button id="touchModeBtn" title="Touch Mode (for touch screens)" onclick="(function(b){var on=document.body.classList.toggle('touch-mode');b.classList.toggle('is-on',on);window.__touchMode=on;console.log('Touch mode:',on);})(this);return false;">✋</button>
 
 <script>
@@ -7254,6 +7254,76 @@ window.liveFlights = {
   }
   
   console.log('Touch mode handlers ready (pinch zoom, double-tap, two-finger zoom-out, long-press)');
+})();
+</script>
+
+
+<script>
+// ===== Drag coordinate compensation when body is rotated =====
+(function() {
+  // For body rotated +90deg via CSS transform:
+  // - Panel CSS top/left are in body's rotated coord system
+  // - Mouse events arrive with physical screen coords
+  // - We need to translate physical → rotated coords for drag math
+  
+  window.__getDragCoord = function(clientX, clientY) {
+    if (!document.body.classList.contains('is-rotated')) {
+      return { x: clientX, y: clientY };
+    }
+    // Body rotated +90deg clockwise. Physical (x, y) → body's logical:
+    // logical_x = y, logical_y = window.innerWidth - x
+    return {
+      x: clientY,
+      y: window.innerWidth - clientX
+    };
+  };
+})();
+</script>
+
+
+<script>
+// ===== Auto-arrange panels when rotation toggles =====
+(function() {
+  let lastRotated = document.body.classList.contains('is-rotated');
+  
+  function arrangePanels() {
+    const isRotated = document.body.classList.contains('is-rotated');
+    if (isRotated === lastRotated) return;
+    lastRotated = isRotated;
+    
+    // When toggling rotation, clear all manually-set inline positions
+    // so panels return to their default CSS positions
+    const panels = document.querySelectorAll(
+      '.toolbar, .layers-panel, .labels-panel, .live-tracking-panel, ' +
+      '.custom-labels-panel, .storyboard-panel, .right-panels-stack, ' +
+      '.color-palette, .asset-palette, .bottom-strip, .presenter-bar, ' +
+      '.brand-header'
+    );
+    panels.forEach(function(p) {
+      p.style.left = '';
+      p.style.top = '';
+      p.style.right = '';
+      p.style.bottom = '';
+      p.style.transform = '';
+    });
+    
+    // Clear localStorage saved panel positions so they don't override
+    Object.keys(localStorage).forEach(function(k) {
+      if (k.startsWith('panel_pos_')) {
+        try { localStorage.removeItem(k); } catch(e) {}
+      }
+    });
+    
+    console.log('Panels auto-arranged for', isRotated ? 'rotated' : 'normal', 'orientation');
+  }
+  
+  // Watch for class changes on body
+  const observer = new MutationObserver(function() {
+    arrangePanels();
+  });
+  if (document.body) {
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
 })();
 </script>
 
