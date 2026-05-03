@@ -3309,6 +3309,40 @@ body.is-rotated .top-bar {
   z-index: 1400;
 }
 
+
+/* When rotated, keep toolbar visible and accessible */
+body.is-rotated .toolbar {
+  position: absolute !important;
+  left: 8px !important;
+  top: 100px !important;
+  z-index: 1500 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Same for collapsed toolbar */
+body.is-rotated .toolbar.is-collapsed {
+  left: 8px !important;
+  top: 100px !important;
+  z-index: 1500 !important;
+}
+
+/* Storyboard panel too */
+body.is-rotated .storyboard-panel {
+  z-index: 1500 !important;
+}
+
+/* Bottom strip */
+body.is-rotated .bottom-strip {
+  z-index: 1500 !important;
+}
+
+/* Brand header */
+body.is-rotated .brand-header {
+  z-index: 1500 !important;
+}
+
 </style>
 </head>
 <body>
