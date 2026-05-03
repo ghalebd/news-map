@@ -3169,7 +3169,63 @@ body.is-rotated #rotateScreenBtn:active {
 </style>
 </head>
 <body>
-<button id="rotateScreenBtn" title="Rotate screen" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
+<button id="rotateScreenBtn" title="Rotate screen" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);window.__screenRotated=on;console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
+<script>
+// Coordinate remap for rotated screen
+(function() {
+  // For body rotated 90deg clockwise:
+  // - Visual right is physical down → mouse moving right should = map moving right
+  // - But after CSS rotate(90), Leaflet's hit-testing puts events at wrong logical coords
+  // Solution: remap clientX/clientY before events reach Leaflet
+  
+  function remap(e) {
+    if (!window.__screenRotated) return;
+    if (e.__remapped) return;
+    
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const ox = e.clientX;
+    const oy = e.clientY;
+    
+    // For rotate(90deg) CSS on body: visual coordinates need to swap
+    // Event arrives with clientX/Y in viewport coords (post-rotation visual)
+    // But Leaflet's container has its own coord system rotated -90
+    // We pre-rotate the event coordinates 90deg counterclockwise:
+    // newX = oy, newY = w - ox
+    const nx = oy;
+    const ny = w - ox;
+    
+    try {
+      Object.defineProperty(e, 'clientX', { value: nx, configurable: true, writable: false });
+      Object.defineProperty(e, 'clientY', { value: ny, configurable: true, writable: false });
+      Object.defineProperty(e, 'pageX', { value: nx, configurable: true, writable: false });
+      Object.defineProperty(e, 'pageY', { value: ny, configurable: true, writable: false });
+    } catch(err) {}
+    
+    if (e.touches) {
+      for (let i = 0; i < e.touches.length; i++) {
+        const t = e.touches[i];
+        const tox = t.clientX, toy = t.clientY;
+        try {
+          Object.defineProperty(t, 'clientX', { value: toy, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: w - tox, configurable: true });
+        } catch(err) {}
+      }
+    }
+    
+    e.__remapped = true;
+  }
+  
+  // Capture phase BEFORE Leaflet
+  const events = ['mousedown','mousemove','mouseup','click','dblclick','contextmenu',
+                  'pointerdown','pointermove','pointerup','pointercancel',
+                  'touchstart','touchmove','touchend','touchcancel','wheel'];
+  events.forEach(function(t) {
+    window.addEventListener(t, remap, { capture: true, passive: false });
+  });
+})();
+</script>
+
 
 <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
