@@ -3272,8 +3272,8 @@ body.touch-mode * {
     // But Leaflet sees them through the rotated transform — they need pre-rotation.
     // For body rotated +90deg, we counter-rotate event coords -90deg:
     // newX = h - y, newY = x  (this should match visual direction)
-    const nx = h - y;
-    const ny = x;
+    const nx = y;
+    const ny = w - x;
     
     try {
       Object.defineProperty(e, 'clientX', { value: nx, configurable: true });
@@ -3287,8 +3287,8 @@ body.touch-mode * {
         const t = e.touches[i];
         const tx = t.clientX, ty = t.clientY;
         try {
-          Object.defineProperty(t, 'clientX', { value: h - ty, configurable: true });
-          Object.defineProperty(t, 'clientY', { value: tx, configurable: true });
+          Object.defineProperty(t, 'clientX', { value: ty, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: w - tx, configurable: true });
         } catch(err) {}
       }
     }
@@ -6820,6 +6820,34 @@ window.liveFlights = {
 
 
 
+</script>
+
+
+<script>
+// Ensure collapsed toolbar can always be reopened
+(function() {
+  function setupToolbarRestore() {
+    document.addEventListener('click', function(e) {
+      const tb = e.target.closest('.toolbar.is-collapsed');
+      if (tb && !e.target.closest('.panel-collapse-btn')) {
+        tb.classList.remove('is-collapsed');
+      }
+    }, true);
+    // Also touch
+    document.addEventListener('touchend', function(e) {
+      const tb = e.target.closest('.toolbar.is-collapsed');
+      if (tb && !e.target.closest('.panel-collapse-btn')) {
+        tb.classList.remove('is-collapsed');
+        e.preventDefault();
+      }
+    }, { capture: true, passive: false });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupToolbarRestore);
+  } else {
+    setupToolbarRestore();
+  }
+})();
 </script>
 
 </body>
