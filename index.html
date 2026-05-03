@@ -3117,14 +3117,6 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 /* When rotated, button rotates with body — counter-rotate it back so it stays readable */
-body.is-rotated #rotateScreenBtn {
-  transform: rotate(-90deg);
-}
-body.is-rotated #rotateScreenBtn:active {
-  transform: rotate(-90deg) scale(0.95);
-}
-
-
 #touchModeBtn {
   position: fixed;
   top: 64px;
@@ -3156,27 +3148,11 @@ body.is-rotated #rotateScreenBtn:active {
 }
 
 
-/* ===== SCREEN ROTATION ===== */
-body.is-rotated {
-  overflow: hidden;
-  width: 100vh;
-  height: 100vw;
-  position: fixed;
-  top: calc(50vh - 50vw);
-  left: calc(50vw - 50vh);
-  transform: rotate(90deg);
-  transform-origin: 50% 50%;
-}
 
 /* Fix mouse axis when rotated: install handler that compensates */
 /* This is done in JS - see __screenRotated handler */
 
 /* Rotate button — counter-rotate so it stays readable */
-body.is-rotated #rotateScreenBtn,
-body.is-rotated #touchModeBtn {
-  transform: rotate(-90deg);
-}
-
 #rotateScreenBtn {
   position: fixed;
   top: 64px;
@@ -3296,124 +3272,28 @@ body.touch-mode .panel-collapse-btn {
 
 
 /* When body rotated, ensure right panels stay visible */
-body.is-rotated .right-panels-stack {
-  top: 4px;
-  right: 4px;
-  max-height: calc(100vw - 16px);
-  z-index: 1500;
-}
-body.is-rotated .toolbar {
-  z-index: 1500;
-}
-body.is-rotated .top-bar {
-  z-index: 1400;
-}
-
-
-
-
-
-/* ===== ROTATION FIX — Keep ALL panels visible when body rotates ===== */
 /* When body is rotated +90deg, position:absolute gets caught in the rotated coordinate system.
    We need elements visible in the physical viewport. */
 
-body.is-rotated .toolbar {
-  position: fixed !important;
-  left: 8px !important;
-  top: 100px !important;
-  bottom: auto !important;
-  right: auto !important;
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 1500 !important;
-  transform: none !important;
-}
-
-body.is-rotated .toolbar.is-collapsed {
-  position: fixed !important;
-  left: 8px !important;
-  top: 100px !important;
-  z-index: 1500 !important;
-}
-
-body.is-rotated .right-panels-stack {
-  position: fixed !important;
-  right: 4px !important;
-  top: 60px !important;
-  bottom: auto !important;
-  left: auto !important;
-  max-height: 90vh !important;
-  z-index: 1500 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body.is-rotated .top-bar {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 1400 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body.is-rotated .brand-header {
-  position: fixed !important;
-  z-index: 1500 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body.is-rotated .storyboard-panel {
-  position: fixed !important;
-  bottom: 16px !important;
-  right: 8px !important;
-  top: auto !important;
-  left: auto !important;
-  z-index: 1500 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body.is-rotated .bottom-strip {
-  position: fixed !important;
-  bottom: 4px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  z-index: 1500 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body.is-rotated .presenter-bar {
-  position: fixed !important;
-  top: 56px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  z-index: 1450 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-body.is-rotated .zoom-controls {
-  position: fixed !important;
-  z-index: 1500 !important;
-}
-
 /* Rotate buttons stay visible - counter-rotate them */
+
+/* ===== SCREEN ROTATION — clean implementation ===== */
+/* Wrap the entire map+UI in a rotating container */
+body.is-rotated {
+  overflow: hidden;
+  width: 100vh;
+  height: 100vw;
+  position: fixed;
+  top: calc(50vh - 50vw);
+  left: calc(50vw - 50vh);
+  transform: rotate(90deg);
+  transform-origin: 50% 50%;
+}
+/* Buttons stay accessible by counter-rotating */
 body.is-rotated #rotateScreenBtn,
 body.is-rotated #touchModeBtn {
-  position: fixed !important;
-  z-index: 99999 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  transform: rotate(-90deg);
 }
-
-
-
-
 
 </style>
 </head>
@@ -3421,72 +3301,7 @@ body.is-rotated #touchModeBtn {
 <button id="rotateScreenBtn" title="Rotate screen 90°" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);document.querySelectorAll('.toolbar,.layers-panel,.labels-panel,.live-tracking-panel,.custom-labels-panel,.storyboard-panel,.right-panels-stack,.color-palette,.asset-palette,.bottom-strip,.presenter-bar').forEach(function(p){p.style.left='';p.style.top='';p.style.right='';p.style.bottom='';});setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
 <button id="touchModeBtn" title="Touch Mode (for touch screens)" onclick="(function(b){var on=document.body.classList.toggle('touch-mode');b.classList.toggle('is-on',on);window.__touchMode=on;console.log('Touch mode:',on);})(this);return false;">✋</button>
 
-<script>
-// Mouse axis compensation when screen is rotated 90deg via CSS
-// Without this, dragging the map goes the wrong direction.
-(function() {
-  function isRotated() {
-    return document.body.classList.contains('is-rotated');
-  }
-  
-  function compensate(e) {
-    if (!isRotated()) return;
-    if (e.__compensated) return;
-    
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    // Body is rotated 90deg clockwise via CSS.
-    // The visual coordinates the user sees are (x, y) on physical screen.
-    // But Leaflet sees them through the rotated transform — they need pre-rotation.
-    // For body rotated +90deg, we counter-rotate event coords -90deg:
-    // newX = h - y, newY = x  (this should match visual direction)
-    const nx = y;
-    const ny = w - x;
-    
-    try {
-      Object.defineProperty(e, 'clientX', { value: nx, configurable: true });
-      Object.defineProperty(e, 'clientY', { value: ny, configurable: true });
-      Object.defineProperty(e, 'pageX', { value: nx, configurable: true });
-      Object.defineProperty(e, 'pageY', { value: ny, configurable: true });
-    } catch(err) {}
-    
-    if (e.touches) {
-      for (let i = 0; i < e.touches.length; i++) {
-        const t = e.touches[i];
-        const tx = t.clientX, ty = t.clientY;
-        try {
-          Object.defineProperty(t, 'clientX', { value: ty, configurable: true });
-          Object.defineProperty(t, 'clientY', { value: w - tx, configurable: true });
-        } catch(err) {}
-      }
-    }
-    
-    e.__compensated = true;
-  }
-  
-  // Skip events on the buttons themselves so they still work
-  function shouldSkip(e) {
-    const t = e.target;
-    if (!t) return false;
-    return t.id === 'rotateScreenBtn' || t.id === 'touchModeBtn' ||
-           t.closest('#rotateScreenBtn') || t.closest('#touchModeBtn');
-  }
-  
-  function handler(e) {
-    if (shouldSkip(e)) return;
-    compensate(e);
-  }
-  
-  ['mousedown','mousemove','mouseup','click','dblclick','contextmenu',
-   'pointerdown','pointermove','pointerup','pointercancel',
-   'touchstart','touchmove','touchend','touchcancel','wheel'].forEach(function(t) {
-    window.addEventListener(t, handler, { capture: true, passive: false });
-  });
-})();
-</script>
+
 
 
 
@@ -7230,139 +7045,13 @@ window.liveFlights = {
 </script>
 
 
-<script>
-// ===== Drag coordinate compensation when body is rotated =====
-(function() {
-  // For body rotated +90deg via CSS transform:
-  // - Panel CSS top/left are in body's rotated coord system
-  // - Mouse events arrive with physical screen coords
-  // - We need to translate physical → rotated coords for drag math
-  
-  window.__getDragCoord = function(clientX, clientY) {
-    if (!document.body.classList.contains('is-rotated')) {
-      return { x: clientX, y: clientY };
-    }
-    // Body rotated +90deg clockwise. Physical (x, y) → body's logical:
-    // logical_x = y, logical_y = window.innerWidth - x
-    return {
-      x: clientY,
-      y: window.innerWidth - clientX
-    };
-  };
-})();
-</script>
 
 
-<script>
-// ===== Auto-arrange panels when rotation toggles =====
-(function() {
-  let lastRotated = document.body.classList.contains('is-rotated');
-  
-  function arrangePanels() {
-    const isRotated = document.body.classList.contains('is-rotated');
-    if (isRotated === lastRotated) return;
-    lastRotated = isRotated;
-    
-    // When toggling rotation, clear all manually-set inline positions
-    // so panels return to their default CSS positions
-    const panels = document.querySelectorAll(
-      '.toolbar, .layers-panel, .labels-panel, .live-tracking-panel, ' +
-      '.custom-labels-panel, .storyboard-panel, .right-panels-stack, ' +
-      '.color-palette, .asset-palette, .bottom-strip, .presenter-bar, ' +
-      '.brand-header'
-    );
-    panels.forEach(function(p) {
-      p.style.left = '';
-      p.style.top = '';
-      p.style.right = '';
-      p.style.bottom = '';
-      p.style.transform = '';
-    });
-    
-    // Clear localStorage saved panel positions so they don't override
-    Object.keys(localStorage).forEach(function(k) {
-      if (k.startsWith('panel_pos_')) {
-        try { localStorage.removeItem(k); } catch(e) {}
-      }
-    });
-    
-    console.log('Panels auto-arranged for', isRotated ? 'rotated' : 'normal', 'orientation');
-  }
-  
-  // Watch for class changes on body
-  const observer = new MutationObserver(function() {
-    arrangePanels();
-  });
-  if (document.body) {
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-  }
-})();
-</script>
 
 
-<script>
-// ===== Drag fix for rotated body =====
-// When body is rotated +90deg, mouse events have physical coords but panel CSS
-// uses body's rotated coord system. This patches dragging to work correctly.
-(function() {
-  // Helper: convert physical client coords to body's rotated coord system
-  window.__physToBody = function(x, y) {
-    if (!document.body.classList.contains('is-rotated')) {
-      return { x: x, y: y };
-    }
-    // Body rotated +90deg clockwise via CSS transform
-    // Physical (x, y) maps to body's logical (h - y, x) where h = innerHeight
-    // Wait, need to think about this carefully.
-    //
-    // CSS: body { width: 100vh; height: 100vw; transform: rotate(90deg); }
-    // Body's own coordinate system has its origin at body's top-left
-    // When body is rotated 90deg clockwise, body's top-left moves to physical top-right
-    // So physical (px, py) corresponds to body's logical:
-    //   bodyX = py
-    //   bodyY = window.innerWidth - px
-    return {
-      x: y,
-      y: window.innerWidth - x
-    };
-  };
-  
-  // Override pointermove for drag handles ONLY (not the map)
-  // The drag handles have specific class names like .ltp-handle, .toolbar-handle, etc.
-  
-  // Instead of overriding, install a global pointermove interceptor that
-  // patches e.clientX/clientY for events fired on .ltp-handle, .panel-handle, etc.
-  function patchDragEvent(e) {
-    if (!document.body.classList.contains('is-rotated')) return;
-    if (e.__dragPatched) return;
-    
-    // Only patch if event is on a known drag handle
-    const target = e.target;
-    if (!target) return;
-    const isHandle = target.classList && (
-      target.classList.contains('ltp-handle') ||
-      target.classList.contains('panel-handle') ||
-      target.classList.contains('drag-handle') ||
-      target.closest && (target.closest('.ltp-handle') || target.closest('.panel-handle') || target.closest('.drag-handle'))
-    );
-    if (!isHandle) return;
-    
-    const remapped = window.__physToBody(e.clientX, e.clientY);
-    try {
-      Object.defineProperty(e, 'clientX', { value: remapped.x, configurable: true });
-      Object.defineProperty(e, 'clientY', { value: remapped.y, configurable: true });
-      Object.defineProperty(e, 'pageX', { value: remapped.x, configurable: true });
-      Object.defineProperty(e, 'pageY', { value: remapped.y, configurable: true });
-    } catch(err) {}
-    e.__dragPatched = true;
-  }
-  
-  ['pointerdown', 'pointermove', 'pointerup', 'mousedown', 'mousemove', 'mouseup'].forEach(function(t) {
-    window.addEventListener(t, patchDragEvent, { capture: true, passive: false });
-  });
-  
-  console.log('Drag fix for rotated mode loaded');
-})();
-</script>
+
+
+
 
 <script>
 // ===== Touch Drag-and-Drop for Assets in touch mode =====
@@ -7477,6 +7166,87 @@ window.liveFlights = {
   }, { passive: true });
   
   console.log('Touch drag-and-drop for assets ready');
+})();
+</script>
+
+<script>
+// ===== Single comprehensive event coord fix for rotated body =====
+(function() {
+  function isRotated() {
+    return document.body.classList.contains('is-rotated');
+  }
+  
+  // For body rotated +90deg via CSS:
+  // - Body's CSS coord system is rotated relative to physical screen
+  // - Event listeners on body's elements receive physical clientX/Y
+  // - But getBoundingClientRect() returns the ROTATED bounding box
+  // - Leaflet computes coords using getBoundingClientRect, so it gets confused
+  //
+  // The cleanest fix: Pre-rotate clientX/Y to "undo" the body rotation
+  // so Leaflet sees coordinates as if the rotation didn't happen.
+  //
+  // For rotate(90deg) clockwise via CSS:
+  //   physical(x, y) → body's coord(y, w - x)
+  // We translate event coords from physical to body's coord system
+  // BEFORE Leaflet's listeners process them.
+  
+  function translateCoord(x, y) {
+    const w = window.innerWidth;
+    return { x: y, y: w - x };
+  }
+  
+  function patchEvent(e) {
+    if (!isRotated()) return;
+    if (e.__rotPatched) return;
+    
+    // Skip events on the rotate/touch buttons themselves
+    if (e.target && (e.target.id === 'rotateScreenBtn' || e.target.id === 'touchModeBtn' ||
+                     (e.target.closest && (e.target.closest('#rotateScreenBtn') || e.target.closest('#touchModeBtn'))))) {
+      return;
+    }
+    
+    const oldX = e.clientX;
+    const oldY = e.clientY;
+    if (typeof oldX === 'number' && typeof oldY === 'number') {
+      const { x, y } = translateCoord(oldX, oldY);
+      try {
+        Object.defineProperty(e, 'clientX', { value: x, configurable: true });
+        Object.defineProperty(e, 'clientY', { value: y, configurable: true });
+        Object.defineProperty(e, 'pageX', { value: x, configurable: true });
+        Object.defineProperty(e, 'pageY', { value: y, configurable: true });
+      } catch(err) {}
+    }
+    
+    if (e.touches) {
+      for (let i = 0; i < e.touches.length; i++) {
+        const t = e.touches[i];
+        const { x, y } = translateCoord(t.clientX, t.clientY);
+        try {
+          Object.defineProperty(t, 'clientX', { value: x, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: y, configurable: true });
+        } catch(err) {}
+      }
+    }
+    if (e.changedTouches) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        const { x, y } = translateCoord(t.clientX, t.clientY);
+        try {
+          Object.defineProperty(t, 'clientX', { value: x, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: y, configurable: true });
+        } catch(err) {}
+      }
+    }
+    
+    e.__rotPatched = true;
+  }
+  
+  // Capture phase = before any other listeners
+  ['mousedown','mousemove','mouseup','click','dblclick','contextmenu',
+   'pointerdown','pointermove','pointerup','pointercancel',
+   'touchstart','touchmove','touchend','touchcancel','wheel'].forEach(function(t) {
+    window.addEventListener(t, patchEvent, { capture: true, passive: false });
+  });
 })();
 </script>
 
