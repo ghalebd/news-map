@@ -3071,29 +3071,63 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 
-/* ===== SCREEN ROTATION — apply directly to wrapper ===== */
-#rotationWrapper {
-  width: 100%;
-  height: 100%;
-  transform-origin: center center;
-  transition: transform 0.3s ease-out;
+
+
+
+
+
+
+
+@keyframes rotate-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(255, 149, 0, 0.6); }
+  50% { box-shadow: 0 0 24px rgba(255, 149, 0, 0.9); }
 }
 
-body.is-rotated {
+
+/* Rotate button active state */
+#rotateScreenBtn.is-on {
+  background: var(--accent) !important;
+  color: white !important;
+  box-shadow: 0 0 12px rgba(0, 184, 212, 0.5);
+}
+#rotateScreenBtn {
+  font-size: 18px;
+  min-width: 36px;
+}
+
+
+/* ===== SCREEN ROTATION — old proven logic, rotated -90 (left) ===== */
+body.rotate-portrait {
   overflow: hidden;
 }
-
-body.is-rotated #rotationWrapper {
-  width: 100vh;
-  height: 100vw;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  margin-top: 0;
-  margin-left: 0;
-  transform: translate(-50%, -50%) rotate(-90deg);
+body.rotate-portrait #map,
+body.rotate-portrait .toolbar,
+body.rotate-portrait .right-panels-stack,
+body.rotate-portrait .presenter-bar,
+body.rotate-portrait .bottom-strip,
+body.rotate-portrait .top-bar,
+body.rotate-portrait .brand-header,
+body.rotate-portrait .storyboard-panel,
+body.rotate-portrait .color-palette,
+body.rotate-portrait .asset-palette,
+body.rotate-portrait .zoom-controls,
+body.rotate-portrait .leaflet-container {
+  transform: rotate(-90deg);
+  transform-origin: center center;
+}
+body.rotate-portrait #map,
+body.rotate-portrait .leaflet-container {
+  width: 100vh !important;
+  height: 100vw !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  margin-top: -50vw !important;
+  margin-left: -50vh !important;
+  transform: rotate(-90deg) !important;
 }
 
+/* Rotate button — single, prominent */
 .rotate-btn {
   position: fixed;
   top: 64px;
@@ -3118,59 +3152,18 @@ body.is-rotated #rotationWrapper {
   background: #00d4f0;
   transform: scale(1.08);
 }
-.rotate-btn:active {
-  transform: scale(0.95);
-}
+.rotate-btn:active { transform: scale(0.95); }
 .rotate-btn.is-on {
   background: #ff9500;
   border-color: rgba(255,255,255,0.4);
   box-shadow: 0 0 20px rgba(255, 149, 0, 0.7);
 }
 
-/* Rotate everything EXCEPT the rotate button itself */
-body.is-rotated #rotationWrapper {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  width: 100vh;
-  height: 100vw;
-  transform: translate(-50%, -50%) rotate(-90deg);
-  transform-origin: center center;
-}
-
-body.is-rotated {
-  overflow: hidden;
-}
-
-/* Rotate button stays fixed regardless of rotation */
-
-
-
-
-@keyframes rotate-pulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(255, 149, 0, 0.6); }
-  50% { box-shadow: 0 0 24px rgba(255, 149, 0, 0.9); }
-}
-
-
-/* Rotate button active state */
-#rotateScreenBtn.is-on {
-  background: var(--accent) !important;
-  color: white !important;
-  box-shadow: 0 0 12px rgba(0, 184, 212, 0.5);
-}
-#rotateScreenBtn {
-  font-size: 18px;
-  min-width: 36px;
-}
-
 </style>
 </head>
 <body>
-<div id="rotationWrapper">
-
-
-  <button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
+<button class="rotate-btn" id="rotateScreenBtn" title="Rotate screen left">⟳</button>
+<button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
   <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
   <button class="pt-btn" data-pt="reset" title="Reset view">⌂</button>
   <span class="pt-divider"></span>
@@ -6670,7 +6663,7 @@ window.liveFlights = {
 
 
 // =====================================================================
-// SCREEN ROTATION
+// SCREEN ROTATION — toggles body.rotate-portrait class (proven old logic)
 // =====================================================================
 (function setupRotateScreen() {
   function setupRotate() {
@@ -6686,14 +6679,10 @@ window.liveFlights = {
         e.stopPropagation();
         e.stopImmediatePropagation();
       }
-      const isRotated = document.body.classList.toggle('is-rotated');
+      const isRotated = document.body.classList.toggle('rotate-portrait');
       btn.classList.toggle('is-on', isRotated);
       console.log('Rotation:', isRotated ? 'ON' : 'OFF');
       
-      // Force reflow
-      document.body.offsetHeight;
-      
-      // Invalidate map size after transition
       setTimeout(function() {
         if (typeof map !== 'undefined' && map.invalidateSize) {
           try { map.invalidateSize({pan: false}); } catch(e) {}
@@ -6704,7 +6693,6 @@ window.liveFlights = {
     btn.onclick = doRotate;
     btn.addEventListener('click', doRotate, true);
     btn.addEventListener('pointerdown', function(e) { e.stopPropagation(); }, true);
-    btn.addEventListener('touchstart', function(e) { e.stopPropagation(); }, true);
     
     if (typeof L !== 'undefined') {
       try {
@@ -6725,6 +6713,5 @@ window.liveFlights = {
 
 </script>
 
-</div>
 </body>
 </html>
