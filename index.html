@@ -3059,65 +3059,7 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 
 
 /* ===== PORTRAIT/VERTICAL ROTATION MODE ===== */
-body.rotate-portrait {
-  overflow: hidden;
-}
-body.rotate-portrait #map,
-body.rotate-portrait .toolbar,
-body.rotate-portrait .right-panels-stack,
-body.rotate-portrait .presenter-bar,
-body.rotate-portrait .bottom-strip,
-body.rotate-portrait .top-bar,
-body.rotate-portrait .brand-header,
-body.rotate-portrait .storyboard-panel,
-body.rotate-portrait .color-palette,
-body.rotate-portrait .asset-palette,
-body.rotate-portrait .zoom-controls,
-body.rotate-portrait .leaflet-container {
-  transform: rotate(90deg);
-  transform-origin: center center;
-  /* Swap dimensions: width = vh, height = vw */
-}
-body.rotate-portrait #map,
-body.rotate-portrait .leaflet-container {
-  width: 100vh !important;
-  height: 100vw !important;
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  margin-top: -50vw !important;
-  margin-left: -50vh !important;
-  transform: rotate(90deg) !important;
-}
-/* Rotate button styling */
-.rotate-portrait-btn {
-  background: rgba(0, 184, 212, 0.15);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  border-radius: 6px;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-.rotate-portrait-btn:hover {
-  background: var(--accent);
-  color: white;
-  transform: scale(1.05);
-}
-.rotate-portrait-btn.is-active {
-  background: #ff9500;
-  border-color: #ff9500;
-  color: white;
-}
-.rotate-portrait-btn svg {
-  width: 18px;
-  height: 18px;
-}
+
 
 
 
@@ -3137,7 +3079,7 @@ body.is-rotated #rotationWrapper {
   left: 50%;
   width: 100vh;
   height: 100vw;
-  transform: translate(-50%, -50%) rotate(-90deg);
+  transform: translate(-50%, -50%) rotate(90deg);
   transform-origin: center center;
 }
 
@@ -3277,14 +3219,7 @@ body.is-rotated {
       <button class="scenario-clear-btn" id="clearScenario">✕ Clear current scenario</button>
     </div>
   </div>
-  <button class="rotate-portrait-btn" id="rotatePortraitBtn" title="Rotate screen (Portrait/Vertical)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5" y="2" width="14" height="20" rx="2"/>
-      <path d="M9 18h6"/>
-      <circle cx="12" cy="6" r="0.5" fill="currentColor"/>
-    </svg>
-  </button>
-  <button class="top-bar-btn" id="saveBtn" title="Save map state to file">💾 Save</button>
+    <button class="top-bar-btn" id="saveBtn" title="Save map state to file">💾 Save</button>
   <button class="top-bar-btn" id="loadBtn" title="Load map state from file">📂 Load</button>
   <input type="file" id="loadFile" accept=".json" style="display:none">
   <button class="top-bar-btn" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
