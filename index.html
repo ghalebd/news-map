@@ -3310,37 +3310,105 @@ body.is-rotated .top-bar {
 }
 
 
-/* When rotated, keep toolbar visible and accessible */
+
+
+
+/* ===== ROTATION FIX — Keep ALL panels visible when body rotates ===== */
+/* When body is rotated +90deg, position:absolute gets caught in the rotated coordinate system.
+   We need elements visible in the physical viewport. */
+
 body.is-rotated .toolbar {
-  position: absolute !important;
+  position: fixed !important;
+  left: 8px !important;
+  top: 100px !important;
+  bottom: auto !important;
+  right: auto !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 1500 !important;
+  transform: none !important;
+}
+
+body.is-rotated .toolbar.is-collapsed {
+  position: fixed !important;
   left: 8px !important;
   top: 100px !important;
   z-index: 1500 !important;
-  display: flex !important;
+}
+
+body.is-rotated .right-panels-stack {
+  position: fixed !important;
+  right: 4px !important;
+  top: 60px !important;
+  bottom: auto !important;
+  left: auto !important;
+  max-height: 90vh !important;
+  z-index: 1500 !important;
   visibility: visible !important;
   opacity: 1 !important;
 }
 
-/* Same for collapsed toolbar */
-body.is-rotated .toolbar.is-collapsed {
-  left: 8px !important;
-  top: 100px !important;
-  z-index: 1500 !important;
+body.is-rotated .top-bar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1400 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
-/* Storyboard panel too */
-body.is-rotated .storyboard-panel {
-  z-index: 1500 !important;
-}
-
-/* Bottom strip */
-body.is-rotated .bottom-strip {
-  z-index: 1500 !important;
-}
-
-/* Brand header */
 body.is-rotated .brand-header {
+  position: fixed !important;
   z-index: 1500 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.is-rotated .storyboard-panel {
+  position: fixed !important;
+  bottom: 16px !important;
+  right: 8px !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 1500 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.is-rotated .bottom-strip {
+  position: fixed !important;
+  bottom: 4px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 1500 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.is-rotated .presenter-bar {
+  position: fixed !important;
+  top: 56px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 1450 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.is-rotated .zoom-controls {
+  position: fixed !important;
+  z-index: 1500 !important;
+}
+
+/* Rotate buttons stay visible - counter-rotate them */
+body.is-rotated #rotateScreenBtn,
+body.is-rotated #touchModeBtn {
+  position: fixed !important;
+  z-index: 99999 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 </style>
