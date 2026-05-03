@@ -3095,10 +3095,445 @@ body.hide-all-panels .custom-labels-panel { display: none !important; }
 /* Disable hover effects (which stick on touch screens) */
 /* Bigger close/delete buttons */
 /* When body rotated, ensure right panels stay visible */
-/* When body is rotated +90deg, position:absolute gets caught in the rotated coordinate system.
-   We need elements visible in the physical viewport. */
+</style>
+</head>
+<body>
+<button class="pt-btn" data-pt="zoom-in" title="Zoom in">+</button>
+  <button class="pt-btn" data-pt="zoom-out" title="Zoom out">−</button>
+  <button class="pt-btn" data-pt="reset" title="Reset view">⌂</button>
+  <span class="pt-divider"></span>
+  <button class="pt-btn" data-pt="prev" title="Previous step">◀</button>
+  <button class="pt-btn" data-pt="next" title="Next step">▶</button>
+  <span class="pt-step-info" id="ptStepInfo">—</span>
+  <span class="pt-divider"></span>
+  <button class="pt-btn" data-pt="capture" title="Capture step">●</button>
+  <button class="pt-btn" data-pt="hide-ui" title="Hide all UI">👁</button>
+</div>
+<div class="brand-header" id="brandHeader">
+  <img src="live_assets/aljazeera_logo.png" alt="Al Jazeera" class="brand-logo-img" draggable="false">
+</div>
 
-,
+<div class="presenter-bar" id="presenterBar">
+  <div class="pb-section pb-brand-section">
+    <div class="pb-handle" title="Drag">⋮</div>
+    <div class="pb-live-dot"></div>
+    <span class="pb-live-text">LIVE</span>
+  </div>
+
+  <div class="pb-section">
+    <button class="pb-btn" data-pb="zoom-in" title="Zoom in">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.6" y2="16.6"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    </button>
+    <button class="pb-btn" data-pb="zoom-out" title="Zoom out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.6" y2="16.6"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    </button>
+    <button class="pb-btn" data-pb="home" title="Reset view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+    </button>
+  </div>
+
+  <div class="pb-divider"></div>
+
+  <div class="pb-section">
+    <button class="pb-btn" data-pb="prev" title="Previous step (←)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="15,4 7,12 15,20"/></svg>
+    </button>
+    <span class="pb-step-display" id="pbStepDisplay">—</span>
+    <button class="pb-btn" data-pb="next" title="Next step (→)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="9,4 17,12 9,20"/></svg>
+    </button>
+    <button class="pb-btn pb-capture" data-pb="capture" title="Capture step">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+    </button>
+  </div>
+
+  <div class="pb-divider"></div>
+
+  <div class="pb-section">
+    <button class="pb-btn" data-pb="toggle-flights" title="Toggle live flights" id="pbFlights">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+    </button>
+    <button class="pb-btn" data-pb="toggle-ships" title="Toggle live ships" id="pbShips">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13.5L12 4l9 9.5-1 .5v6l-8 1-8-1v-6l-1-.5zM12 6.4L5.5 13l.5.3v5.4l6 .8 6-.8v-5.4l.5-.3L12 6.4z"/></svg>
+    </button>
+    <button class="pb-btn" data-pb="toggle-labels" title="Toggle place labels" id="pbLabels">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    </button>
+  </div>
+
+  <div class="pb-divider"></div>
+
+  <div class="pb-section">
+    <button class="pb-btn" data-pb="screenshot" title="Take screenshot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+    <button class="pb-btn" data-pb="hide-ui" title="Hide all UI (clean view)" id="pbHideUI">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button class="pb-btn" data-pb="fullscreen" title="Fullscreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>
+    </button>
+  </div>
+</div>
+
+
+
+<div id="map"></div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="logo"></div>
+    <div class="top-bar-spacer"></div>
+  <div class="scenario-wrap">
+    <button class="top-bar-btn" id="scenarioBtn">📋 Scenarios ▾</button>
+    <div class="scenario-menu" id="scenarioMenu">
+      <div class="scenario-menu-title">Pre-built Scenarios</div>
+      <div id="scenarioList"></div>
+      <button class="scenario-clear-btn" id="clearScenario">✕ Clear current scenario</button>
+    </div>
+  </div>
+    <button class="top-bar-btn" id="saveBtn" title="Save map state to file">💾 Save</button>
+  <button class="top-bar-btn" id="loadBtn" title="Load map state from file">📂 Load</button>
+  <input type="file" id="loadFile" accept=".json" style="display:none">
+  <button class="top-bar-btn" id="undoBtn" title="Undo (Ctrl+Z)">↶</button>
+  <button class="top-bar-btn" id="clearAllBtn">🗑</button>
+    <button class="top-bar-btn" id="hideUIBtn" title="Hide all panels (H)">⌷ Hide UI</button>
+  <button class="top-bar-btn primary" id="presenterBtn">▶ Presenter</button>
+</div>
+
+<button class="exit-presenter" id="exitPresenter">✕ Exit Presenter</button>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="panel-collapse-btn" data-collapse="toolbar" title="Collapse">−</button>
+  <button class="tool-btn active" data-tool="pan" title="Pan (V)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+    <div class="label">Pan</div><div class="shortcut">V</div>
+  </button>
+
+      <div class="color-picker-wrapper">
+        <button class="color-picker-btn" id="colorPickerBtn" title="Pick color"></button>
+        <div class="color-popup" id="colorPopup">
+          <div class="color-circle active" data-color="#ff3b30" style="background:#ff3b30"></div>
+          <div class="color-circle" data-color="#ff9500" style="background:#ff9500"></div>
+          <div class="color-circle" data-color="#ffcc00" style="background:#ffcc00"></div>
+          <div class="color-circle" data-color="#34c759" style="background:#34c759"></div>
+          <div class="color-circle" data-color="#5ac8fa" style="background:#5ac8fa"></div>
+          <div class="color-circle" data-color="#af52de" style="background:#af52de"></div>
+          <div class="color-circle" data-color="#ffffff" style="background:#ffffff"></div>
+          <div class="color-circle" data-color="#000000" style="background:#000000;border-color:#444"></div>
+        </div>
+      </div>
+        <button class="tool-btn" data-tool="asset" title="Military Asset (U)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L4 6v6c0 5 3.4 9.5 8 10 4.6-.5 8-5 8-10V6l-8-4z"/></svg>
+    <div class="label">Asset</div><div class="shortcut">U</div>
+  </button>
+  <button class="tool-btn" data-tool="animate" title="Animate Path (N)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="6 4 20 12 6 20 6 4"/></svg>
+    <div class="label">Animate</div><div class="shortcut">N</div>
+  </button>
+  <div class="toolbar-divider"></div>
+  <button class="tool-btn" data-tool="sketch" title="Sketch + Smooth (F)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/><path d="M14.06 6.19l3.75 3.75"/></svg>
+    <div class="label">Sketch</div><div class="shortcut">F</div>
+  </button>
+  <button class="tool-btn" data-tool="arrow" title="Arrow (A)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
+    <div class="label">Arrow</div><div class="shortcut">A</div>
+  </button>
+  <button class="tool-btn" data-tool="circle" title="Circle (C)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+    <div class="label">Circle</div><div class="shortcut">C</div>
+  </button>
+  <button class="tool-btn" data-tool="polygon" title="Area (P)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+      <polygon points="12 2 22 8 19 20 5 20 2 8"/></svg>
+    <div class="label">Area</div><div class="shortcut">P</div>
+  </button>
+  <button class="tool-btn" data-tool="textlabel" title="Add Text Label (Place Name)" data-shortcut="L">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+  </button>
+  <button class="tool-btn" data-tool="measure" title="Ruler (R)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18v12H3z"/><path d="M7 6v3M11 6v6M15 6v3M19 6v4"/></svg>
+    <div class="label">Ruler</div><div class="shortcut">R</div>
+  </button>
+  <div class="toolbar-divider"></div>
+  <button class="tool-btn" data-tool="country" title="Tap-Highlight Country (K)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+    <div class="label">Country</div><div class="shortcut">K</div>
+  </button>
+  <button class="tool-btn" data-tool="marker" title="Pin (M)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <div class="label">Pin</div><div class="shortcut">M</div>
+  </button>
+<div class="toolbar-divider"></div>
+  <button class="tool-btn" data-tool="erase" title="Erase (E)">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+    <div class="label">Erase</div><div class="shortcut">E</div>
+  </button>
+</div>
+
+
+<!-- ASSET PALETTE -->
+<div class="asset-palette" id="assetPalette">
+  <div class="asset-palette-title">Military Assets</div>
+  <div class="asset-grid" id="assetGrid"></div>
+</div>
+
+<!-- RIGHT-SIDE PANELS — flex stack to prevent overlap -->
+<div class="right-panels-stack" id="rightPanelsStack">
+<div class="layers-panel">
+  <button class="panel-collapse-btn" data-collapse="layers" title="Collapse">−</button>
+  <div class="layers-title">Map Style</div>
+  <button class="layer-btn active" data-layer="newsv2"><div class="layer-icon">📺</div><span>News <span style="font-size:9px;color:var(--text-dim);font-weight:600;letter-spacing:0.5px">CUSTOM</span></span></button>
+  <button class="layer-btn" data-layer="marine_dark"><div class="layer-icon">🌊</div><span>Marine</span></button>
+  <button class="layer-btn" data-layer="satellite"><div class="layer-icon">🛰️</div><span>Satellite</span></button>
+      <button class="layer-btn" data-layer="terrain"><span class="layer-emoji">⛰️</span>Terrain</button>
+      <button class="layer-btn" data-layer="topographic"><span class="layer-emoji">🗻</span>Topo</button>
+
+      <button class="layer-btn" data-layer="basic_dark"><span class="layer-emoji">⬛</span>Dark</button>
+      <button class="layer-btn" data-layer="toner"><span class="layer-emoji">⚫</span>Toner</button>
+      <button class="layer-btn" data-layer="streets_dark"><span class="layer-emoji">🌃</span>Streets</button>
+      <button class="layer-btn" data-layer="hybrid"><span class="layer-emoji">🛰️</span>Hybrid</button>
+      
+      <button class="layer-btn" data-layer="dataviz_dark"><span class="layer-emoji">📊</span>DataViz</button>
+      <button class="layer-btn" data-layer="positron_dark"><span class="layer-emoji">⚡</span>Positron</button>
+      <button class="layer-btn" data-layer="bright_dark"><span class="layer-emoji">🌌</span>Bright</button>
+      <button class="layer-btn" data-layer="satellite_hd"><span class="layer-emoji">🛰</span>Sat HD</button>
+</div>
+
+<div class="labels-panel" id="labelsPanel">
+  <button class="panel-collapse-btn" data-collapse="labels" title="Collapse">−</button>
+  <div class="labels-title">Map Labels</div>
+  <button class="label-toggle" data-labels="countries">
+    <div class="toggle-icon">🌐</div>
+    <span class="toggle-name">Countries</span>
+    <span class="toggle-state">Off</span>
+  </button>
+  <button class="label-toggle" data-labels="capitals">
+    <div class="toggle-icon">★</div>
+    <span class="toggle-name">Capitals</span>
+    <span class="toggle-state">Off</span>
+  </button>
+  <button class="label-toggle" data-labels="cities">
+    <div class="toggle-icon">📍</div>
+    <span class="toggle-name">Cities</span>
+    <span class="toggle-state">Off</span>
+  </button>
+
+  
+</div>
+
+<div class="live-tracking-panel" id="liveTrackingPanel">
+  <button class="panel-collapse-btn" data-collapse="liveTracking" title="Collapse">−</button>
+  <div class="ltp-handle" title="Drag">⋮</div>
+  <div class="ltp-title">LIVE TRACKING</div>
+  <button class="ltp-btn" id="shipsToggleBtn" title="Live AIS ship tracking">
+    <span class="ltp-icon">🚢</span>
+    <span class="ltp-label">Ships</span>
+    <span class="ltp-count" id="shipsCount" style="display:none">0</span>
+    <span class="ltp-state" id="aisStatus">OFF</span>
+  </button>
+  <button class="ltp-btn" id="flightsToggleBtn" title="Live aircraft tracking">
+    <span class="ltp-icon">✈️</span>
+    <span class="ltp-label">Flights</span>
+    <span class="ltp-count" id="flightsCount" style="display:none">0</span>
+    <span class="ltp-state" id="flightsStatus">OFF</span>
+  </button>
+</div>
+
+
+
+
+<!-- LABELS PANEL -->
+
+
+<!-- SHOW PANELS button (visible when all UI hidden) -->
+
+</div>
+
+
+<!-- TEXT LABEL MODAL -->
+<div class="text-label-modal" id="textLabelModal">
+  <h3>📝 Add Text Label</h3>
+  <input type="text" id="textLabelInput" placeholder="Enter place name..." maxlength="40" />
+  <div class="modal-buttons">
+    <button id="textLabelCancel">Cancel</button>
+    <button class="primary" id="textLabelOk">Add to Map</button>
+  </div>
+
+<!-- CUSTOM LABELS PANEL -->
+<div class="custom-labels-panel" id="customLabelsPanel">
+  <button class="panel-collapse-btn" data-collapse="customLabels" title="Collapse">−</button>
+  <div class="ltp-handle" title="Drag">⋮</div>
+  <div class="ltp-title">CUSTOM LABELS</div>
+  <input type="text" id="customLabelInput" placeholder="Type place name..." maxlength="40">
+  <div class="clp-row">
+    <select id="customLabelStyle" class="clp-select">
+      <option value="default">Default</option>
+      <option value="city">City</option>
+      <option value="country">Country</option>
+      <option value="capital">Capital ★</option>
+      <option value="region">Region</option>
+      <option value="warning">Warning ⚠</option>
+    </select>
+  </div>
+  <button class="clp-btn-add" id="addCustomLabelBtn">+ Click on Map</button>
+  <div class="clp-list" id="customLabelsList"></div>
+</div>
+
+</div>
+
+<!-- ZOOM CONTROLS -->
+<div class="zoom-controls">
+  <button class="zoom-btn" id="zoomIn">+</button>
+  <button class="zoom-btn" id="zoomOut">−</button>
+  <button class="zoom-btn" id="resetView" style="font-size:18px">⌂</button>
+</div>
+
+<!-- ANIMATE PANEL -->
+<div class="animate-panel" id="animatePanel">
+  <div class="anim-progress">
+    <div class="anim-step active" id="animStep1"></div>
+    <div class="anim-step" id="animStep2"></div>
+    <div class="anim-step" id="animStep3"></div>
+  </div>
+  <div class="anim-msg" id="animMessage"><span class="step-num">1</span>Tap any asset on the map to select it for animation</div>
+  <div class="anim-controls">
+    <div class="anim-control">
+      <span>Speed</span>
+      <div class="anim-speed" id="animSpeed">
+        <button data-speed="slow">Slow</button>
+        <button class="active" data-speed="medium">Med</button>
+        <button data-speed="fast">Fast</button>
+      </div>
+    </div>
+    <label class="anim-toggle" id="animLoop">
+      <input type="checkbox" id="animLoopChk">
+      <span>↻ Loop</span>
+    </label>
+    <label class="anim-toggle checked" id="animTrail">
+      <input type="checkbox" id="animTrailChk" checked>
+      <span>⤳ Trail</span>
+    </label>
+    <div class="anim-spacer"></div>
+    <button class="btn-secondary" id="animClear" disabled>Reset</button>
+    <button class="btn-primary" id="animPlay" disabled>▶ Play</button>
+    <button class="btn-secondary" id="animClose">Close</button>
+  </div>
+</div>
+
+<!-- EDIT PANEL -->
+<div class="edit-panel" id="editPanel">
+  <div class="edit-row">
+    <input type="text" class="edit-input" id="markerLabel" placeholder="Marker title (e.g. Tehran, HQ, Front line)">
+  </div>
+  <div class="edit-row">
+    <textarea class="edit-input" id="markerDesc" placeholder="Notes / details (optional)…" rows="2" style="resize:none"></textarea>
+  </div>
+  <div class="edit-row">
+    <span class="edit-label">Icon</span>
+    <div class="icon-picker" id="iconPicker">
+      <div class="icon-pick selected" data-icon="📍">📍</div>
+      <div class="icon-pick" data-icon="⚠️">⚠️</div>
+      <div class="icon-pick" data-icon="🔥">🔥</div>
+      <div class="icon-pick" data-icon="💥">💥</div>
+      <div class="icon-pick" data-icon="🎯">🎯</div>
+      <div class="icon-pick" data-icon="🛡️">🛡️</div>
+      <div class="icon-pick" data-icon="🏛️">🏛️</div>
+      <div class="icon-pick" data-icon="⭐">⭐</div>
+      <div class="icon-pick" data-icon="🏠">🏠</div>
+      <div class="icon-pick" data-icon="💎">💎</div>
+    </div>
+  </div>
+  <div class="edit-row" style="justify-content:flex-end">
+    <button class="btn-danger" id="deleteMarker">🗑 Delete</button>
+    <div style="flex:1"></div>
+    <button class="btn-secondary" id="cancelEdit">Cancel</button>
+    <button class="btn-primary" id="saveMarker">Save</button>
+  </div>
+</div>
+
+
+<!-- ===== STORYBOARD PANEL ===== -->
+<div class="storyboard-panel" id="storyboardPanel">
+  <div class="storyboard-header">
+    <span class="storyboard-title">🎬 Storyboard</span>
+    <button class="storyboard-btn primary" id="sbCapture" title="Capture current map state as a new step">+ Capture</button>
+    <button class="storyboard-btn" id="sbPrev" title="Previous step (← arrow)">◀ Prev</button>
+    <button class="storyboard-btn" id="sbNext" title="Next step (→ arrow)">Next ▶</button>
+    <button class="storyboard-btn" id="sbUpdate" title="Overwrite current step with map state">⟳ Update</button>
+    <button class="storyboard-btn danger" id="sbClear" title="Delete all steps">Clear all</button>
+    <div style="flex:1"></div>
+    <button class="panel-collapse-btn" title="Collapse">✕</button>
+  </div>
+  <div class="storyboard-list" id="sbList"></div>
+</div>
+
+<!-- ASSET ROTATION + LABEL PANEL -->
+<div class="asset-edit-panel" id="assetEditPanel">
+  <div class="asset-edit-row">
+    <span class="asset-label-text">Label</span>
+    <input type="text" class="asset-edit-input" id="assetLabelInput" placeholder="Asset name (e.g. F-35 Squadron)">
+  </div>
+  <div class="asset-edit-row">
+    <span class="asset-label-text">Rotate</span>
+    <div class="rot-slider-wrap">
+      <input type="range" class="rot-slider" id="assetRotSlider" min="0" max="359" value="0">
+      <span class="rot-value" id="assetRotValue">0°</span>
+    </div>
+  </div>
+  <div class="asset-edit-row">
+    <span class="asset-label-text">Quick</span>
+    <div class="rot-quick-btns">
+      <button class="rot-btn" data-rot-add="-45" title="Rotate left 45°">↺ 45°</button>
+      <button class="rot-btn" data-rot-add="-15" title="Rotate left 15°">↺ 15°</button>
+      <button class="rot-btn" data-rot-set="0" title="Reset rotation">⟲ 0°</button>
+      <button class="rot-btn" data-rot-add="15" title="Rotate right 15°">15° ↻</button>
+      <button class="rot-btn" data-rot-add="45" title="Rotate right 45°">45° ↻</button>
+      <button class="rot-btn" data-rot-add="180" title="Flip 180°">⇄ 180°</button>
+    </div>
+  </div>
+  <div class="asset-edit-row" style="justify-content:flex-end">
+    <button class="btn-danger" id="assetDelete">🗑 Delete</button>
+    <div style="flex:1"></div>
+    <button class="btn-secondary" id="assetCancel">Close</button>
+    <button class="btn-primary" id="assetSave">Save</button>
+  </div>
+</div>
+
+
+<!-- DOCK -->
+<div class="presenter-dock" id="presenterDock"></div>
+
+<!-- INSTRUCTIONS / STATUS / TOAST -->
+<div class="instructions" id="instructions"></div>
+<div class="status-bar" id="statusBar">📍 -- , -- · Z 5</div>
+<div class="toast" id="toast"></div>
+
+<script src="lib/leaflet.min.js"></script>
+<script>
+// =====================================================================
+// CONFIG
+// =====================================================================
+const MAPTILER_KEY = 'tnFJbEP9ELhQqkA6rPY2';
+const COUNTRIES_URL = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_0_countries.geojson';
+const PLACES_URL = 'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_10m_populated_places_simple.geojson';
+
+// =====================================================================
+// MILITARY ASSET SVGS
+// =====================================================================
+const ASSETS = {
+  attack_helicopter: { name: 'Attack Heli', cat: 'air', svg: `<img loading="lazy" decoding="async" src="assets/attack_helicopter.png" style="width:100%;height:100%;pointer-events:none;-webkit-user-drag:none;user-select:none;" draggable="false" alt="Attack Helicopter">` },
   attack_helicopter_2: { name: 'Attack Heli v2', cat: 'air', svg: `<img loading="lazy" decoding="async" src="assets/attack_helicopter_2.png" style="width:100%;height:100%;pointer-events:none;-webkit-user-drag:none;user-select:none;" draggable="false" alt="Attack Helicopter (v2)">` },
   black_military_drone: { name: 'Mil Drone', cat: 'air', svg: `<img loading="lazy" decoding="async" src="assets/black_military_drone.png" style="width:100%;height:100%;pointer-events:none;-webkit-user-drag:none;user-select:none;" draggable="false" alt="Black Military Drone">` },
   black_military_drone_2: { name: 'Mil Drone v2', cat: 'air', svg: `<img loading="lazy" decoding="async" src="assets/black_military_drone_2.png" style="width:100%;height:100%;pointer-events:none;-webkit-user-drag:none;user-select:none;" draggable="false" alt="Black Military Drone (v2)">` },
