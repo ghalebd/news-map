@@ -3411,6 +3411,38 @@ body.is-rotated #touchModeBtn {
   opacity: 1 !important;
 }
 
+
+/* When screen is rotated, counter-rotate placed assets so they appear correct */
+body.is-rotated .asset-wrapper {
+  transform: rotate(calc(var(--rot, 0deg) - 90deg)) scale(var(--zoom-scale, 1)) !important;
+}
+body.is-rotated .leaflet-marker-icon .asset-wrapper {
+  transform: rotate(calc(var(--rot, 0deg) - 90deg)) scale(var(--zoom-scale, 1)) !important;
+}
+/* Counter-rotate ship and plane markers */
+body.is-rotated .ship-icon-wrapper {
+  transform: rotate(calc(var(--rot, 0deg) - 90deg)) scale(var(--zoom-scale, 1)) !important;
+}
+body.is-rotated .plane-marker {
+  transform: rotate(calc(var(--rot, 0deg) - 90deg)) scale(var(--zoom-scale, 1)) !important;
+}
+/* Counter-rotate custom map labels so text stays readable */
+body.is-rotated .custom-map-label-inner {
+  transform: rotate(-90deg);
+  transform-origin: center center;
+}
+/* Counter-rotate Leaflet popup content */
+body.is-rotated .leaflet-popup-content-wrapper,
+body.is-rotated .leaflet-popup-tip {
+  transform: rotate(-90deg);
+}
+/* Counter-rotate country/capital/city labels */
+body.is-rotated .country-label,
+body.is-rotated .capital-label,
+body.is-rotated .city-label {
+  transform: rotate(-90deg) !important;
+}
+
 </style>
 </head>
 <body>
