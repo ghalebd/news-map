@@ -3166,10 +3166,42 @@ body.is-rotated #rotateScreenBtn:active {
   transform: rotate(-90deg) scale(0.95);
 }
 
+
+#touchModeBtn {
+  position: fixed;
+  top: 64px;
+  left: 70px;
+  z-index: 99999;
+  width: 44px; height: 44px;
+  background: #5856d6;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 16px rgba(88, 86, 214, 0.4);
+  user-select: none;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1;
+}
+#touchModeBtn:hover { background: #6864e6; }
+#touchModeBtn:active { transform: scale(0.95); }
+#touchModeBtn.is-on {
+  background: #34c759;
+  box-shadow: 0 0 20px rgba(52, 199, 89, 0.7);
+}
+
 </style>
 </head>
 <body>
-<button id="rotateScreenBtn" title="Rotate screen" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);window.__screenRotated=on;console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
+<button id="rotateScreenBtn" title="Rotate screen" onclick="(function(b){var on=document.body.classList.toggle('is-rotated');b.classList.toggle('is-on',on);console.log('Rotated:',on);setTimeout(function(){if(typeof map!=='undefined'&&map.invalidateSize){try{map.invalidateSize();}catch(e){}}},400);})(this);return false;">⟳</button>
+<button id="touchModeBtn" title="Touch mode (remap touch coords)" onclick="(function(b){window.__touchRemap=!window.__touchRemap;b.classList.toggle('is-on',window.__touchRemap);console.log('Touch remap:',window.__touchRemap);})(this);return false;">✋</button>
 <script>
 // Coordinate remap for rotated screen
 (function() {
@@ -3179,7 +3211,7 @@ body.is-rotated #rotateScreenBtn:active {
   // Solution: remap clientX/clientY before events reach Leaflet
   
   function remap(e) {
-    if (!window.__screenRotated) return;
+    if (!window.__touchRemap) return;
     if (e.__remapped) return;
     
     const w = window.innerWidth;
@@ -3187,13 +3219,9 @@ body.is-rotated #rotateScreenBtn:active {
     const ox = e.clientX;
     const oy = e.clientY;
     
-    // For rotate(90deg) CSS on body: visual coordinates need to swap
-    // Event arrives with clientX/Y in viewport coords (post-rotation visual)
-    // But Leaflet's container has its own coord system rotated -90
-    // We pre-rotate the event coordinates 90deg counterclockwise:
-    // newX = oy, newY = w - ox
-    const nx = w - oy;
-    const ny = ox;
+    // Try formula 4: nx = oy, ny = h - ox
+    const nx = oy;
+    const ny = h - ox;
     
     try {
       Object.defineProperty(e, 'clientX', { value: nx, configurable: true, writable: false });
@@ -3207,8 +3235,8 @@ body.is-rotated #rotateScreenBtn:active {
         const t = e.touches[i];
         const tox = t.clientX, toy = t.clientY;
         try {
-          Object.defineProperty(t, 'clientX', { value: w - toy, configurable: true });
-          Object.defineProperty(t, 'clientY', { value: tox, configurable: true });
+          Object.defineProperty(t, 'clientX', { value: toy, configurable: true });
+          Object.defineProperty(t, 'clientY', { value: h - tox, configurable: true });
         } catch(err) {}
       }
     }
