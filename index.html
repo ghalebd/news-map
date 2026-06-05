@@ -5293,6 +5293,8 @@ function removeFeature(f) {
   if (animTarget === f) resetAnimateWorkflow();
 }
 function undoLast() {
+  // Delegate to v2 undo (with redo support) if loaded
+  if (typeof window.__v2Undo === 'function') { window.__v2Undo(); return; }
   const last = history.pop();
   if (!last) return;
   if (last.action === 'add') removeFeature(last.feature);

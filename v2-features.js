@@ -26,7 +26,7 @@ window.removeFeature = function(f) {
   _origRemoveFeature(f);
 };
 
-window.undoLast = function() {
+window.__v2Undo = function() {
   const last = history.pop();
   if (!last) return;
   if (last.action === 'add') {
@@ -41,6 +41,7 @@ window.undoLast = function() {
   }
   updateUndoRedoButtons();
 };
+window.undoLast = window.__v2Undo;
 
 window.redoLast = function() {
   const item = redoStack.pop();
