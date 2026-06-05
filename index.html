@@ -465,7 +465,7 @@ body {
 .asset-wrapper {
   width: 72px; height: 72px;
   display: flex; align-items: center; justify-content: center;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
+  filter: drop-shadow(0 6px 5px rgba(0,0,0,0.55)) drop-shadow(0 2px 2px rgba(0,0,0,0.4));
   pointer-events: auto;
   position: relative;
   transform: rotate(var(--rot, 0deg)) scale(var(--zoom-scale, 1));
@@ -3240,6 +3240,54 @@ body.touch-mode .clp-list {
 body.hide-all-panels #v2Panel { display: none !important; }
 .v2-text-marker { background: none !important; border: none !important; }
 
+
+/* ============== PROFESSIONAL UI LAYOUT (v2) ============== */
+/* Right panels stack: push DOWN below v2 panel */
+.right-panels-stack {
+  top: 478px !important;
+}
+/* v2 Panel: top-right, above right-panels */
+#v2Panel {
+  top: 70px !important;
+  right: 8px !important;
+}
+/* Zoom controls: move to BOTTOM-LEFT, away from right panels */
+.zoom-controls {
+  left: 8px !important;
+  right: auto !important;
+  bottom: 120px !important;
+  top: auto !important;
+}
+/* Presenter bar: below top-bar, not overlapping it */
+.presenter-bar {
+  top: 70px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+/* Storyboard: bottom-center ABOVE bottom-strip */
+.storyboard-panel {
+  bottom: 92px !important;
+  top: auto !important;
+}
+/* Bottom strip: very bottom center */
+.bottom-strip {
+  bottom: 12px !important;
+  top: auto !important;
+}
+/* Touch mode button: fix broken position → top-left corner stacked below brand */
+#touchModeBtn {
+  top: 70px !important;
+  left: 56px !important;
+  right: auto !important;
+  width: 44px !important;
+  height: 44px !important;
+  font-size: 22px !important;
+}
+/* Toolbar: ensure it starts below top-bar */
+.toolbar {
+  top: 76px !important;
+}
+
 </style>
 </head>
 <body>
@@ -3949,7 +3997,7 @@ const map = L.map('map', {
 
 const mtUrl = (s) => `https://api.maptiler.com/maps/${s}/{z}/{x}/{y}@2x.png?key=${MAPTILER_KEY}`;
 const mtAtt = '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
-const lopt = { attribution: mtAtt, tileSize: 512, zoomOffset: -1, crossOrigin: true, maxZoom: 22, keepBuffer: 12, updateWhenIdle: false, updateWhenZooming: false, fadeAnimation: false, zoomAnimation: true };
+const lopt = { attribution: mtAtt, tileSize: 512, zoomOffset: -1, crossOrigin: true, maxZoom: 22, keepBuffer: 24, updateWhenIdle: false, updateWhenZooming: false, fadeAnimation: false, zoomAnimation: true, updateInterval: 50, maxNativeZoom: 20 };
 // "newsv2" is Dida's custom News V2 style on MapTiler Cloud — designed for the broadcast map
 const NEWS_V2_STYLE_ID = '019caada-7e48-7379-ba36-e8967f4fcc92';
 // CartoDB tile URL helper (free, fast CDN, no API key, no-label variants)
@@ -3958,7 +4006,12 @@ const cartoOpt = Object.assign({}, lopt, {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: 'abcd',
   tileSize: 256,    // CartoDB tiles are 256, not 512
-  zoomOffset: 0
+  zoomOffset: 0,
+  preferCanvas: true,
+  inertia: true,
+  inertiaDeceleration: 2500,
+  zoomSnap: 0.5,
+  wheelPxPerZoomLevel: 80
 });
 const layers = {
   dataviz_dark:  L.tileLayer('https://api.maptiler.com/maps/dataviz-dark/{z}/{x}/{y}.png?key=tnFJbEP9ELhQqkA6rPY2', { maxZoom: 22, attribution: 'MapTiler' }),

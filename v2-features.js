@@ -492,3 +492,37 @@ console.log('[v2] All features loaded ✓');
 
 }); // whenReady
 })();
+
+
+// ============================================================
+// v2.1 — ZOOM-AWARE ASSET SIZING + UI CLEANUP
+// ============================================================
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map) cb(); else setTimeout(()=>ready(cb),300); }
+ready(function(){
+
+  // ---- Zoom-aware sizing: assets scale with map zoom ----
+  // At reference zoom they're 1.0; smaller when zoomed out, bigger when zoomed in (clamped)
+  const REF_ZOOM = 6;
+  function updateAssetScale() {
+    const z = map.getZoom();
+    // scale grows ~12% per zoom level, clamped 0.45–1.8
+    let scale = Math.pow(1.12, z - REF_ZOOM);
+    scale = Math.max(0.45, Math.min(1.8, scale));
+    document.documentElement.style.setProperty('--zoom-scale', scale.toFixed(3));
+  }
+  map.on('zoom zoomend', updateAssetScale);
+  updateAssetScale();
+  console.log('[v2.1] Zoom-aware asset sizing ready');
+
+  // ---- Map background already dark (#0a0e1a) so loading tiles blend in ----
+  // Force leaflet tile container to inherit dark bg (no white flash)
+  const style = document.createElement('style');
+  style.textContent = '.leaflet-tile-container { background: #0a0e1a; } ' +
+    '.leaflet-tile { will-change: transform; }';
+  document.head.appendChild(style);
+  console.log('[v2.1] Tile loading blend ready');
+
+});
+})();
