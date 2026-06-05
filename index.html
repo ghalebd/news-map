@@ -3248,14 +3248,19 @@ body.hide-all-panels #v2Panel { display: none !important; }
 
 
 /* ============== PROFESSIONAL UI LAYOUT (v2) ============== */
-/* Right panels stack: push DOWN below v2 panel */
+/* Right panels stack: full right column (v2 panel moved to left) */
 .right-panels-stack {
-  top: 478px !important;
-}
-/* v2 Panel: top-right, above right-panels */
-#v2Panel {
   top: 70px !important;
   right: 8px !important;
+  max-height: calc(100vh - 90px) !important;
+}
+/* v2 Panel: LEFT side, below brand header (frees right column) */
+#v2Panel {
+  top: 64px !important;
+  left: 14px !important;
+  right: auto !important;
+  max-height: calc(100vh - 84px) !important;
+  overflow-y: auto !important;
 }
 /* Zoom controls: move to BOTTOM-LEFT, away from right panels */
 .zoom-controls {
