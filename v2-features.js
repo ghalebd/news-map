@@ -625,3 +625,68 @@ ready(function(){
 
 });
 })();
+
+// ============================================================
+// v3.1 — DYNAMIC PANEL MANAGER
+// Opening one panel collapses others · studio panel collapse
+// ============================================================
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map&&document.getElementById('v2Panel')) cb(); else setTimeout(()=>ready(cb),300); }
+ready(function(){
+
+  // --- Add collapse button to Studio (v2) panel header ---
+  const v2head = document.querySelector('#v2Panel .v2-head');
+  if (v2head && !v2head.querySelector('.v2-collapse-btn')) {
+    const btn = document.createElement('button');
+    btn.className = 'v2-collapse-btn';
+    btn.innerHTML = '−';
+    btn.title = 'Collapse';
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      const p = document.getElementById('v2Panel');
+      p.classList.toggle('is-collapsed');
+      btn.innerHTML = p.classList.contains('is-collapsed') ? '+' : '−';
+    };
+    v2head.appendChild(btn);
+    // Click collapsed panel to expand
+    document.getElementById('v2Panel').addEventListener('click', function(e){
+      const p = this;
+      if (p.classList.contains('is-collapsed')) {
+        p.classList.remove('is-collapsed');
+        btn.innerHTML = '−';
+      }
+    });
+  }
+
+  // --- DYNAMIC ACCORDION: opening one right-panel collapses the others ---
+  // Applies to the right-column panels (layers, labels, live-tracking)
+  const rightPanels = ['.layers-panel', '.labels-panel', '.live-tracking-panel'];
+  function getRightPanelEls() {
+    return rightPanels.map(s => document.querySelector(s)).filter(Boolean);
+  }
+
+  // Watch for expand actions: when a collapsed panel is expanded, collapse siblings
+  function collapseSiblings(except) {
+    getRightPanelEls().forEach(p => {
+      if (p !== except && !p.classList.contains('is-collapsed')) {
+        p.classList.add('is-collapsed');
+      }
+    });
+  }
+
+  // Intercept clicks on collapsed panels (expand) → collapse the others
+  document.addEventListener('click', function(e) {
+    const panel = e.target.closest('.layers-panel, .labels-panel, .live-tracking-panel');
+    if (!panel) return;
+    // If this panel was just expanded (no longer collapsed), collapse siblings
+    setTimeout(function() {
+      if (!panel.classList.contains('is-collapsed')) {
+        collapseSiblings(panel);
+      }
+    }, 10);
+  }, false);
+
+  console.log('[v3.1] Dynamic panel manager ready');
+});
+})();

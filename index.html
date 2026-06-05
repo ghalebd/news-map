@@ -3306,14 +3306,14 @@ body.hide-all-panels #v2Panel { display: none !important; }
    Unified modern broadcast UI — Apple-style liquid glass
    ============================================================ */
 :root {
-  --lg-blur: 24px;
-  --lg-blur-strong: 40px;
-  --lg-bg: rgba(18, 22, 34, 0.55);
-  --lg-bg-hover: rgba(30, 38, 58, 0.65);
+  --lg-blur: 40px;
+  --lg-blur-strong: 60px;
+  --lg-bg: rgba(16, 20, 32, 0.42);
+  --lg-bg-hover: rgba(34, 44, 68, 0.55);
   --lg-bg-active: rgba(0, 184, 212, 0.22);
-  --lg-border: rgba(255, 255, 255, 0.12);
-  --lg-border-hi: rgba(255, 255, 255, 0.28);
-  --lg-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 0.5px rgba(255,255,255,0.06);
+  --lg-border: rgba(255, 255, 255, 0.18);
+  --lg-border-hi: rgba(255, 255, 255, 0.4);
+  --lg-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 0.5px rgba(255,255,255,0.1), inset 0 -20px 40px rgba(0,0,0,0.15);
   --lg-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0,0,0,0.3);
   --lg-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0,0,0,0.4);
   --lg-accent: #00d4ee;
@@ -3332,8 +3332,8 @@ body.hide-all-panels #v2Panel { display: none !important; }
 #labelsPanel, #customLabelsPanel, #liveTrackingPanel, #presenterDock,
 .panel, .glass-panel, .right-panel, .dock {
   background: var(--lg-bg) !important;
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(180%);
-  backdrop-filter: blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(var(--lg-blur)) saturate(200%) brightness(1.05);
   border: 0.5px solid var(--lg-border) !important;
   box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
   border-radius: var(--lg-radius) !important;
@@ -3356,8 +3356,8 @@ body.hide-all-panels #v2Panel { display: none !important; }
 .storyboard-btn, .ltp-btn, .clp-btn, .panel-collapse-btn,
 .scenario-clear-btn, .color-picker-btn, .label-toggle {
   background: var(--lg-bg) !important;
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%);
-  backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
+  backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
   border: 0.5px solid var(--lg-border) !important;
   border-radius: var(--lg-radius-sm) !important;
   color: var(--lg-text) !important;
@@ -3440,8 +3440,8 @@ body.hide-all-panels #v2Panel { display: none !important; }
 /* ---------- TOOL DOCK: floating liquid bar ---------- */
 .tool-dock, #toolDock, .dock-container {
   background: var(--lg-bg) !important;
-  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(180%);
-  backdrop-filter: blur(var(--lg-blur-strong)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(200%) brightness(1.05);
   border: 0.5px solid var(--lg-border) !important;
   box-shadow: var(--lg-shadow-lg), var(--lg-inner-glow) !important;
   border-radius: var(--lg-radius-pill) !important;
@@ -3484,8 +3484,8 @@ body.hide-all-panels #v2Panel { display: none !important; }
   border-radius: var(--lg-radius-sm) !important;
   background: var(--lg-bg) !important;
   border: 0.5px solid var(--lg-border) !important;
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%);
-  backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
+  backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
   color: var(--lg-text) !important;
 }
 .toolbar .tool-btn.active, .tool-btn.tool-btn.active,
@@ -3499,6 +3499,91 @@ body.hide-all-panels #v2Panel { display: none !important; }
 .dock-btn.dock-btn:hover {
   background: var(--lg-bg-hover) !important;
   border-color: var(--lg-border-hi) !important;
+}
+
+/* ============================================================
+   v3.1 — PANEL FIXES: collapse btn, no grey bg, dynamics
+   ============================================================ */
+
+/* ---- Elegant collapse button (bigger, glassy, no grey box) ---- */
+.panel-collapse-btn {
+  width: 26px !important; height: 26px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 0.5px solid transparent !important;
+  color: var(--lg-text-dim) !important;
+  font-size: 15px !important;
+  top: 8px !important; right: 8px !important;
+  transition: all var(--lg-transition) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+.panel-collapse-btn:hover {
+  background: rgba(0,212,238,0.18) !important;
+  border-color: var(--lg-accent) !important;
+  color: var(--lg-accent) !important;
+  transform: none !important;
+}
+
+/* ---- Remove grey background behind ALL panel icon areas ---- */
+.layer-icon, .label-icon, .ltp-icon, .panel-icon,
+.layers-title, .labels-title, .panel-title {
+  background: transparent !important;
+}
+/* Layer/label/tracking buttons: remove inner grey, keep glass only on button */
+.layer-btn .layer-icon, .ltp-btn .ltp-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---- Collapsed panel = neat glass pill ---- */
+.is-collapsed {
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center; justify-content: center;
+}
+.is-collapsed .panel-collapse-btn { display: none !important; }
+
+/* ---- Studio panel (v2Panel) collapse support ---- */
+#v2Panel.is-collapsed {
+  width: 48px !important; height: 48px !important;
+  min-height: 48px !important; max-height: 48px !important;
+}
+#v2Panel.is-collapsed > * { display: none !important; }
+#v2Panel.is-collapsed::after {
+  content: '⚙';
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+  font-size: 22px; color: var(--lg-accent);
+}
+/* Studio panel header gets a collapse button */
+.v2-head {
+  position: relative;
+  cursor: pointer;
+  padding-right: 34px !important;
+}
+.v2-collapse-btn {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  width: 24px; height: 24px; border-radius: 7px;
+  background: transparent; border: 0.5px solid transparent;
+  color: var(--lg-text-dim); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--lg-transition);
+}
+.v2-collapse-btn:hover { background: rgba(0,212,238,0.18); color: var(--lg-accent); border-color: var(--lg-accent); }
+
+/* Smooth panel transitions for dynamic open/close */
+#v2Panel, .layers-panel, .labels-panel, .live-tracking-panel, .storyboard-panel {
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), height 0.3s cubic-bezier(0.4,0,0.2,1),
+              max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s, transform 0.3s !important;
 }
 
 </style>
