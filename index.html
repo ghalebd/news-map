@@ -3586,6 +3586,44 @@ body.hide-all-panels #v2Panel { display: none !important; }
               max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s, transform 0.3s !important;
 }
 
+/* ============================================================
+   v3.2 — RIGHT PANEL FIXES: wider, accordion default
+   ============================================================ */
+/* Wider, comfortable panels */
+.layers-panel, .labels-panel, .live-tracking-panel {
+  width: 210px !important;
+  padding: 34px 12px 12px !important;
+}
+/* Panel titles cleaner */
+.layers-title, .labels-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  text-transform: uppercase;
+  color: var(--lg-text-dim) !important;
+  margin-bottom: 8px !important;
+}
+/* Layer buttons: full width rows, comfortable */
+.layer-btn {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 9px 11px !important;
+  font-size: 12px !important;
+  margin-bottom: 4px !important;
+}
+/* Collapsed right-panel pill shows an icon */
+.layers-panel.is-collapsed::after { content: '🗺'; }
+.labels-panel.is-collapsed::after { content: '🏷'; }
+.live-tracking-panel.is-collapsed::after { content: '📡'; }
+.layers-panel.is-collapsed, .labels-panel.is-collapsed, .live-tracking-panel.is-collapsed {
+  font-size: 22px;
+}
+.layers-panel.is-collapsed::after, .labels-panel.is-collapsed::after,
+.live-tracking-panel.is-collapsed::after {
+  display:flex; align-items:center; justify-content:center; width:100%; height:100%;
+}
+
 </style>
 </head>
 <body>

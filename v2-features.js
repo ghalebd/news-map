@@ -690,3 +690,21 @@ ready(function(){
   console.log('[v3.1] Dynamic panel manager ready');
 });
 })();
+
+// ============================================================
+// v3.2 — Right panels: collapse all but first by default
+// ============================================================
+(function(){
+'use strict';
+function ready(cb){ if(document.querySelector('.labels-panel')) cb(); else setTimeout(()=>ready(cb),300); }
+ready(function(){
+  // On load, collapse labels & live-tracking (keep layers/Map Style open)
+  setTimeout(function(){
+    const labels = document.querySelector('.labels-panel');
+    const live = document.querySelector('.live-tracking-panel');
+    if (labels && !labels.classList.contains('is-collapsed')) labels.classList.add('is-collapsed');
+    if (live && !live.classList.contains('is-collapsed')) live.classList.add('is-collapsed');
+  }, 800);
+  console.log('[v3.2] Right panels default-collapsed (accordion)');
+});
+})();
