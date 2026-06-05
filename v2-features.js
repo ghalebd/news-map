@@ -90,88 +90,7 @@ document.addEventListener('keydown', function(e) {
 console.log('[v2] Undo/Redo ready');
 
 
-// ============================================================
-// 2. TEXT TOOL — type text, click on map, box auto-expands to text
-// ============================================================
-let textPlacementActive = false;
-
-function makeTextMarker(latlng, text, opts) {
-  opts = opts || {};
-  const bg = opts.bg || 'rgba(15,18,30,0.85)';
-  const color = opts.color || '#ffffff';
-  const fontSize = opts.fontSize || 15;
-  const html = '<div class="v2-text-box" style="' +
-    'background:' + bg + ';color:' + color + ';font-size:' + fontSize + 'px;' +
-    'padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);' +
-    'font-weight:600;white-space:nowrap;font-family:Inter,system-ui,sans-serif;' +
-    'box-shadow:0 4px 16px rgba(0,0,0,0.5);pointer-events:auto;' +
-    'letter-spacing:0.3px;display:inline-block;">' +
-    escapeHtml(text) + '</div>';
-  const icon = L.divIcon({ className: 'v2-text-marker', html: html, iconSize: null, iconAnchor: [0, 0] });
-  const m = L.marker(latlng, { icon: icon, draggable: true }).addTo(map);
-  m.options.featureType = 'text';
-  m.options.textContent = text;
-  m.options.textStyle = opts;
-  m.on('click', function(ev) {
-    L.DomEvent.stopPropagation(ev);
-    if (currentTool === 'erase') { window.removeFeature(m); return; }
-    editTextMarker(m);
-  });
-  features.push(m);
-  history.push({ action: 'add', feature: m });
-  return m;
-}
-
-function editTextMarker(m) {
-  const cur = m.options.textContent || '';
-  const next = prompt('Edit text:', cur);
-  if (next === null) return;
-  if (next.trim() === '') { window.removeFeature(m); return; }
-  m.options.textContent = next;
-  const el = m._icon && m._icon.querySelector('.v2-text-box');
-  if (el) el.textContent = next;
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, function(c) {
-    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
-  });
-}
-
-// Wire text input box + activate placement
-function activateTextTool() {
-  const input = document.getElementById('v2TextInput');
-  const txt = (input && input.value.trim()) || '';
-  if (!txt) {
-    if (input) { input.focus(); input.placeholder = 'Type text first…'; }
-    return;
-  }
-  textPlacementActive = true;
-  if (typeof setTool === 'function') setTool('pan');
-  map.getContainer().style.cursor = 'crosshair';
-  const btn = document.getElementById('v2TextPlaceBtn');
-  if (btn) { btn.classList.add('is-on'); btn.textContent = '✓ Click map'; }
-}
-
-map.on('click', function(e) {
-  if (!textPlacementActive) return;
-  const input = document.getElementById('v2TextInput');
-  const txt = (input && input.value.trim()) || '';
-  if (txt) {
-    const colorEl = document.getElementById('v2TextColor');
-    makeTextMarker(e.latlng, txt, {
-      color: colorEl ? colorEl.value : '#ffffff',
-      fontSize: parseInt((document.getElementById('v2TextSize') || {}).value || '15', 10)
-    });
-  }
-  textPlacementActive = false;
-  map.getContainer().style.cursor = '';
-  if (input) input.value = '';
-  const btn = document.getElementById('v2TextPlaceBtn');
-  if (btn) { btn.classList.remove('is-on'); btn.textContent = '+ Click on Map'; }
-});
-
-console.log('[v2] Text tool ready');
+// (Text tool removed — using existing native textlabel tool instead)
 
 
 // ============================================================
@@ -420,15 +339,7 @@ function buildV2Panel() {
         '<button id="v2RedoBtn" class="v2-btn" title="Redo (Ctrl+Y)">↷ Redo</button>' +
       '</div>' +
     '</div>' +
-    '<div class="v2-section">' +
-      '<div class="v2-label">TEXT LABEL</div>' +
-      '<input id="v2TextInput" class="v2-input" type="text" placeholder="Type place / event name…" maxlength="60">' +
-      '<div class="v2-row">' +
-        '<input id="v2TextColor" type="color" value="#ffffff" class="v2-color" title="Text color">' +
-        '<input id="v2TextSize" type="number" value="15" min="10" max="40" class="v2-num" title="Font size">' +
-        '<button id="v2TextPlaceBtn" class="v2-btn v2-accent">+ Click on Map</button>' +
-      '</div>' +
-    '</div>' +
+    
     '<div class="v2-section">' +
       '<div class="v2-label">MOTION PATH</div>' +
       '<button id="v2PathBtn" class="v2-btn v2-wide">✈ Draw Motion Path</button>' +
@@ -440,22 +351,38 @@ function buildV2Panel() {
         '<button id="v2LogoBtn" class="v2-btn" title="Toggle logo">▣ Logo</button>' +
         '<button id="v2LogoCornerBtn" class="v2-btn v2-small" title="Move logo corner">⟳</button>' +
       '</div>' +
+    '</div>' +
+    '<div class="v2-section">' +
+      '<div class="v2-label">RANGE RING</div>' +
+      '<button id="v2RingBtn" class="v2-btn v2-wide" title="Click map, enter radius in km">⊕ Draw Range Ring</button>' +
+      '<div class="v2-hint">Click on map, then enter radius in km.</div>' +
+    '</div>' +
+    '<div class="v2-section">' +
+      '<div class="v2-label">SESSION</div>' +
+      '<div class="v2-row">' +
+        '<button id="v2AutoSaveBtn" class="v2-btn" title="Auto-save to browser every 10s">⟳ Auto-save</button>' +
+        '<button id="v2RestoreBtn" class="v2-btn" title="Restore last auto-save">↺ Restore</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="v2-section">' +
+      '<div class="v2-label">PRESETS</div>' +
+      '<button id="v2SavePresetBtn" class="v2-btn v2-wide" title="Save current map as a preset">★ Save Preset</button>' +
+      '<div id="v2PresetList" class="v2-preset-list"></div>' +
     '</div>';
   document.body.appendChild(panel);
 
   // Wire buttons
   document.getElementById('v2UndoBtn').onclick = window.undoLast;
   document.getElementById('v2RedoBtn').onclick = window.redoLast;
-  document.getElementById('v2TextPlaceBtn').onclick = activateTextTool;
   document.getElementById('v2PathBtn').onclick = window.startMotionPath;
   document.getElementById('v2SpotBtn').onclick = function() { window.toggleSpotlight(this); };
   document.getElementById('v2LogoBtn').onclick = function() { window.toggleLogoBug(this); };
   document.getElementById('v2LogoCornerBtn').onclick = window.cycleLogoCorner;
-
-  // Enter key in text input = place mode
-  document.getElementById('v2TextInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); activateTextTool(); }
-  });
+  document.getElementById('v2RingBtn').onclick = function() { window.startRangeRing(this); };
+  document.getElementById('v2AutoSaveBtn').onclick = function() { window.toggleAutoSave(this); };
+  document.getElementById('v2RestoreBtn').onclick = window.restoreAutoSave;
+  document.getElementById('v2SavePresetBtn').onclick = window.savePreset;
+  if (window.__refreshPresetList) setTimeout(window.__refreshPresetList, 500);
 
   updateUndoRedoButtons();
   makeDraggable(panel, panel.querySelector('.v2-head'));
@@ -524,6 +451,177 @@ ready(function(){
     '.leaflet-tile { will-change: transform; }';
   document.head.appendChild(style);
   console.log('[v2.1] Tile loading blend ready');
+
+});
+})();
+
+
+// ============================================================
+// v2.2 — RANGE RINGS · ROTATION SNAP · AUTO-SAVE · PRESETS
+// ============================================================
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map&&typeof features!=='undefined') cb(); else setTimeout(()=>ready(cb),300); }
+ready(function(){
+
+  // ========================================================
+  // A. RANGE RINGS — circle with a specified radius in km
+  // ========================================================
+  let ringMode = false;
+  window.startRangeRing = function(btn) {
+    ringMode = !ringMode;
+    if (btn) btn.classList.toggle('is-on', ringMode);
+    map.getContainer().style.cursor = ringMode ? 'crosshair' : '';
+    if (typeof setTool === 'function' && ringMode) setTool('pan');
+  };
+
+  map.on('click', function(e) {
+    if (!ringMode) return;
+    const kmStr = prompt('Ring radius in kilometers (e.g. 50, 100, 300):', '100');
+    if (kmStr === null) return;
+    const km = parseFloat(kmStr);
+    if (isNaN(km) || km <= 0) return;
+    const color = (window.currentColor) || '#00b8d4';
+    const ring = L.circle(e.latlng, {
+      radius: km * 1000,
+      color: color, weight: 2.5, fillColor: color, fillOpacity: 0.08,
+      dashArray: '6 6'
+    }).addTo(map);
+    ring.options.featureType = 'rangering';
+    // Label showing the radius
+    const lbl = L.marker(e.latlng, {
+      icon: L.divIcon({
+        className: 'range-ring-label',
+        html: '<div style="background:rgba(15,18,30,0.9);color:'+color+';padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:Inter,sans-serif;white-space:nowrap;border:1px solid '+color+';">⊕ '+km+' km</div>',
+        iconAnchor: [0, 0]
+      }),
+      interactive: false
+    }).addTo(map);
+    ring._label = lbl;
+    ring.on('click', function(){ if (window.currentTool === 'erase') { map.removeLayer(lbl); window.removeFeature(ring); } });
+    features.push(ring); history.push({ action: 'add', feature: ring });
+    features.push(lbl); history.push({ action: 'add', feature: lbl });
+  });
+  console.log('[v2.2] Range rings ready');
+
+  // ========================================================
+  // B. ROTATION SNAP — snap asset rotation to 15/30/45/90
+  //    Hold Shift while using slider to free-rotate
+  // ========================================================
+  const rotSlider = document.getElementById('assetRotSlider');
+  if (rotSlider) {
+    let snapEnabled = true;
+    // Add a snap toggle near the slider
+    rotSlider.addEventListener('input', function(e) {
+      if (!snapEnabled || e.shiftKey) return;
+      let v = parseInt(rotSlider.value, 10);
+      const snapped = Math.round(v / 15) * 15;  // snap to 15° increments
+      if (snapped !== v) {
+        rotSlider.value = snapped;
+        const valEl = document.getElementById('assetRotValue');
+        if (valEl) valEl.textContent = snapped + '°';
+        // Trigger rotation update
+        rotSlider.dispatchEvent(new Event('input', { bubbles: false, __snapped: true }));
+      }
+    }, true);  // capture phase to snap before the main handler
+    console.log('[v2.2] Rotation snap (15°) ready — hold Shift for free rotate');
+  }
+
+  // ========================================================
+  // C. AUTO-SAVE to localStorage (optional, toggleable)
+  // ========================================================
+  const AUTOSAVE_KEY = 'newsmap_autosave_v1';
+  const AUTOSAVE_ENABLED_KEY = 'newsmap_autosave_enabled';
+  let autoSaveEnabled = localStorage.getItem(AUTOSAVE_ENABLED_KEY) === 'true';
+
+  function doAutoSave() {
+    if (!autoSaveEnabled) return;
+    try {
+      if (typeof serializeState === 'function') {
+        const state = serializeState();
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+      }
+    } catch(e) { console.warn('autosave failed', e); }
+  }
+  // Auto-save every 10 seconds when enabled
+  setInterval(doAutoSave, 10000);
+  // Also save on feature changes
+  map.on('moveend', doAutoSave);
+
+  window.toggleAutoSave = function(btn) {
+    autoSaveEnabled = !autoSaveEnabled;
+    localStorage.setItem(AUTOSAVE_ENABLED_KEY, autoSaveEnabled ? 'true' : 'false');
+    if (btn) btn.classList.toggle('is-on', autoSaveEnabled);
+    if (autoSaveEnabled) { doAutoSave(); }
+  };
+
+  window.restoreAutoSave = function() {
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (!saved) { alert('No auto-saved map found.'); return; }
+      if (typeof loadState === 'function') {
+        loadState(JSON.parse(saved));
+      }
+    } catch(e) { alert('Restore failed: ' + e.message); }
+  };
+  console.log('[v2.2] Auto-save ready (enabled: ' + autoSaveEnabled + ')');
+
+  // ========================================================
+  // D. PRESETS — save/load named scenarios in localStorage
+  // ========================================================
+  const PRESETS_KEY = 'newsmap_presets_v1';
+  function getPresets() {
+    try { return JSON.parse(localStorage.getItem(PRESETS_KEY) || '{}'); }
+    catch(e) { return {}; }
+  }
+  function savePresets(p) { localStorage.setItem(PRESETS_KEY, JSON.stringify(p)); }
+
+  window.savePreset = function() {
+    const name = prompt('Save current map as preset — enter a name:');
+    if (!name) return;
+    if (typeof serializeState !== 'function') { alert('Cannot serialize.'); return; }
+    const presets = getPresets();
+    const state = serializeState();
+    if (window.storyboard && window.storyboard.steps && window.storyboard.steps.length) {
+      state.storyboard = { currentStep: window.storyboard.current, steps: window.storyboard.steps };
+    }
+    presets[name] = { saved: Date.now(), state: state };
+    savePresets(presets);
+    refreshPresetList();
+    alert('✓ Preset "' + name + '" saved');
+  };
+
+  window.loadPreset = function(name) {
+    const presets = getPresets();
+    if (!presets[name]) return;
+    if (typeof loadState === 'function') loadState(presets[name].state);
+  };
+
+  window.deletePreset = function(name) {
+    const presets = getPresets();
+    delete presets[name];
+    savePresets(presets);
+    refreshPresetList();
+  };
+
+  function refreshPresetList() {
+    const list = document.getElementById('v2PresetList');
+    if (!list) return;
+    const presets = getPresets();
+    const names = Object.keys(presets);
+    if (names.length === 0) {
+      list.innerHTML = '<div class="v2-hint">No presets saved yet.</div>';
+      return;
+    }
+    list.innerHTML = names.map(function(n) {
+      return '<div class="v2-preset-item">' +
+        '<span class="v2-preset-name" onclick="window.loadPreset(\'' + n.replace(/'/g,"\\'") + '\')">' + n + '</span>' +
+        '<button class="v2-preset-del" onclick="window.deletePreset(\'' + n.replace(/'/g,"\\'") + '\')">✕</button>' +
+        '</div>';
+    }).join('');
+  }
+  window.__refreshPresetList = refreshPresetList;
+  console.log('[v2.2] Presets ready');
 
 });
 })();

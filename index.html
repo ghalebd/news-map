@@ -3239,6 +3239,12 @@ body.touch-mode .clp-list {
 }
 body.hide-all-panels #v2Panel { display: none !important; }
 .v2-text-marker { background: none !important; border: none !important; }
+.v2-preset-list { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto; }
+.v2-preset-item { display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.25); border-radius: 6px; padding: 2px 4px 2px 8px; }
+.v2-preset-name { flex: 1; font-size: 11px; color: var(--text, #e8edf5); cursor: pointer; padding: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-preset-name:hover { color: var(--accent, #00b8d4); }
+.v2-preset-del { flex: 0 0 22px; height: 22px; background: rgba(255,80,80,0.15); border: none; border-radius: 5px; color: #ff7b7b; cursor: pointer; font-size: 11px; line-height: 1; }
+.v2-preset-del:hover { background: rgba(255,80,80,0.35); }
 
 
 /* ============== PROFESSIONAL UI LAYOUT (v2) ============== */
