@@ -3471,6 +3471,31 @@ body.hide-all-panels #v2Panel { display: none !important; }
   pointer-events: none;
 }
 
+/* ---------- SPECIFICITY BOOST (beat compound legacy selectors) ---------- */
+/* Doubled class = higher specificity, later in cascade = wins */
+.tool-btn.tool-btn, .dock-btn.dock-btn, .bs-btn.bs-btn, .pb-btn.pb-btn,
+.layer-btn.layer-btn, .zoom-btn.zoom-btn, .top-bar-btn.top-bar-btn,
+.v2-btn.v2-btn, .pt-btn.pt-btn, .storyboard-btn.storyboard-btn {
+  border-radius: var(--lg-radius-sm) !important;
+  background: var(--lg-bg) !important;
+  border: 0.5px solid var(--lg-border) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  color: var(--lg-text) !important;
+}
+.toolbar .tool-btn.active, .tool-btn.tool-btn.active,
+.dock-btn.dock-btn.active, .layer-btn.layer-btn.active,
+.bs-btn.bs-btn.active {
+  background: linear-gradient(135deg, rgba(0,212,238,0.30), rgba(0,184,212,0.18)) !important;
+  border-color: var(--lg-accent) !important;
+  box-shadow: var(--lg-accent-glow), var(--lg-inner-glow), inset 0 0 12px rgba(0,212,238,0.25) !important;
+}
+.toolbar .tool-btn:hover, .tool-btn.tool-btn:hover,
+.dock-btn.dock-btn:hover {
+  background: var(--lg-bg-hover) !important;
+  border-color: var(--lg-border-hi) !important;
+}
+
 </style>
 </head>
 <body>
