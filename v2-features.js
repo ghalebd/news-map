@@ -708,3 +708,24 @@ ready(function(){
   console.log('[v3.2] Right panels default-collapsed (accordion)');
 });
 })();
+
+// ============================================================
+// v3.3 — Wrap map-style layer buttons into a 2-col grid
+// ============================================================
+(function(){
+'use strict';
+function ready(cb){ if(document.querySelector('.layers-panel')) cb(); else setTimeout(()=>ready(cb),300); }
+ready(function(){
+  setTimeout(function(){
+    const panel = document.querySelector('.layers-panel');
+    if (!panel || panel.querySelector('.layers-grid-wrap')) return;
+    const btns = Array.from(panel.querySelectorAll('.layer-btn'));
+    if (btns.length < 4) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'layers-grid-wrap';
+    btns[0].parentNode.insertBefore(wrap, btns[0]);
+    btns.forEach(b => wrap.appendChild(b));
+    console.log('[v3.3] Layer buttons gridded (' + btns.length + ')');
+  }, 900);
+});
+})();
