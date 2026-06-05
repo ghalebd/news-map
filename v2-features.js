@@ -626,106 +626,31 @@ ready(function(){
 });
 })();
 
-// ============================================================
-// v3.1 — DYNAMIC PANEL MANAGER
-// Opening one panel collapses others · studio panel collapse
-// ============================================================
-(function() {
-'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&document.getElementById('v2Panel')) cb(); else setTimeout(()=>ready(cb),300); }
-ready(function(){
 
-  // --- Add collapse button to Studio (v2) panel header ---
+
+
+// ============================================================
+// Studio (v2) panel — collapse button (standalone)
+// ============================================================
+(function(){
+'use strict';
+function ready(cb){ if(document.getElementById('v2Panel')&&document.querySelector('#v2Panel .v2-head')) cb(); else setTimeout(()=>ready(cb),300); }
+ready(function(){
   const v2head = document.querySelector('#v2Panel .v2-head');
-  if (v2head && !v2head.querySelector('.v2-collapse-btn')) {
-    const btn = document.createElement('button');
-    btn.className = 'v2-collapse-btn';
-    btn.innerHTML = '−';
-    btn.title = 'Collapse';
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      const p = document.getElementById('v2Panel');
-      p.classList.toggle('is-collapsed');
-      btn.innerHTML = p.classList.contains('is-collapsed') ? '+' : '−';
-    };
-    v2head.appendChild(btn);
-    // Click collapsed panel to expand
-    document.getElementById('v2Panel').addEventListener('click', function(e){
-      const p = this;
-      if (p.classList.contains('is-collapsed')) {
-        p.classList.remove('is-collapsed');
-        btn.innerHTML = '−';
-      }
-    });
-  }
-
-  // --- DYNAMIC ACCORDION: opening one right-panel collapses the others ---
-  // Applies to the right-column panels (layers, labels, live-tracking)
-  const rightPanels = ['.layers-panel', '.labels-panel', '.live-tracking-panel'];
-  function getRightPanelEls() {
-    return rightPanels.map(s => document.querySelector(s)).filter(Boolean);
-  }
-
-  // Watch for expand actions: when a collapsed panel is expanded, collapse siblings
-  function collapseSiblings(except) {
-    getRightPanelEls().forEach(p => {
-      if (p !== except && !p.classList.contains('is-collapsed')) {
-        p.classList.add('is-collapsed');
-      }
-    });
-  }
-
-  // Intercept clicks on collapsed panels (expand) → collapse the others
-  document.addEventListener('click', function(e) {
-    const panel = e.target.closest('.layers-panel, .labels-panel, .live-tracking-panel');
-    if (!panel) return;
-    // If this panel was just expanded (no longer collapsed), collapse siblings
-    setTimeout(function() {
-      if (!panel.classList.contains('is-collapsed')) {
-        collapseSiblings(panel);
-      }
-    }, 10);
-  }, false);
-
-  console.log('[v3.1] Dynamic panel manager ready');
-});
-})();
-
-// ============================================================
-// v3.2 — Right panels: collapse all but first by default
-// ============================================================
-(function(){
-'use strict';
-function ready(cb){ if(document.querySelector('.labels-panel')) cb(); else setTimeout(()=>ready(cb),300); }
-ready(function(){
-  // On load, collapse labels & live-tracking (keep layers/Map Style open)
-  setTimeout(function(){
-    const labels = document.querySelector('.labels-panel');
-    const live = document.querySelector('.live-tracking-panel');
-    if (labels && !labels.classList.contains('is-collapsed')) labels.classList.add('is-collapsed');
-    if (live && !live.classList.contains('is-collapsed')) live.classList.add('is-collapsed');
-  }, 800);
-  console.log('[v3.2] Right panels default-collapsed (accordion)');
-});
-})();
-
-// ============================================================
-// v3.3 — Wrap map-style layer buttons into a 2-col grid
-// ============================================================
-(function(){
-'use strict';
-function ready(cb){ if(document.querySelector('.layers-panel')) cb(); else setTimeout(()=>ready(cb),300); }
-ready(function(){
-  setTimeout(function(){
-    const panel = document.querySelector('.layers-panel');
-    if (!panel || panel.querySelector('.layers-grid-wrap')) return;
-    const btns = Array.from(panel.querySelectorAll('.layer-btn'));
-    if (btns.length < 4) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'layers-grid-wrap';
-    btns[0].parentNode.insertBefore(wrap, btns[0]);
-    btns.forEach(b => wrap.appendChild(b));
-    console.log('[v3.3] Layer buttons gridded (' + btns.length + ')');
-  }, 900);
+  if (!v2head || v2head.querySelector('.v2-collapse-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'v2-collapse-btn';
+  btn.innerHTML = '−'; btn.title = 'Collapse';
+  btn.onclick = function(e){
+    e.stopPropagation();
+    const p = document.getElementById('v2Panel');
+    p.classList.toggle('is-collapsed');
+    btn.innerHTML = p.classList.contains('is-collapsed') ? '+' : '−';
+  };
+  v2head.appendChild(btn);
+  document.getElementById('v2Panel').addEventListener('click', function(){
+    if (this.classList.contains('is-collapsed')) { this.classList.remove('is-collapsed'); btn.innerHTML='−'; }
+  });
+  console.log('[v4] Studio collapse button ready');
 });
 })();

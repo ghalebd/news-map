@@ -3586,83 +3586,160 @@ body.hide-all-panels #v2Panel { display: none !important; }
               max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s, transform 0.3s !important;
 }
 
+
+</style>
+<style id="panel-system-v4">
 /* ============================================================
-   v3.2 — RIGHT PANEL FIXES: wider, accordion default
+   PANEL SYSTEM v4 — CLEAN REBUILD
+   Compact · dynamic · accordion · no clutter · unified
+   This file OVERRIDES all legacy panel CSS.
    ============================================================ */
-/* Wider, comfortable panels */
-.layers-panel, .labels-panel, .live-tracking-panel {
-  width: 210px !important;
-  padding: 34px 12px 12px !important;
-}
-/* Panel titles cleaner */
-.layers-title, .labels-title {
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.6px !important;
-  text-transform: uppercase;
-  color: var(--lg-text-dim) !important;
-  margin-bottom: 8px !important;
-}
-/* Layer buttons: full width rows, comfortable */
-.layer-btn {
-  width: 100% !important;
-  justify-content: flex-start !important;
-  gap: 8px !important;
-  padding: 9px 11px !important;
-  font-size: 12px !important;
-  margin-bottom: 4px !important;
-}
-/* Collapsed right-panel pill shows an icon */
-.layers-panel.is-collapsed::after { content: '🗺'; }
-.labels-panel.is-collapsed::after { content: '🏷'; }
-.live-tracking-panel.is-collapsed::after { content: '📡'; }
-.layers-panel.is-collapsed, .labels-panel.is-collapsed, .live-tracking-panel.is-collapsed {
-  font-size: 22px;
-}
-.layers-panel.is-collapsed::after, .labels-panel.is-collapsed::after,
-.live-tracking-panel.is-collapsed::after {
-  display:flex; align-items:center; justify-content:center; width:100%; height:100%;
+
+/* ---- Right rail container: clean vertical stack ---- */
+#rightPanelsStack {
+  position: fixed !important;
+  top: 64px !important;
+  right: 12px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 232px !important;
+  max-height: calc(100vh - 84px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  overflow: visible !important;
+  z-index: 1000 !important;
+  padding: 0 !important;
 }
 
-/* ============================================================
-   v3.3 — Compact map-style grid (shorten tall layers panel)
-   ============================================================ */
-/* Map style layers as 2-column grid */
-.layers-panel {
-  display: flex; flex-direction: column;
+/* ---- Panel card: ONE glass surface, no nested backgrounds ---- */
+.np-panel {
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+  border: 0.5px solid var(--lg-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+  overflow: hidden !important;
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.2s !important;
+  position: relative !important;
 }
-.layers-panel .layer-btn {
-  width: 100% !important;
+
+/* ---- Panel header: title + chevron, draggable ---- */
+.np-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 11px 12px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  border-bottom: 0.5px solid transparent;
+  transition: border-color 0.2s;
 }
-/* Group the layer buttons into a 2-col grid via a wrapper-less approach:
-   make layer-btns flow in a grid */
-.layers-panel {
-  --grid-on: 1;
+.np-panel.np-open .np-head { border-bottom-color: var(--lg-border) !important; }
+.np-head-icon { font-size: 16px !important; line-height: 1 !important; width: 20px; text-align: center; flex: 0 0 auto; }
+.np-head-title {
+  flex: 1 !important;
+  font-size: 11.5px !important; font-weight: 700 !important;
+  letter-spacing: 0.7px !important; text-transform: uppercase !important;
+  color: var(--lg-text) !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.layers-grid-wrap {
+.np-head-chevron {
+  font-size: 11px !important; color: var(--lg-text-dim) !important;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+  flex: 0 0 auto;
+}
+.np-panel.np-open .np-head-chevron { transform: rotate(180deg) !important; }
+.np-head:hover .np-head-title { color: var(--lg-accent) !important; }
+.np-head:hover .np-head-chevron { color: var(--lg-accent) !important; }
+
+/* ---- Panel body: collapses cleanly ---- */
+.np-body {
+  max-height: 0 !important;
+  overflow: hidden !important;
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), padding 0.32s !important;
+  padding: 0 12px !important;
+}
+.np-panel.np-open .np-body {
+  max-height: 60vh !important;
+  overflow-y: auto !important;
+  padding: 10px 12px 12px !important;
+}
+
+/* ---- Unified emoji size in buttons (FIX: consistent icon size) ---- */
+.np-body .layer-icon, .np-body .layer-emoji,
+.np-body .toggle-icon, .np-body .ltp-icon,
+.np-emoji {
+  font-size: 15px !important;
+  width: 20px !important; height: 20px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  flex: 0 0 auto !important;
+  background: none !important;
+  line-height: 1 !important;
+}
+
+/* ---- Map-style grid: 2 columns, compact ---- */
+.np-body .layers-grid-wrap {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
-  gap: 5px !important;
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 2px;
+  gap: 6px !important;
 }
-.layers-grid-wrap .layer-btn {
+.np-body .layers-grid-wrap .layer-btn {
   flex-direction: column !important;
-  justify-content: center !important;
-  align-items: center !important;
-  text-align: center;
-  padding: 8px 4px !important;
-  font-size: 10.5px !important;
-  gap: 3px !important;
-  min-height: 52px;
+  align-items: center !important; justify-content: center !important;
+  text-align: center !important;
+  gap: 4px !important;
+  padding: 9px 4px !important;
+  font-size: 10px !important;
+  min-height: 50px !important;
+  border-radius: 11px !important;
 }
-.layers-grid-wrap .layer-btn .layer-icon,
-.layers-grid-wrap .layer-btn .layer-emoji { font-size: 16px !important; }
-/* Label toggles also more compact */
-.label-toggle {
-  padding: 7px 10px !important;
-  font-size: 11px !important;
+.np-body .layers-grid-wrap .layer-btn span { white-space: nowrap; }
+
+/* ---- Label toggles: clean rows ---- */
+.np-body .label-toggle {
+  display: flex !important; align-items: center !important; gap: 9px !important;
+  width: 100% !important; padding: 9px 11px !important;
+  font-size: 11.5px !important; margin-bottom: 5px !important;
+  border-radius: 11px !important;
+}
+.np-body .label-toggle:last-child { margin-bottom: 0 !important; }
+.np-body .toggle-name { flex: 1 !important; text-align: left !important; }
+.np-body .toggle-state {
+  font-size: 9px !important; font-weight: 700 !important; letter-spacing: 0.5px;
+  color: var(--lg-text-dim) !important; text-transform: uppercase;
+}
+.np-body .label-toggle.active .toggle-state { color: var(--lg-accent) !important; }
+
+/* ---- Live tracking buttons ---- */
+.np-body .ltp-btn {
+  display: flex !important; align-items: center !important; gap: 9px !important;
+  width: 100% !important; padding: 10px 11px !important;
+  font-size: 11.5px !important; margin-bottom: 6px !important;
+  border-radius: 11px !important;
+}
+.np-body .ltp-state, .np-body .ltp-count {
+  font-size: 9px !important; font-weight: 700 !important;
+  margin-left: auto !important;
+}
+
+/* ---- Hide legacy collapse buttons & handles inside new system ---- */
+.np-panel .panel-collapse-btn, .np-panel .ltp-handle,
+.np-panel .layers-title, .np-panel .labels-title, .np-panel .ltp-title {
+  display: none !important;
+}
+
+/* ---- KILL all legacy grey backgrounds behind sub-elements ---- */
+.np-body * { background-color: transparent; }
+.np-body .layer-btn, .np-body .label-toggle, .np-body .ltp-btn {
+  background: var(--lg-bg) !important;
+}
+.np-body .layer-btn.active, .np-body .label-toggle.active, .np-body .ltp-btn.active {
+  background: linear-gradient(135deg, rgba(0,212,238,0.30), rgba(0,184,212,0.16)) !important;
+  border-color: var(--lg-accent) !important;
+  box-shadow: var(--lg-accent-glow), inset 0 0 10px rgba(0,212,238,0.2) !important;
 }
 
 </style>
@@ -7334,5 +7411,97 @@ window.toggleTouchMode = function(btn) {
 </script>
 
 <script src="v2-features.js"></script>
+<script id="panel-system-v4-js">
+/* ============================================================
+   PANEL SYSTEM v4 — JS controller
+   Restructures existing panels into clean accordion cards.
+   Compact · dynamic (one open at a time) · draggable
+   ============================================================ */
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map&&document.getElementById('rightPanelsStack')) cb(); else setTimeout(()=>ready(cb),250); }
+
+ready(function() {
+  setTimeout(buildPanelSystem, 700);
+
+  function buildPanelSystem() {
+    const stack = document.getElementById('rightPanelsStack');
+    if (!stack || stack.dataset.v4built) return;
+
+    // Define the three panels: selector, icon, title
+    const defs = [
+      { sel: '.layers-panel',        icon: '🗺', title: 'Map Style',     gridLayers: true },
+      { sel: '.labels-panel',        icon: '🏷', title: 'Map Labels' },
+      { sel: '.live-tracking-panel', icon: '📡', title: 'Live Tracking' }
+    ];
+
+    defs.forEach(function(def, idx) {
+      const orig = stack.querySelector(def.sel);
+      if (!orig) return;
+
+      // Build new card
+      const card = document.createElement('div');
+      card.className = 'np-panel';
+      card.dataset.panel = def.title;
+
+      const head = document.createElement('div');
+      head.className = 'np-head';
+      head.innerHTML =
+        '<span class="np-head-icon">' + def.icon + '</span>' +
+        '<span class="np-head-title">' + def.title + '</span>' +
+        '<span class="np-head-chevron">▾</span>';
+
+      const body = document.createElement('div');
+      body.className = 'np-body';
+
+      // Move original panel's functional children into body
+      // (skip legacy collapse buttons / titles / handles — CSS hides them anyway)
+      Array.from(orig.childNodes).forEach(function(node) {
+        if (node.nodeType === 1) {
+          const cl = node.classList;
+          if (cl && (cl.contains('panel-collapse-btn') || cl.contains('ltp-handle') ||
+                     cl.contains('layers-title') || cl.contains('labels-title') ||
+                     cl.contains('ltp-title'))) return;
+        }
+        body.appendChild(node);
+      });
+
+      // For Map Style: wrap layer buttons in a grid
+      if (def.gridLayers) {
+        const btns = Array.from(body.querySelectorAll('.layer-btn'));
+        if (btns.length) {
+          const wrap = document.createElement('div');
+          wrap.className = 'layers-grid-wrap';
+          btns[0].parentNode.insertBefore(wrap, btns[0]);
+          btns.forEach(b => wrap.appendChild(b));
+        }
+      }
+
+      card.appendChild(head);
+      card.appendChild(body);
+
+      // Replace original with card
+      orig.parentNode.replaceChild(card, orig);
+
+      // First panel open by default
+      if (idx === 0) card.classList.add('np-open');
+
+      // Header click = accordion toggle (open this, close others)
+      head.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const willOpen = !card.classList.contains('np-open');
+        // Close all
+        stack.querySelectorAll('.np-panel').forEach(p => p.classList.remove('np-open'));
+        if (willOpen) card.classList.add('np-open');
+      });
+    });
+
+    stack.dataset.v4built = '1';
+    console.log('[Panel v4] Clean accordion system built');
+  }
+});
+})();
+
+</script>
 </body>
 </html>
