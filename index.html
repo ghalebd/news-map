@@ -3900,23 +3900,29 @@ body.hide-all-panels #v2Panel { display: none !important; }
 }
 
 /* statusBar vs bottomStrip: stack status ABOVE strip on narrow screens */
-@media (max-width: 900px) {
-  #v2Panel { 
-    left: 60px !important; 
-    width: 180px !important;
-    max-height: calc(100vh - 360px) !important;
-  }
-  .presenter-bar { 
-    max-width: calc(100vw - 130px) !important;
-    left: 60px !important;
+@media (max-width: 1100px) {
+  /* Presenter bar stays full-width at very top */
+  .presenter-bar {
+    left: 56px !important;
+    right: 12px !important;
+    max-width: none !important;
+    width: auto !important;
     transform: none !important;
+    top: 68px !important;
+  }
+  /* Side panels start BELOW the presenter bar (no top:70 collision) */
+  #v2Panel {
+    left: 56px !important;
+    top: 118px !important;
+    width: 190px !important;
+    max-height: calc(100vh - 240px) !important;
+  }
+  .right-panels-stack {
+    top: 118px !important;
+    right: 12px !important;
+    max-height: calc(100vh - 240px) !important;
   }
   #statusBar { bottom: 56px !important; }
-  .right-panels-stack { 
-    top: auto !important; 
-    bottom: 100px !important;
-    max-height: 50vh !important;
-  }
 }
 
 /* Very narrow / portrait: collapse studio panel by default, stack vertically */
