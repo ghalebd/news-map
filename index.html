@@ -3803,6 +3803,49 @@ body.hide-all-panels #v2Panel { display: none !important; }
 .v2-row { display: flex !important; gap: 6px !important; }
 .v2-row .v2-btn { flex: 1 !important; padding: 0 6px !important; }
 
+/* ============================================================
+   v4.2 — Grip handles, uniform collapse btns, collapsed bars
+   ============================================================ */
+/* Drag grip */
+.upb-grip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 28px; flex: 0 0 auto;
+  color: var(--lg-text-dim); cursor: grab;
+  font-size: 12px; letter-spacing: -2px;
+  border-radius: 7px; margin-right: 4px;
+  transition: all var(--lg-transition);
+}
+.upb-grip:hover { color: var(--lg-accent); background: rgba(0,212,238,0.12); }
+.upb-grip:active { cursor: grabbing; }
+
+/* Uniform collapse buttons everywhere (24x24) */
+.upb-collapse, .v2-collapse-btn, .panel-collapse-btn {
+  width: 24px !important; height: 24px !important;
+  min-width: 24px !important; flex: 0 0 auto !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  border: 0.5px solid transparent !important;
+  color: var(--lg-text-dim) !important;
+  font-size: 14px !important; line-height: 1 !important;
+  cursor: pointer !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  margin-left: 4px;
+  transition: all var(--lg-transition) !important;
+}
+.upb-collapse:hover, .v2-collapse-btn:hover, .panel-collapse-btn:hover {
+  background: rgba(0,212,238,0.18) !important;
+  color: var(--lg-accent) !important;
+  border-color: var(--lg-accent) !important;
+}
+
+/* Collapsed horizontal bar = compact pill (grip + collapse only) */
+.upb-collapsed > *:not(.upb-grip):not(.upb-collapse) { display: none !important; }
+.upb-collapsed {
+  width: auto !important; min-width: 0 !important;
+  padding: 6px 8px !important;
+  gap: 2px !important;
+}
+
 </style>
 </head>
 <body>
@@ -7566,88 +7609,90 @@ ready(function() {
 </script>
 <script id="universal-panels-js">
 /* ============================================================
-   UNIVERSAL PANEL BEHAVIOR v4.1
-   Every floating panel: draggable + collapsible + edge-snap
+   UNIVERSAL PANEL BEHAVIOR v4.2
+   Injects grip handle + collapse btn into floating bars.
+   Drag via grip · collapse · edge-snap.
    ============================================================ */
 (function() {
 'use strict';
 function ready(cb){ if(typeof map!=='undefined'&&map) cb(); else setTimeout(()=>ready(cb),250); }
 
 ready(function() {
-  setTimeout(initUniversalPanels, 900);
+  setTimeout(initUniversalPanels, 1000);
 
   function initUniversalPanels() {
-    // Panels that need drag+collapse but don't have it yet
-    const targets = [
-      { id: 'presenterBar', label: 'Presenter', horizontal: true },
-      { id: 'storyboardPanel', label: 'Storyboard', horizontal: true },
-      { id: 'bottomStrip', label: 'Controls', horizontal: true }
-    ];
-
-    targets.forEach(function(t) {
-      const el = document.getElementById(t.id);
-      if (!el || el.dataset.upbInit) return;
-      el.dataset.upbInit = '1';
-      makeDraggableSnap(el);
+    const targets = ['presenterBar', 'storyboardPanel', 'bottomStrip'];
+    targets.forEach(function(id) {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.upb2) return;
+      el.dataset.upb2 = '1';
+      injectControls(el);
     });
-    console.log('[UPB v4.1] Universal panel behavior applied');
+    console.log('[UPB v4.2] grips + collapse + snap applied');
   }
 
-  // Drag with edge-snap (sticks to nearest edge when released near it)
-  function makeDraggableSnap(el) {
-    let dragging = false, sx, sy, ox, oy, moved = false;
+  function injectControls(el) {
+    // Grip handle (drag)
+    const grip = document.createElement('div');
+    grip.className = 'upb-grip';
+    grip.innerHTML = '⋮⋮';
+    grip.title = 'Drag to move';
+    // Collapse button
+    const collapse = document.createElement('button');
+    collapse.className = 'upb-collapse';
+    collapse.innerHTML = '−';
+    collapse.title = 'Collapse';
 
-    // Use the element itself as drag handle (but not its buttons)
-    el.addEventListener('pointerdown', function(e) {
-      if (e.target.closest('button, input, select, a, .np-body')) return;
-      dragging = true; moved = false;
+    el.insertBefore(grip, el.firstChild);
+    el.appendChild(collapse);
+
+    // Collapse logic: hide all children except grip+collapse
+    collapse.addEventListener('click', function(e) {
+      e.stopPropagation();
+      el.classList.toggle('upb-collapsed');
+      collapse.innerHTML = el.classList.contains('upb-collapsed') ? '+' : '−';
+    });
+
+    // Drag via grip
+    let dragging=false, sx, sy, ox, oy, moved=false;
+    grip.addEventListener('pointerdown', function(e) {
+      dragging=true; moved=false;
       const r = el.getBoundingClientRect();
-      // Switch to absolute positioning from current spot
-      el.style.position = 'fixed';
-      el.style.left = r.left + 'px';
-      el.style.top = r.top + 'px';
-      el.style.right = 'auto';
-      el.style.bottom = 'auto';
-      el.style.transform = 'none';
-      sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
-      el.style.transition = 'none';
-      el.setPointerCapture(e.pointerId);
-      e.preventDefault();
+      el.style.position='fixed';
+      el.style.left=r.left+'px'; el.style.top=r.top+'px';
+      el.style.right='auto'; el.style.bottom='auto'; el.style.transform='none';
+      sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+      el.style.transition='none';
+      grip.setPointerCapture(e.pointerId);
+      e.preventDefault(); e.stopPropagation();
     });
-
-    el.addEventListener('pointermove', function(e) {
-      if (!dragging) return;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-      el.style.left = (ox + dx) + 'px';
-      el.style.top = (oy + dy) + 'px';
+    grip.addEventListener('pointermove', function(e) {
+      if(!dragging)return;
+      const dx=e.clientX-sx, dy=e.clientY-sy;
+      if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
+      el.style.left=(ox+dx)+'px'; el.style.top=(oy+dy)+'px';
     });
-
-    el.addEventListener('pointerup', function(e) {
-      if (!dragging) return;
-      dragging = false;
-      el.releasePointerCapture(e.pointerId);
-      el.style.transition = 'all 0.25s cubic-bezier(0.4,0,0.2,1)';
-      if (moved) snapToEdge(el);
+    grip.addEventListener('pointerup', function(e) {
+      if(!dragging)return;
+      dragging=false;
+      try{grip.releasePointerCapture(e.pointerId);}catch(_){}
+      el.style.transition='all 0.25s cubic-bezier(0.4,0,0.2,1)';
+      if(moved) snapToEdge(el);
     });
   }
 
   function snapToEdge(el) {
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const margin = 12;
-    const cx = r.left + r.width/2, cy = r.top + r.height/2;
-    // distances to each edge
-    const dLeft = cx, dRight = vw - cx, dTop = cy, dBottom = vh - cy;
-    const minH = Math.min(dLeft, dRight);
-    const minV = Math.min(dTop, dBottom);
-    // Snap horizontally if closer to a side edge; else vertical
-    if (minH < minV) {
-      el.style.left = (dLeft < dRight ? margin : vw - r.width - margin) + 'px';
-      el.style.top = Math.max(margin, Math.min(vh - r.height - margin, r.top)) + 'px';
+    const r=el.getBoundingClientRect();
+    const vw=window.innerWidth, vh=window.innerHeight, m=12;
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const dL=cx, dR=vw-cx, dT=cy, dB=vh-cy;
+    const minH=Math.min(dL,dR), minV=Math.min(dT,dB);
+    if(minH<minV){
+      el.style.left=(dL<dR?m:vw-r.width-m)+'px';
+      el.style.top=Math.max(m,Math.min(vh-r.height-m,r.top))+'px';
     } else {
-      el.style.top = (dTop < dBottom ? margin : vh - r.height - margin) + 'px';
-      el.style.left = Math.max(margin, Math.min(vw - r.width - margin, r.left)) + 'px';
+      el.style.top=(dT<dB?m:vh-r.height-m)+'px';
+      el.style.left=Math.max(m,Math.min(vw-r.width-m,r.left))+'px';
     }
   }
 });
