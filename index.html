@@ -7659,7 +7659,7 @@ ready(function() {
       if(!dragging)return;
       const dx=e.clientX-sx, dy=e.clientY-sy;
       if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
-      el.style.left=(ox+dx)+'px'; el.style.top=(oy+dy)+'px';
+      el.style.setProperty('left',(ox+dx)+'px','important'); el.style.setProperty('top',(oy+dy)+'px','important');
     }
     function onUp(e){
       if(!dragging)return;
@@ -7672,9 +7672,12 @@ ready(function() {
     grip.addEventListener('pointerdown', function(e) {
       dragging=true; moved=false;
       const r = el.getBoundingClientRect();
-      el.style.position='fixed';
-      el.style.left=r.left+'px'; el.style.top=r.top+'px';
-      el.style.right='auto'; el.style.bottom='auto'; el.style.transform='none';
+      el.style.setProperty('position','fixed','important');
+      el.style.setProperty('left',r.left+'px','important');
+      el.style.setProperty('top',r.top+'px','important');
+      el.style.setProperty('right','auto','important');
+      el.style.setProperty('bottom','auto','important');
+      el.style.setProperty('transform','none','important');
       sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
       el.style.transition='none';
       document.addEventListener('pointermove',onMove);
@@ -7690,11 +7693,11 @@ ready(function() {
     const dL=cx, dR=vw-cx, dT=cy, dB=vh-cy;
     const minH=Math.min(dL,dR), minV=Math.min(dT,dB);
     if(minH<minV){
-      el.style.left=(dL<dR?m:vw-r.width-m)+'px';
-      el.style.top=Math.max(m,Math.min(vh-r.height-m,r.top))+'px';
+      el.style.setProperty('left',(dL<dR?m:vw-r.width-m)+'px','important');
+      el.style.setProperty('top',Math.max(m,Math.min(vh-r.height-m,r.top))+'px','important');
     } else {
-      el.style.top=(dT<dB?m:vh-r.height-m)+'px';
-      el.style.left=Math.max(m,Math.min(vw-r.width-m,r.left))+'px';
+      el.style.setProperty('top',(dT<dB?m:vh-r.height-m)+'px','important');
+      el.style.setProperty('left',Math.max(m,Math.min(vw-r.width-m,r.left))+'px','important');
     }
   }
 });
