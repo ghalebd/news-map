@@ -157,7 +157,7 @@
 
 /* ---- NARROWER right rail (was 232 → 184) ---- */
 #rightPanelsStack {
-  width: 184px !important;
+  width: 150px !important;
   right: 10px !important;
   gap: 8px !important;
 }
@@ -206,11 +206,15 @@
   padding: 0 11px !important;
 }
 
-/* ---- Studio panel narrower to match aesthetic ---- */
-#v2Panel { width: 200px !important; }
+/* ---- Studio panel: width tuned so 2-column rows never overflow ---- */
+#v2Panel { width: 214px !important; overflow-x: hidden !important; }
 .v2-btn { font-size: 11px !important; }
 .v2-row { display: flex !important; gap: 6px !important; }
-.v2-row .v2-btn { flex: 1 !important; padding: 0 6px !important; }
+/* flex-basis:auto sizes each button to its label (so long labels aren't crushed
+   to equal width); min-width:0 + the span ellipsis are a safety net at narrow sizes. */
+.v2-row .v2-btn { flex: 1 1 auto !important; min-width: 0 !important; padding: 0 7px !important; }
+.v2-btn > span { white-space: nowrap !important; }
+.v2-btn svg { margin-right: 4px !important; }
 
 /* ============================================================
    v4.2 — Grip handles, uniform collapse btns, collapsed bars
@@ -278,10 +282,16 @@
   flex: 0 0 auto !important;
   display: block !important;
 }
-/* Buttons with text+icon: let icon be smaller, keep auto width */
-.v2-btn svg, .top-bar-btn svg, .ltp-btn svg, .bs-btn svg {
+/* Buttons with text+icon: let icon be smaller, keep auto width.
+   NOTE: .bs-btn is icon-ONLY, so it must NOT get margin-right (that pushed its
+   icon off-center). It stays in the centered 17px group above. */
+.v2-btn svg, .top-bar-btn svg, .ltp-btn svg {
   width: 14px !important; height: 14px !important;
   margin-right: 5px;
+}
+/* Icon-only buttons: SVG perfectly centered, never offset by a stray margin */
+.pb-btn svg, .tool-btn svg, .zoom-btn svg, .bs-btn svg, .dock-btn svg {
+  margin: 0 !important;
 }
 /* Don't clip button content */
 .pb-btn, .tool-btn, .zoom-btn, .v2-btn, .ltp-btn, .top-bar-btn, .bs-btn {
@@ -298,7 +308,7 @@
   left: 60px !important;
   top: 70px !important;
   right: auto !important;
-  width: 196px !important;
+  width: 214px !important;
   z-index: 1500 !important;
 }
 /* When toolbar is hidden, studio can shift left — handled by JS if needed */
@@ -329,7 +339,7 @@
   #v2Panel {
     left: 56px !important;
     top: 118px !important;
-    width: 190px !important;
+    width: 214px !important;
     max-height: calc(100vh - 240px) !important;
   }
   #rightPanelsStack {
@@ -342,7 +352,7 @@
 
 /* Very narrow / portrait: collapse studio panel by default, stack vertically */
 @media (max-width: 740px) {
-  #v2Panel { left: 52px !important; width: 164px !important; top: 122px !important; }
+  #v2Panel { left: 52px !important; width: 214px !important; top: 122px !important; }
 }
 
 /* ============================================================
@@ -408,6 +418,85 @@
   width: 100%; height: 100%; color: var(--lg-accent);
 }
 .v5-square-icon .pro-icon { width: 22px; height: 22px; }
+
+/* ============================================================
+   v6.3 — dock controls always at the EDGES (grip left, collapse right);
+   de-duplicate the bottom strip; vertical drag handle for the right rail
+   ============================================================ */
+/* Flex order forces the grip to the far-left and the collapse to the far-right
+   of every managed bar, regardless of what v6 prepended/appended later. */
+.v5-grip { order: -100 !important; }
+.v5-collapse { order: 100 !important; margin-left: auto !important; }
+
+/* Bottom strip had a redundant drag handle and a duplicate undo (v6 added its
+   own undo/redo pair) — hide the legacy ones so the row reads cleanly. */
+.bottom-strip .bs-handle { display: none !important; }
+.bottom-strip .bs-btn[data-bs="undo"] { display: none !important; }
+
+/* Left toolbar now holds extra utility icons (Studio, zoom, center). On short
+   screens it must scroll instead of clipping its bottom buttons off-screen. */
+.toolbar {
+  max-height: calc(100vh - 88px) !important;
+  overflow-y: auto !important;
+}
+.toolbar::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+
+/* Left toolbar: the legacy collapse "−" is redundant now (the grip handles
+   moving, the toolbar stays visible) and looked wrong overlapping the grip. */
+#toolbar .panel-collapse-btn { display: none !important; }
+
+/* ============================================================
+   v6.4 — unify the LEFT toolbar & RIGHT rail: identical "closed" shapes,
+   one radius, one accent. (Labeled map-style buttons stay wider — they hold
+   text — but every icon-button / collapsed chip / square now matches.)
+   ============================================================ */
+.toolbar .tool-btn { width: 44px !important; height: 44px !important; border-radius: 12px !important; }
+.v5-square {
+  width: 44px !important; min-width: 44px !important; max-width: 44px !important;
+  height: 44px !important; min-height: 44px !important; max-height: 44px !important;
+  border-radius: 12px !important;
+}
+.np-panel:not(.np-open) .np-head {
+  width: 44px !important; height: 44px !important; border-radius: 12px !important;
+}
+/* shared glass surface + cyan accent for every icon-button / chip / square */
+.toolbar .tool-btn, .np-panel:not(.np-open) .np-head, .v5-square {
+  background: var(--lg-bg) !important;
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+}
+.toolbar .tool-btn:hover, .np-panel:not(.np-open) .np-head:hover, .v5-square:hover {
+  border-color: var(--lg-accent) !important;
+}
+.toolbar .tool-btn.active {
+  border-color: var(--lg-accent) !important;
+  box-shadow: var(--lg-accent-glow), var(--lg-inner-glow) !important;
+}
+
+/* Left toolbar: small icon-sized drag handle at the top (vertical drag only). */
+#toolbar .v5-grip {
+  order: -100 !important;
+  position: sticky !important; top: 0 !important; z-index: 3 !important;
+  align-self: center !important;
+  width: 34px !important; height: 14px !important;
+  margin: 0 auto 4px auto !important;
+  border-radius: 7px !important;
+  background: rgba(255,255,255,0.07) !important;
+}
+#toolbar .v5-grip:hover { background: rgba(0,212,238,0.16) !important; }
+
+/* Right rail: small icon-sized drag handle (NOT a wide bar) centered at the top. */
+#rightPanelsStack .v5-grip {
+  order: -100 !important;
+  align-self: center !important;
+  width: 34px !important; height: 16px !important;
+  margin: 0 auto 6px auto !important;
+  border-radius: 8px !important;
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow) !important;
+}
 
 /* --- Collapsed np-panel (right rail) = square too --- */
 .np-panel:not(.np-open) {
@@ -486,9 +575,9 @@
   order: 99 !important;
 }
 
-/* ---- Storyboard: slimmer + taller (vertical-ish), tidy ---- */
+/* ---- Storyboard: wide enough that its control row never overflows ---- */
 #storyboardPanel, .storyboard-panel {
-  max-width: 360px !important;
+  max-width: 460px !important;
 }
 .storyboard-strip, .storyboard-steps {
   gap: 5px !important;
@@ -510,13 +599,50 @@ body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
    v6.1 — presenter bar must not reach the right rail
    ============================================================ */
 .presenter-bar {
-  max-width: calc(100vw - 280px) !important;
+  /* Reserve room for BOTH side zones: studio (left, ends ~266px) + right rail
+     (~204px). 500px keeps a ~26px gap to the right rail down to 1200px-wide. */
+  max-width: calc(100vw - 500px) !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
   flex-wrap: nowrap !important;
 }
 .presenter-bar::-webkit-scrollbar { height: 0 !important; }
-/* When centered (default), keep it clear of both side panels */
+/* When centered (default), keep it clear of both side panels.
+   The Studio panel (#v2Panel) snaps to toolbar.right(48)+8 + its width (210) = 266px,
+   so the presenter bar starts at 280 to leave a clean gap. */
 @media (min-width: 1101px) {
-  .presenter-bar { left: 250px !important; transform: none !important; }
+  .presenter-bar { left: 280px !important; transform: none !important; }
+}
+
+/* ============================================================
+   v6.2 — text+icon buttons must not be crushed into icon squares
+   ============================================================ */
+/* .pb-btn forces a 34px square for icon-only buttons. Buttons that keep a
+   text label (e.g. Presenter) need auto width so the label isn't clipped. */
+.pb-btn:has(span) {
+  width: auto !important;
+  min-width: 34px !important;
+  padding: 0 12px !important;
+  gap: 6px !important;
+}
+.pb-btn:has(span) span { white-space: nowrap !important; }
+
+/* ============================================================
+   v6.2 — storyboard control buttons must not be squeezed/clipped
+   ============================================================ */
+/* They had flex:0 1 auto inside a 360px panel, so labels truncated. Keep their
+   content width (panel max-width raised to 460 above gives the row room). */
+.storyboard-panel .storyboard-btn { flex: 0 0 auto !important; white-space: nowrap !important; }
+
+/* ---- Slimmer, prettier storyboard (lower height) ---- */
+.storyboard-panel { padding: 5px 9px !important; }
+.storyboard-panel .storyboard-header { align-items: center !important; gap: 5px !important; }
+.storyboard-panel .storyboard-btn {
+  height: 26px !important; min-height: 26px !important; max-height: 26px !important;
+  padding: 0 9px !important; font-size: 10.5px !important; border-radius: 8px !important;
+}
+.storyboard-panel .storyboard-title { font-size: 9px !important; opacity: 0.92; }
+.storyboard-panel .storyboard-list { min-height: 26px !important; padding: 1px !important; }
+.storyboard-panel .storyboard-list:empty::before {
+  padding: 5px 4px !important; font-size: 10px !important;
 }

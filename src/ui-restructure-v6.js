@@ -8,7 +8,7 @@
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
 
 ready(function() {
   setTimeout(restructure, 1500);
@@ -48,7 +48,7 @@ ready(function() {
       // Convert to compact icon button
       btn.classList.add('pb-btn');
       btn.classList.remove('top-bar-btn');
-      const label = r.keepText ? ' <span>'+btn.textContent.replace(/[^\w ]/g,'').trim()+'</span>' : '';
+      const label = r.keepText ? ' <span>'+btn.textContent.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>' : '';
       btn.innerHTML = window.svgIcon(r.icon, 16) + label;
       sect.appendChild(btn);
     });

@@ -5,7 +5,7 @@
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&document.getElementById('rightPanelsStack')) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map&&document.getElementById('rightPanelsStack')) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
 
 ready(function() {
   setTimeout(buildPanelSystem, 700);

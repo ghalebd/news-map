@@ -2225,9 +2225,33 @@ div.asset-palette .asset-btn {
 .bs-color-section {
   gap: 3px;
   padding: 0 6px;
+  position: relative;
+  overflow: visible;
 }
+/* single button that shows the current color and opens the swatch popover */
+.bs-color-trigger {
+  width: 22px; height: 22px; padding: 0;
+  border-radius: 7px; cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.35), inset 0 1px 2px rgba(255,255,255,0.35);
+  transition: transform 0.12s;
+}
+.bs-color-trigger:hover { transform: scale(1.12); }
+/* popover floating above the strip */
+.bs-color-pop {
+  position: absolute; bottom: calc(100% + 10px); left: 50%;
+  transform: translateX(-50%) scale(0.92);
+  display: flex; gap: 7px; padding: 8px 10px;
+  background: var(--lg-bg, rgba(16,20,32,0.7));
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  border: 0.5px solid rgba(255,255,255,0.18); border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s, transform 0.15s;
+  z-index: 3000;
+}
+.bs-color-pop.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
 .bs-color {
-  width: 16px; height: 16px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid rgba(255, 255, 255, 0.15);
@@ -3318,6 +3342,7 @@ body.hide-all-panels #v2Panel { display: none !important; }
   --lg-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0,0,0,0.4);
   --lg-accent: #00d4ee;
   --lg-accent-glow: 0 0 16px rgba(0, 212, 238, 0.5);
+  --danger: #ff3b30;
   --lg-radius: 14px;
   --lg-radius-sm: 10px;
   --lg-radius-pill: 999px;
@@ -3328,8 +3353,15 @@ body.hide-all-panels #v2Panel { display: none !important; }
 
 /* ---------- UNIFIED PANELS (liquid glass surfaces) ---------- */
 #v2Panel, #presenterBar, #brandHeader, #storyboardPanel, #bottomStrip,
-#statusBar, #rightPanelsStack, #animatePanel, #assetEditPanel, #editPanel,
+#statusBar, #animatePanel, #assetEditPanel, #editPanel,
 #labelsPanel, #customLabelsPanel, #liveTrackingPanel, #presenterDock,
+@keyframes lgPopIn {
+  from { opacity: 0; transform: translateX(-8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+#v2Panel, #assetPalette, .asset-palette, #colorPopup, .color-popup { transform-origin: left center; }
+
+#assetPalette, .asset-palette, #colorPopup, .color-popup,
 .panel, .glass-panel, .right-panel, .dock {
   background: var(--lg-bg) !important;
   -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(200%) brightness(1.05);
@@ -3337,6 +3369,32 @@ body.hide-all-panels #v2Panel { display: none !important; }
   border: 0.5px solid var(--lg-border) !important;
   box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
   border-radius: var(--lg-radius) !important;
+}
+
+/* The right rail is a layout wrapper only — each np-panel carries its own glass,
+   so the container must be fully transparent (no empty glass box behind panels). */
+#rightPanelsStack {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-radius: 0 !important;
+}
+
+/* Status bar (coords + zoom readout): compact chip pinned to the very
+   bottom-left corner — clear and readable. */
+#statusBar {
+  bottom: 6px !important; left: 6px !important;
+  padding: 4px 11px !important;
+  font-size: 10.5px !important; font-weight: 600 !important;
+  letter-spacing: 0.3px !important;
+  border-radius: 9px !important;
+  color: var(--lg-text) !important;
+  background: rgba(8, 11, 20, 0.74) !important;
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  opacity: 1 !important;
 }
 
 /* Subtle top highlight (liquid sheen) on panels */
@@ -3415,7 +3473,9 @@ body.hide-all-panels #v2Panel { display: none !important; }
 .v2-head {
   background: linear-gradient(180deg, rgba(0,212,238,0.12), rgba(0,212,238,0)) !important;
   border-bottom: 0.5px solid var(--lg-border) !important;
-  letter-spacing: 0.5px;
+  /* match the right-rail header treatment: uppercase, tracked */
+  text-transform: uppercase !important;
+  letter-spacing: 0.7px !important;
 }
 .v2-label, .panel-title, .section-label {
   color: var(--lg-text-dim) !important;
@@ -3748,7 +3808,7 @@ body.hide-all-panels #v2Panel { display: none !important; }
 
 /* ---- NARROWER right rail (was 232 → 184) ---- */
 #rightPanelsStack {
-  width: 184px !important;
+  width: 150px !important;
   right: 10px !important;
   gap: 8px !important;
 }
@@ -3797,11 +3857,15 @@ body.hide-all-panels #v2Panel { display: none !important; }
   padding: 0 11px !important;
 }
 
-/* ---- Studio panel narrower to match aesthetic ---- */
-#v2Panel { width: 200px !important; }
+/* ---- Studio panel: width tuned so 2-column rows never overflow ---- */
+#v2Panel { width: 214px !important; overflow-x: hidden !important; }
 .v2-btn { font-size: 11px !important; }
 .v2-row { display: flex !important; gap: 6px !important; }
-.v2-row .v2-btn { flex: 1 !important; padding: 0 6px !important; }
+/* flex-basis:auto sizes each button to its label (so long labels aren't crushed
+   to equal width); min-width:0 + the span ellipsis are a safety net at narrow sizes. */
+.v2-row .v2-btn { flex: 1 1 auto !important; min-width: 0 !important; padding: 0 7px !important; }
+.v2-btn > span { white-space: nowrap !important; }
+.v2-btn svg { margin-right: 4px !important; }
 
 /* ============================================================
    v4.2 — Grip handles, uniform collapse btns, collapsed bars
@@ -3869,10 +3933,16 @@ body.hide-all-panels #v2Panel { display: none !important; }
   flex: 0 0 auto !important;
   display: block !important;
 }
-/* Buttons with text+icon: let icon be smaller, keep auto width */
-.v2-btn svg, .top-bar-btn svg, .ltp-btn svg, .bs-btn svg {
+/* Buttons with text+icon: let icon be smaller, keep auto width.
+   NOTE: .bs-btn is icon-ONLY, so it must NOT get margin-right (that pushed its
+   icon off-center). It stays in the centered 17px group above. */
+.v2-btn svg, .top-bar-btn svg, .ltp-btn svg {
   width: 14px !important; height: 14px !important;
   margin-right: 5px;
+}
+/* Icon-only buttons: SVG perfectly centered, never offset by a stray margin */
+.pb-btn svg, .tool-btn svg, .zoom-btn svg, .bs-btn svg, .dock-btn svg {
+  margin: 0 !important;
 }
 /* Don't clip button content */
 .pb-btn, .tool-btn, .zoom-btn, .v2-btn, .ltp-btn, .top-bar-btn, .bs-btn {
@@ -3889,7 +3959,7 @@ body.hide-all-panels #v2Panel { display: none !important; }
   left: 60px !important;
   top: 70px !important;
   right: auto !important;
-  width: 196px !important;
+  width: 214px !important;
   z-index: 1500 !important;
 }
 /* When toolbar is hidden, studio can shift left — handled by JS if needed */
@@ -3920,7 +3990,7 @@ body.hide-all-panels #v2Panel { display: none !important; }
   #v2Panel {
     left: 56px !important;
     top: 118px !important;
-    width: 190px !important;
+    width: 214px !important;
     max-height: calc(100vh - 240px) !important;
   }
   #rightPanelsStack {
@@ -3933,7 +4003,7 @@ body.hide-all-panels #v2Panel { display: none !important; }
 
 /* Very narrow / portrait: collapse studio panel by default, stack vertically */
 @media (max-width: 740px) {
-  #v2Panel { left: 52px !important; width: 164px !important; top: 122px !important; }
+  #v2Panel { left: 52px !important; width: 214px !important; top: 122px !important; }
 }
 
 /* ============================================================
@@ -3999,6 +4069,85 @@ body.hide-all-panels #v2Panel { display: none !important; }
   width: 100%; height: 100%; color: var(--lg-accent);
 }
 .v5-square-icon .pro-icon { width: 22px; height: 22px; }
+
+/* ============================================================
+   v6.3 — dock controls always at the EDGES (grip left, collapse right);
+   de-duplicate the bottom strip; vertical drag handle for the right rail
+   ============================================================ */
+/* Flex order forces the grip to the far-left and the collapse to the far-right
+   of every managed bar, regardless of what v6 prepended/appended later. */
+.v5-grip { order: -100 !important; }
+.v5-collapse { order: 100 !important; margin-left: auto !important; }
+
+/* Bottom strip had a redundant drag handle and a duplicate undo (v6 added its
+   own undo/redo pair) — hide the legacy ones so the row reads cleanly. */
+.bottom-strip .bs-handle { display: none !important; }
+.bottom-strip .bs-btn[data-bs="undo"] { display: none !important; }
+
+/* Left toolbar now holds extra utility icons (Studio, zoom, center). On short
+   screens it must scroll instead of clipping its bottom buttons off-screen. */
+.toolbar {
+  max-height: calc(100vh - 88px) !important;
+  overflow-y: auto !important;
+}
+.toolbar::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+
+/* Left toolbar: the legacy collapse "−" is redundant now (the grip handles
+   moving, the toolbar stays visible) and looked wrong overlapping the grip. */
+#toolbar .panel-collapse-btn { display: none !important; }
+
+/* ============================================================
+   v6.4 — unify the LEFT toolbar & RIGHT rail: identical "closed" shapes,
+   one radius, one accent. (Labeled map-style buttons stay wider — they hold
+   text — but every icon-button / collapsed chip / square now matches.)
+   ============================================================ */
+.toolbar .tool-btn { width: 44px !important; height: 44px !important; border-radius: 12px !important; }
+.v5-square {
+  width: 44px !important; min-width: 44px !important; max-width: 44px !important;
+  height: 44px !important; min-height: 44px !important; max-height: 44px !important;
+  border-radius: 12px !important;
+}
+.np-panel:not(.np-open) .np-head {
+  width: 44px !important; height: 44px !important; border-radius: 12px !important;
+}
+/* shared glass surface + cyan accent for every icon-button / chip / square */
+.toolbar .tool-btn, .np-panel:not(.np-open) .np-head, .v5-square {
+  background: var(--lg-bg) !important;
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+}
+.toolbar .tool-btn:hover, .np-panel:not(.np-open) .np-head:hover, .v5-square:hover {
+  border-color: var(--lg-accent) !important;
+}
+.toolbar .tool-btn.active {
+  border-color: var(--lg-accent) !important;
+  box-shadow: var(--lg-accent-glow), var(--lg-inner-glow) !important;
+}
+
+/* Left toolbar: small icon-sized drag handle at the top (vertical drag only). */
+#toolbar .v5-grip {
+  order: -100 !important;
+  position: sticky !important; top: 0 !important; z-index: 3 !important;
+  align-self: center !important;
+  width: 34px !important; height: 14px !important;
+  margin: 0 auto 4px auto !important;
+  border-radius: 7px !important;
+  background: rgba(255,255,255,0.07) !important;
+}
+#toolbar .v5-grip:hover { background: rgba(0,212,238,0.16) !important; }
+
+/* Right rail: small icon-sized drag handle (NOT a wide bar) centered at the top. */
+#rightPanelsStack .v5-grip {
+  order: -100 !important;
+  align-self: center !important;
+  width: 34px !important; height: 16px !important;
+  margin: 0 auto 6px auto !important;
+  border-radius: 8px !important;
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow) !important;
+}
 
 /* --- Collapsed np-panel (right rail) = square too --- */
 .np-panel:not(.np-open) {
@@ -4077,9 +4226,9 @@ body.hide-all-panels #v2Panel { display: none !important; }
   order: 99 !important;
 }
 
-/* ---- Storyboard: slimmer + taller (vertical-ish), tidy ---- */
+/* ---- Storyboard: wide enough that its control row never overflows ---- */
 #storyboardPanel, .storyboard-panel {
-  max-width: 360px !important;
+  max-width: 460px !important;
 }
 .storyboard-strip, .storyboard-steps {
   gap: 5px !important;
@@ -4101,15 +4250,52 @@ body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
    v6.1 — presenter bar must not reach the right rail
    ============================================================ */
 .presenter-bar {
-  max-width: calc(100vw - 280px) !important;
+  /* Reserve room for BOTH side zones: studio (left, ends ~266px) + right rail
+     (~204px). 500px keeps a ~26px gap to the right rail down to 1200px-wide. */
+  max-width: calc(100vw - 500px) !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
   flex-wrap: nowrap !important;
 }
 .presenter-bar::-webkit-scrollbar { height: 0 !important; }
-/* When centered (default), keep it clear of both side panels */
+/* When centered (default), keep it clear of both side panels.
+   The Studio panel (#v2Panel) snaps to toolbar.right(48)+8 + its width (210) = 266px,
+   so the presenter bar starts at 280 to leave a clean gap. */
 @media (min-width: 1101px) {
-  .presenter-bar { left: 250px !important; transform: none !important; }
+  .presenter-bar { left: 280px !important; transform: none !important; }
+}
+
+/* ============================================================
+   v6.2 — text+icon buttons must not be crushed into icon squares
+   ============================================================ */
+/* .pb-btn forces a 34px square for icon-only buttons. Buttons that keep a
+   text label (e.g. Presenter) need auto width so the label isn't clipped. */
+.pb-btn:has(span) {
+  width: auto !important;
+  min-width: 34px !important;
+  padding: 0 12px !important;
+  gap: 6px !important;
+}
+.pb-btn:has(span) span { white-space: nowrap !important; }
+
+/* ============================================================
+   v6.2 — storyboard control buttons must not be squeezed/clipped
+   ============================================================ */
+/* They had flex:0 1 auto inside a 360px panel, so labels truncated. Keep their
+   content width (panel max-width raised to 460 above gives the row room). */
+.storyboard-panel .storyboard-btn { flex: 0 0 auto !important; white-space: nowrap !important; }
+
+/* ---- Slimmer, prettier storyboard (lower height) ---- */
+.storyboard-panel { padding: 5px 9px !important; }
+.storyboard-panel .storyboard-header { align-items: center !important; gap: 5px !important; }
+.storyboard-panel .storyboard-btn {
+  height: 26px !important; min-height: 26px !important; max-height: 26px !important;
+  padding: 0 9px !important; font-size: 10.5px !important; border-radius: 8px !important;
+}
+.storyboard-panel .storyboard-title { font-size: 9px !important; opacity: 0.92; }
+.storyboard-panel .storyboard-list { min-height: 26px !important; padding: 1px !important; }
+.storyboard-panel .storyboard-list:empty::before {
+  padding: 5px 4px !important; font-size: 10px !important;
 }
 
 </style>
@@ -4223,7 +4409,7 @@ body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
 <button class="exit-presenter" id="exitPresenter">✕ Exit Presenter</button>
 
 <!-- TOOLBAR -->
-<div class="toolbar">
+<div class="toolbar" id="toolbar">
   <button class="panel-collapse-btn" data-collapse="toolbar" title="Collapse">−</button>
   <button class="tool-btn active" data-tool="pan" title="Pan (V)">
     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4298,6 +4484,28 @@ body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
     <div class="label">Erase</div><div class="shortcut">E</div>
+  </button>
+  <div class="toolbar-divider"></div>
+  <button class="tool-btn" id="studioToggleBtn" title="Studio Tools">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+    <div class="label">Studio</div>
+  </button>
+  <div class="toolbar-divider"></div>
+  <button class="tool-btn" id="zoomIn" title="Zoom in">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    <div class="label">Zoom +</div>
+  </button>
+  <button class="tool-btn" id="zoomOut" title="Zoom out">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    <div class="label">Zoom −</div>
+  </button>
+  <button class="tool-btn" id="resetView" title="Center / reset view">
+    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+    <div class="label">Center</div>
   </button>
 </div>
 
@@ -4413,11 +4621,7 @@ body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
 </div>
 
 <!-- ZOOM CONTROLS -->
-<div class="zoom-controls">
-  <button class="zoom-btn" id="zoomIn">+</button>
-  <button class="zoom-btn" id="zoomOut">−</button>
-  <button class="zoom-btn" id="resetView" style="font-size:18px">⌂</button>
-</div>
+<!-- zoom/center controls merged into the left toolbar (see #zoomIn/#zoomOut/#resetView there) -->
 
 <!-- ANIMATE PANEL -->
 <div class="animate-panel" id="animatePanel">
@@ -5274,6 +5478,7 @@ function showToast(text, ms = 2000) {
 document.querySelectorAll('.tool-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const tool = btn.dataset.tool;
+    if (!tool) return;   // utility buttons (Studio, zoom, center) aren't drawing tools
     // Toggle: if asset is already active and user clicks asset again, close it (back to pan)
     if (tool === 'asset' && currentTool === 'asset') {
       setTool('pan');
@@ -7517,12 +7722,15 @@ window.liveFlights = {
   <div class="bs-divider"></div>
   
   <div class="bs-section bs-color-section">
-    <div class="bs-color" data-bs-color="#ff3b30" style="background:#ff3b30"></div>
-    <div class="bs-color" data-bs-color="#ff9500" style="background:#ff9500"></div>
-    <div class="bs-color" data-bs-color="#ffcc00" style="background:#ffcc00"></div>
-    <div class="bs-color" data-bs-color="#34c759" style="background:#34c759"></div>
-    <div class="bs-color" data-bs-color="#00b8d4" style="background:#00b8d4"></div>
-    <div class="bs-color" data-bs-color="#ffffff" style="background:#ffffff"></div>
+    <button class="bs-color-trigger" id="bsColorTrigger" title="Drawing color" style="background:#ff3b30"></button>
+    <div class="bs-color-pop" id="bsColorPop">
+      <div class="bs-color active" data-bs-color="#ff3b30" style="background:#ff3b30"></div>
+      <div class="bs-color" data-bs-color="#ff9500" style="background:#ff9500"></div>
+      <div class="bs-color" data-bs-color="#ffcc00" style="background:#ffcc00"></div>
+      <div class="bs-color" data-bs-color="#34c759" style="background:#34c759"></div>
+      <div class="bs-color" data-bs-color="#00b8d4" style="background:#00b8d4"></div>
+      <div class="bs-color" data-bs-color="#ffffff" style="background:#ffffff"></div>
+    </div>
   </div>
 </div>
 
@@ -7552,12 +7760,25 @@ window.liveFlights = {
     });
   });
   
+  // ---- single color button + popover of swatches ----
+  const colorTrigger = document.getElementById('bsColorTrigger');
+  const colorPop = document.getElementById('bsColorPop');
+  if (colorTrigger && colorPop) {
+    colorTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colorPop.classList.toggle('open');
+    });
+    document.addEventListener('click', () => colorPop.classList.remove('open'));
+    colorPop.addEventListener('click', (e) => e.stopPropagation());
+  }
   strip.querySelectorAll('.bs-color').forEach(c => {
     c.addEventListener('click', (e) => {
       e.stopPropagation();
       const color = c.dataset.bsColor;
       strip.querySelectorAll('.bs-color').forEach(x => x.classList.remove('active'));
       c.classList.add('active');
+      if (colorTrigger) colorTrigger.style.background = color;   // reflect current color
+      if (colorPop) colorPop.classList.remove('open');
       if (typeof setColor === 'function') setColor(color);
       else {
         const circle = document.querySelector('.color-circle[data-color="' + color + '"]');
@@ -7861,7 +8082,7 @@ window.svgIcon = function(name, size) {
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&document.getElementById('rightPanelsStack')) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map&&document.getElementById('rightPanelsStack')) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
 
 ready(function() {
   setTimeout(buildPanelSystem, 700);
@@ -7955,7 +8176,7 @@ ready(function() {
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
 
 ready(function() {
   setTimeout(function(){
@@ -8029,18 +8250,18 @@ ready(function() {
     // --- Play buttons (text "▶ Play") ---
     ['animPlay'].forEach(function(id){
       const b=document.getElementById(id);
-      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\w]+/,'').trim();b.innerHTML=window.svgIcon('play',14)+' <span>'+t+'</span>';b.style.gap='5px';}
+      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\p{L}\p{N}]+/u,'').trim();b.innerHTML=window.svgIcon('play',14)+' <span>'+t+'</span>';b.style.gap='5px';}
     });
     // --- Delete buttons (🗑 Delete) ---
     ['deleteMarker','assetDelete'].forEach(function(id){
       const b=document.getElementById(id);
-      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\w]+/,'').trim();b.innerHTML=window.svgIcon('trash',14)+' <span>'+t+'</span>';b.style.gap='5px';}
+      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\p{L}\p{N}]+/u,'').trim();b.innerHTML=window.svgIcon('trash',14)+' <span>'+t+'</span>';b.style.gap='5px';}
     });
 
     // --- Remaining visible emoji ---
     document.querySelectorAll('.pt-btn').forEach(function(b){
       const t=b.textContent.trim();
-      if(t.indexOf('\u{1F441}')>=0||/👁/.test(b.innerHTML)){b.innerHTML=window.svgIcon('eye',14)+' <span>'+t.replace(/[^\w ]/g,'').trim()+'</span>';b.style.gap='5px';}
+      if(t.indexOf('\u{1F441}')>=0||/👁/.test(b.innerHTML)){b.innerHTML=window.svgIcon('eye',14)+' <span>'+t.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>';b.style.gap='5px';}
     });
     // touch mode button (✋)
     document.querySelectorAll('button,div').forEach(function(b){
@@ -8050,10 +8271,10 @@ ready(function() {
     });
     // Scenario (📋), storyboard title (🎬), storyboard prev/next
     document.querySelectorAll('.top-bar-btn').forEach(function(b){
-      if(/📋/.test(b.innerHTML)){b.innerHTML=window.svgIcon('clipboard',15)+' <span>'+b.textContent.replace(/[^\w ]/g,'').trim()+'</span>';b.style.gap='6px';}
+      if(/📋/.test(b.innerHTML)){b.innerHTML=window.svgIcon('clipboard',15)+' <span>'+b.textContent.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>';b.style.gap='6px';}
     });
     const stTitle=document.querySelector('.storyboard-title');
-    if(stTitle&&/🎬/.test(stTitle.innerHTML)){stTitle.innerHTML=window.svgIcon('film',15)+' <span>'+stTitle.textContent.replace(/[^\w ]/g,'').trim()+'</span>';stTitle.style.display='inline-flex';stTitle.style.alignItems='center';stTitle.style.gap='6px';}
+    if(stTitle&&/🎬/.test(stTitle.innerHTML)){stTitle.innerHTML=window.svgIcon('film',15)+' <span>'+stTitle.textContent.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>';stTitle.style.display='inline-flex';stTitle.style.alignItems='center';stTitle.style.gap='6px';}
     document.querySelectorAll('.storyboard-btn').forEach(function(b){
       const t=b.textContent.trim();
       if(/◀/.test(t)){b.innerHTML=window.svgIcon('prev',13)+' <span>Prev</span>';b.style.gap='4px';}
@@ -8072,7 +8293,7 @@ ready(function() {
     const btn = document.getElementById(id);
     if (!btn) return;
     // Strip leading emoji/symbol, keep text
-    let txt = btn.textContent.trim().replace(/^[^\w(]+\s*/, '');
+    let txt = btn.textContent.trim().replace(/^[^\p{L}\p{N}(]+\s*/u, '');
     btn.innerHTML = window.svgIcon(iconName, 15) + ' <span>' + txt + '</span>';
     btn.style.gap = '6px';
   }
@@ -8082,36 +8303,61 @@ ready(function() {
 </script>
 <script id="universal-panels-js">
 /* ============================================================
-   PANEL DOCK SYSTEM v5 — collapsed squares · edge-snap ·
-   constrained drag · NO panel-in-panel (collision avoidance)
+   PANEL DOCK SYSTEM v6 — free-drag · collapse-to-nearest-edge ·
+   global accordion (open one → others collapse) · vertical rail handle
+   ------------------------------------------------------------
+   modes:
+     free       → drag in BOTH axes, keep dropped position (presenterBar, bottomStrip)
+     vertical   → drag up/down only, snap to its side edge (v2Panel, rightPanelsStack)
+     horizontal → drag left/right only, snap to its top/bottom edge (storyboardPanel)
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
+
+const GRIP_SVG = '<svg viewBox="0 0 24 24" width="12" height="14"><circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/></svg>';
+// clean, simple "minimize" glyph (a minus) — clear and not ugly
+const MIN_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>';
 
 ready(function() {
   setTimeout(initDock, 1300);
-
-  // Registry of all managed floating panels
   const panels = [];
 
   function initDock() {
-    // Horizontal bars (top/bottom) — drag left/right along their edge
-    register('presenterBar', { edge: 'top', icon: 'play' });
-    register('storyboardPanel', { edge: 'bottom', icon: 'next' });
-    register('bottomStrip', { edge: 'bottom', icon: 'home', allowCenter: true });
-    // Side panels (left/right) — drag up/down along their edge
-    register('v2Panel', { edge: 'left', icon: 'studio', isStudio: true });
+    register('presenterBar',     { mode: 'free',       edge: 'top',    icon: 'play', keepOpen: true });
+    register('bottomStrip',      { mode: 'free',       edge: 'bottom', icon: 'home', keepOpen: true });
+    register('storyboardPanel',  { mode: 'horizontal', edge: 'bottom', icon: 'next'   });
+    register('v2Panel',          { mode: 'vertical',   edge: 'left',   icon: 'studio', isStudio: true });
+    register('rightPanelsStack', { mode: 'vertical',   edge: 'right',  icon: 'layers', noCollapse: true });
+    register('toolbar',          { mode: 'vertical',   edge: 'left',   icon: 'tools',  noCollapse: true, isToolbar: true });
 
-    // The right rail np-panels already collapse via accordion; give them square mode too
+    // Right-rail np-panels keep their own one-open-at-a-time accordion + square mode
     document.querySelectorAll('#rightPanelsStack .np-panel').forEach(function(p, i) {
       enableSquareCollapse(p, ['mapstyle','labels','tracking'][i] || 'mapstyle');
     });
 
-    // Continuous collision check
-    setInterval(preventOverlaps, 600);
-    window.addEventListener('resize', function(){ panels.forEach(snapToEdge); });
-    console.log('[Dock v5] ' + panels.length + ' panels managed');
+    // Studio now lives as an icon in the left toolbar — wire it + start hidden
+    const sbtn = document.getElementById('studioToggleBtn');
+    if (sbtn) sbtn.addEventListener('click', function(e){ e.stopPropagation(); window.studioToggle(); });
+    const studio = document.getElementById('v2Panel');
+    if (studio) {
+      // its top-right "−" now simply closes the studio (capture-phase beats the
+      // legacy collapse-to-header handler)
+      const vcb = studio.querySelector('.v2-collapse-btn');
+      if (vcb) { vcb.title = 'Close'; vcb.addEventListener('click', function(e){ e.stopImmediatePropagation(); e.preventDefault(); window.studioToggle(); }, true); }
+      setTimeout(function(){ collapsePanel(studio, 'studio'); }, 250);
+    }
+    // Opening the Assets palette or the Colors popup closes the other menus and
+    // positions the flyout right next to its own toolbar button.
+    const assetToolBtn = document.querySelector('.tool-btn[data-tool="asset"]');
+    if (assetToolBtn) assetToolBtn.addEventListener('click', function(){ setTimeout(function(){ const a=document.getElementById('assetPalette'); if (a && a.classList.contains('show')) { window.closeOtherLeftMenus('assets'); window.placeNearButton(a, assetToolBtn); } }, 0); });
+    const colorBtn = document.getElementById('colorPickerBtn');
+    if (colorBtn) colorBtn.addEventListener('click', function(){ setTimeout(function(){ const c=document.getElementById('colorPopup'); if (c && c.classList.contains('show')) { window.closeOtherLeftMenus('color'); window.placeNearButton(c, colorBtn); } }, 0); });
+
+    clearInterval(window.__dockOverlapTimer);
+    window.__dockOverlapTimer = setInterval(preventOverlaps, 700);
+    window.addEventListener('resize', onResize);
+    console.log('[Dock v6] ' + panels.length + ' panels managed');
   }
 
   function register(id, opts) {
@@ -8121,85 +8367,199 @@ ready(function() {
     el.__dock = opts;
     panels.push(el);
     addControls(el, opts);
-    // initial snap to its edge
     setTimeout(function(){ snapToEdge(el); }, 100);
   }
 
-  // Add grip + collapse-to-square button
+  // ---- grip (always) + collapse button (unless noCollapse) ----
   function addControls(el, opts) {
     if (el.querySelector('.v5-grip')) return;
     const grip = document.createElement('div');
     grip.className = 'v5-grip';
-    grip.innerHTML = window.svgIcon ? window.svgIcon('home',12).replace('home','') : '⋮⋮';
-    grip.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="14"><circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/></svg>';
-    grip.title = 'Drag along edge';
-
-    const collapse = document.createElement('button');
-    collapse.className = 'v5-collapse';
-    collapse.innerHTML = window.svgIcon ? window.svgIcon('close', 13) : '−';
-    collapse.title = 'Collapse to icon';
-    collapse.dataset.icon = opts.icon;
-
+    grip.innerHTML = GRIP_SVG;
+    grip.title = 'Drag';
     el.insertBefore(grip, el.firstChild);
-    el.appendChild(collapse);
 
-    collapse.addEventListener('click', function(e){
-      e.stopPropagation();
-      toggleSquare(el, opts.icon);
-    });
-
-    // Expand when clicking the collapsed square
-    el.addEventListener('click', function(e){
-      if (el.classList.contains('v5-square')) {
-        e.stopPropagation();
-        toggleSquare(el, opts.icon);
-      }
-    });
-
-    enableEdgeDrag(el, grip, opts);
-  }
-
-  function toggleSquare(el, iconName) {
-    const sq = el.classList.toggle('v5-square');
-    if (sq) {
-      el.dataset.prevHTML = '1';
-      el.__squareIcon = document.createElement('div');
-      el.__squareIcon.className = 'v5-square-icon';
-      el.__squareIcon.innerHTML = window.svgIcon(iconName, 22);
-      el.appendChild(el.__squareIcon);
-    } else {
-      if (el.__squareIcon) { el.__squareIcon.remove(); el.__squareIcon = null; }
+    // Studio is opened/closed from the left-toolbar icon, so it doesn't get the
+    // (mispositioned) v5-collapse — its existing top-right "−" closes it instead.
+    if (!opts.noCollapse && !opts.isStudio) {
+      const collapse = document.createElement('button');
+      collapse.className = 'v5-collapse';
+      collapse.innerHTML = MIN_SVG;
+      collapse.title = 'Collapse to icon';
+      collapse.dataset.icon = opts.icon;
+      el.appendChild(collapse);
+      collapse.addEventListener('click', function(e){ e.stopPropagation(); collapsePanel(el, opts.icon); });
     }
-    setTimeout(function(){ snapToEdge(el); preventOverlaps(); }, 50);
+
+    enableDrag(el, grip, opts);
+    enableSquareDrag(el, opts);   // when collapsed: drag the icon, or tap to expand
   }
 
-  function enableSquareCollapse(panel, iconName) {
-    // np-panels: clicking header already toggles open; add square when all closed handled by CSS
-    panel.dataset.squareIcon = iconName;
-  }
-
-  // Constrained drag: side panels move vertically, bars move horizontally
-  function enableEdgeDrag(el, grip, opts) {
-    let dragging=false, sx, sy, ox, oy, moved=false;
+  // ---- collapsed square: drag it freely (snaps to nearest edge), tap to expand ----
+  function enableSquareDrag(el, opts) {
+    let dragging=false, moved=false, sx, sy, ox, oy;
     function move(e){
-      if(!dragging)return;
+      if(!dragging) return;
       const dx=e.clientX-sx, dy=e.clientY-sy;
-      if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
-      if (opts.edge==='left' || opts.edge==='right') {
-        // vertical movement only
-        el.style.setProperty('top', clamp(oy+dy, 8, window.innerHeight-el.offsetHeight-8)+'px','important');
-      } else {
-        // horizontal movement only
-        el.style.setProperty('left', clamp(ox+dx, 8, window.innerWidth-el.offsetWidth-8)+'px','important');
+      if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+      el.style.setProperty('left', clamp(ox+dx, 4, window.innerWidth-46-4)+'px','important');
+      el.style.setProperty('top',  clamp(oy+dy, 4, window.innerHeight-46-4)+'px','important');
+      el.style.setProperty('right','auto','important');
+      el.style.setProperty('bottom','auto','important');
+    }
+    function up(){
+      if(!dragging) return; dragging=false;
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      el.style.transition='all 0.2s cubic-bezier(0.4,0,0.2,1)';
+      if (moved) snapSquareToEdge(el);            // dragged → stick to nearest edge
+      else expandPanel(el, opts.icon);            // tapped → expand
+    }
+    el.addEventListener('pointerdown', function(e){
+      if(!el.classList.contains('v5-square')) return;   // only when collapsed
+      dragging=true; moved=false;
+      const r=el.getBoundingClientRect();
+      el.style.setProperty('position','fixed','important');
+      el.style.setProperty('left',r.left+'px','important');
+      el.style.setProperty('top',r.top+'px','important');
+      sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+      el.style.transition='none';
+      document.addEventListener('pointermove',move);
+      document.addEventListener('pointerup',up);
+      e.preventDefault(); e.stopPropagation();
+    });
+  }
+
+  // a panel counts as collapsed if it's a square OR (studio) fully hidden
+  function isCollapsed(el) { return el.classList.contains('v5-square') || !!el.__studioHidden; }
+
+  // ---- collapse: studio fully hides (it lives in the left toolbar now);
+  //      every other panel shrinks to a square that snaps to the nearest edge ----
+  function collapsePanel(el, iconName) {
+    if (isCollapsed(el)) return;
+    if (el.__dock && el.__dock.isStudio) {
+      el.__studioHidden = true;
+      el.style.setProperty('display', 'none', 'important');
+      setStudioBtnActive(false);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    el.__prevPos = { left: r.left, top: r.top };   // remember to restore on expand
+    el.classList.add('v5-square');
+    el.__squareIcon = document.createElement('div');
+    el.__squareIcon.className = 'v5-square-icon';
+    el.__squareIcon.innerHTML = window.svgIcon(iconName, 22);
+    el.appendChild(el.__squareIcon);
+    setTimeout(function(){ snapSquareToEdge(el); }, 30);
+  }
+
+  // ---- expand: global accordion (others collapse) then restore/show ----
+  function expandPanel(el, iconName) {
+    if (!isCollapsed(el)) return;
+    collapseOthers(el);
+    if (el.__dock && el.__dock.isStudio) {
+      el.__studioHidden = false;
+      el.style.removeProperty('display');
+      setStudioBtnActive(true);
+      setTimeout(function(){ snapToEdge(el); preventOverlaps(); }, 30);
+      return;
+    }
+    el.classList.remove('v5-square');
+    if (el.__squareIcon) { el.__squareIcon.remove(); el.__squareIcon = null; }
+    setTimeout(function(){
+      if (el.__prevPos) restorePos(el, el.__prevPos);
+      else snapToEdge(el);
+      preventOverlaps();
+    }, 30);
+  }
+
+  function collapseOthers(except) {
+    panels.forEach(function(p){
+      if (p === except) return;
+      if (p.__dock && (p.__dock.noCollapse || p.__dock.keepOpen)) return;  // top/bottom bars stay open
+      if (!isCollapsed(p)) collapsePanel(p, p.__dock.icon);
+    });
+  }
+
+  // reflect the studio panel's open/closed state on its left-toolbar button
+  function setStudioBtnActive(on) {
+    const btn = document.getElementById('studioToggleBtn');
+    if (btn) btn.classList.toggle('active', !!on);
+  }
+  // The three left-toolbar menus (Studio / Assets / Colors) are mutually
+  // exclusive: opening one closes the others (no clutter, same dynamic logic).
+  window.closeOtherLeftMenus = function(except) {
+    if (except !== 'studio') { const s = document.getElementById('v2Panel'); if (s && !isCollapsed(s)) collapsePanel(s, 'studio'); }
+    if (except !== 'assets') { const a = document.getElementById('assetPalette'); if (a) a.classList.remove('show'); }
+    if (except !== 'color')  { const c = document.getElementById('colorPopup');   if (c) c.classList.remove('show'); }
+  };
+
+  // Position a flyout menu right next to its toolbar button (fixed, so it is
+  // never clipped by the toolbar's own scroll/overflow). Vertically aligned to
+  // the button, clamped on-screen, opening upward if it would overflow.
+  window.placeNearButton = function(menuEl, btnEl) {
+    if (!menuEl || !btnEl) return;
+    // Move the flyout to <body> so it escapes the toolbar's overflow + the
+    // backdrop-filter containing block (which was clipping it invisibly).
+    if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
+    const tb = document.getElementById('toolbar').getBoundingClientRect();
+    const br = btnEl.getBoundingClientRect();
+    menuEl.style.setProperty('position', 'fixed', 'important');
+    menuEl.style.setProperty('left', (Math.round(tb.right) + 8) + 'px', 'important');
+    menuEl.style.setProperty('right', 'auto', 'important');
+    const h = menuEl.offsetHeight || 220;
+    let top = Math.round(br.top);
+    top = Math.max(64, Math.min(top, window.innerHeight - h - 10));
+    menuEl.style.setProperty('top', top + 'px', 'important');
+    menuEl.style.setProperty('bottom', 'auto', 'important');
+    // unified open motion for all three menus
+    menuEl.style.animation = 'none';
+    void menuEl.offsetWidth;                 // force reflow so it replays each open
+    menuEl.style.animation = 'lgPopIn 0.18s cubic-bezier(0.34,1.2,0.4,1)';
+  };
+
+  // global toggle used by the toolbar icon
+  window.studioToggle = function() {
+    const el = document.getElementById('v2Panel'); if (!el) return;
+    if (isCollapsed(el)) {
+      window.closeOtherLeftMenus('studio');
+      expandPanel(el, el.__dock.icon);
+      const btn = document.getElementById('studioToggleBtn');
+      setTimeout(function(){ window.placeNearButton(el, btn); }, 60);
+    } else collapsePanel(el, el.__dock.icon);
+  };
+
+  function enableSquareCollapse(panel, iconName) { panel.dataset.squareIcon = iconName; }
+
+  // ---- drag (mode-aware) ----
+  function enableDrag(el, grip, opts) {
+    let dragging=false, sx, sy, ox, oy, moved=false;
+    const m = 6;
+    function move(e){
+      if(!dragging) return;
+      const dx=e.clientX-sx, dy=e.clientY-sy;
+      if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+      if (opts.mode==='free') {
+        el.style.setProperty('left', clamp(ox+dx, m, window.innerWidth-el.offsetWidth-m)+'px','important');
+        el.style.setProperty('top',  clamp(oy+dy, m, window.innerHeight-el.offsetHeight-m)+'px','important');
+        el.style.setProperty('right','auto','important');
+        el.style.setProperty('bottom','auto','important');
+        el.style.setProperty('transform','none','important');
+      } else if (opts.mode==='vertical') {
+        el.style.setProperty('top', clamp(oy+dy, 68, window.innerHeight-el.offsetHeight-m)+'px','important');
+      } else { // horizontal
+        el.style.setProperty('left', clamp(ox+dx, m, window.innerWidth-el.offsetWidth-m)+'px','important');
         el.style.setProperty('transform','none','important');
       }
     }
     function up(){
-      if(!dragging)return; dragging=false;
+      if(!dragging) return; dragging=false;
       document.removeEventListener('pointermove',move);
       document.removeEventListener('pointerup',up);
       el.style.transition='all 0.2s cubic-bezier(0.4,0,0.2,1)';
-      snapToEdge(el); preventOverlaps();
+      if (opts.mode==='free') { if (moved) el.__userPlaced = true; }
+      else snapToEdge(el);
+      preventOverlaps();
     }
     grip.addEventListener('pointerdown', function(e){
       dragging=true; moved=false;
@@ -8218,14 +8578,50 @@ ready(function() {
     });
   }
 
-  // Snap to the nearest relevant edge
+  function restorePos(el, pos) {
+    const m=6;
+    el.style.setProperty('position','fixed','important');
+    el.style.setProperty('left', clamp(pos.left, m, window.innerWidth - el.offsetWidth - m)+'px','important');
+    el.style.setProperty('top',  clamp(pos.top, m, window.innerHeight - el.offsetHeight - m)+'px','important');
+    el.style.setProperty('right','auto','important');
+    el.style.setProperty('bottom','auto','important');
+    el.style.setProperty('transform','none','important');
+  }
+
+  // ---- collapsed square snaps to the NEAREST viewport edge ----
+  function snapSquareToEdge(el) {
+    const r = el.getBoundingClientRect();
+    const vw=window.innerWidth, vh=window.innerHeight, m=10, S=46;
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const dl=cx, dr=vw-cx, dt=cy, db=vh-cy;
+    const min=Math.min(dl,dr,dt,db);
+    el.style.setProperty('position','fixed','important');
+    el.style.setProperty('transform','none','important');
+    if (min===dl)      { setSide(el,'left',  m); el.style.setProperty('top', clamp(r.top,68,vh-S-m)+'px','important'); el.style.setProperty('bottom','auto','important'); }
+    else if (min===dr) { setSide(el,'right', m); el.style.setProperty('top', clamp(r.top,68,vh-S-m)+'px','important'); el.style.setProperty('bottom','auto','important'); }
+    else if (min===dt) { el.style.setProperty('top','68px','important'); el.style.setProperty('bottom','auto','important'); el.style.setProperty('left', clamp(r.left,m,vw-S-m)+'px','important'); el.style.setProperty('right','auto','important'); }
+    else               { el.style.setProperty('bottom',m+'px','important'); el.style.setProperty('top','auto','important'); el.style.setProperty('left', clamp(r.left,m,vw-S-m)+'px','important'); el.style.setProperty('right','auto','important'); }
+  }
+  function setSide(el, side, m){
+    if (side==='left'){ el.style.setProperty('left',m+'px','important'); el.style.setProperty('right','auto','important'); }
+    else { el.style.setProperty('right',m+'px','important'); el.style.setProperty('left','auto','important'); }
+  }
+
+  // ---- snap to the panel's home edge (used for non-free panels + initial layout) ----
   function snapToEdge(el) {
     const opts = el.__dock; if(!opts) return;
+    if (el.classList.contains('v5-square')) { snapSquareToEdge(el); return; }
     const r = el.getBoundingClientRect();
     const vw=window.innerWidth, vh=window.innerHeight, m=10;
     el.style.setProperty('position','fixed','important');
+    if (opts.isToolbar) {
+      // toolbar: pinned to the left, only its vertical position moves
+      el.style.setProperty('left', '4px','important');
+      el.style.setProperty('right','auto','important');
+      el.style.setProperty('top', clamp(r.top, 64, vh-r.height-m)+'px','important');
+      return;
+    }
     if (opts.edge==='left') {
-      // Clear the main toolbar if present
       let leftPos = m;
       const tb = document.querySelector('.toolbar');
       if (tb) { const tr = tb.getBoundingClientRect(); if (tr.width>0) leftPos = Math.round(tr.right) + 8; }
@@ -8237,7 +8633,7 @@ ready(function() {
       el.style.setProperty('left','auto','important');
       el.style.setProperty('top', clamp(r.top,68,vh-r.height-m)+'px','important');
     } else if (opts.edge==='top') {
-      el.style.setProperty('top', 68+'px','important');
+      el.style.setProperty('top', '68px','important');
       el.style.setProperty('left', clamp(r.left,m,vw-r.width-m)+'px','important');
       el.style.setProperty('transform','none','important');
     } else { // bottom
@@ -8245,15 +8641,25 @@ ready(function() {
       el.style.setProperty('top','auto','important');
       el.style.setProperty('left', clamp(r.left,m,vw-r.width-m)+'px','important');
       el.style.setProperty('transform','none','important');
-      // allowCenter bars keep their dragged horizontal position (incl. screen center)
     }
   }
 
-  // Prevent any panel overlapping another — nudge apart
+  function onResize() {
+    panels.forEach(function(el){
+      if (el.__studioHidden) return;                 // hidden studio: leave as-is
+      if (el.classList.contains('v5-square')) { snapSquareToEdge(el); return; }
+      if (el.__dock.mode==='free' && el.__userPlaced) {
+        const r=el.getBoundingClientRect(); restorePos(el, {left:r.left, top:r.top});
+      } else snapToEdge(el);
+    });
+  }
+
+  // ---- keep non-user-placed panels from overlapping (free user-placed are exempt) ----
   function preventOverlaps() {
     for (let i=0;i<panels.length;i++){
       for (let j=i+1;j<panels.length;j++){
         const a=panels[i], b=panels[j];
+        if (exempt(a) || exempt(b)) continue;
         const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect();
         const ox=Math.max(0,Math.min(ra.right,rb.right)-Math.max(ra.left,rb.left));
         const oy=Math.max(0,Math.min(ra.bottom,rb.bottom)-Math.max(ra.top,rb.top));
@@ -8262,7 +8668,6 @@ ready(function() {
           if (bo && (bo.edge==='left'||bo.edge==='right')) {
             b.style.setProperty('top', Math.min(window.innerHeight-rb.height-10, ra.bottom+10)+'px','important');
           } else if (bo && bo.edge==='bottom') {
-            // stack this bottom bar ABOVE the other bottom bar
             b.style.setProperty('bottom', (window.innerHeight - ra.top + 10)+'px','important');
             b.style.setProperty('top','auto','important');
           } else if (bo && bo.edge==='top') {
@@ -8273,6 +8678,11 @@ ready(function() {
         }
       }
     }
+  }
+  // toolbar is a fixed anchor; free panels the user placed by hand are not auto-moved
+  function exempt(el){
+    if (el.__dock.isToolbar) return true;
+    return el.classList.contains('v5-square') ? false : (el.__dock.mode==='free' && el.__userPlaced);
   }
 
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
@@ -8291,7 +8701,7 @@ ready(function() {
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
 
 ready(function() {
   setTimeout(restructure, 1500);
@@ -8331,7 +8741,7 @@ ready(function() {
       // Convert to compact icon button
       btn.classList.add('pb-btn');
       btn.classList.remove('top-bar-btn');
-      const label = r.keepText ? ' <span>'+btn.textContent.replace(/[^\w ]/g,'').trim()+'</span>' : '';
+      const label = r.keepText ? ' <span>'+btn.textContent.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>' : '';
       btn.innerHTML = window.svgIcon(r.icon, 16) + label;
       sect.appendChild(btn);
     });

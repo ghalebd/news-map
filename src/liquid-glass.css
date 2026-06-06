@@ -15,6 +15,7 @@
   --lg-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0,0,0,0.4);
   --lg-accent: #00d4ee;
   --lg-accent-glow: 0 0 16px rgba(0, 212, 238, 0.5);
+  --danger: #ff3b30;
   --lg-radius: 14px;
   --lg-radius-sm: 10px;
   --lg-radius-pill: 999px;
@@ -25,8 +26,15 @@
 
 /* ---------- UNIFIED PANELS (liquid glass surfaces) ---------- */
 #v2Panel, #presenterBar, #brandHeader, #storyboardPanel, #bottomStrip,
-#statusBar, #rightPanelsStack, #animatePanel, #assetEditPanel, #editPanel,
+#statusBar, #animatePanel, #assetEditPanel, #editPanel,
 #labelsPanel, #customLabelsPanel, #liveTrackingPanel, #presenterDock,
+@keyframes lgPopIn {
+  from { opacity: 0; transform: translateX(-8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+#v2Panel, #assetPalette, .asset-palette, #colorPopup, .color-popup { transform-origin: left center; }
+
+#assetPalette, .asset-palette, #colorPopup, .color-popup,
 .panel, .glass-panel, .right-panel, .dock {
   background: var(--lg-bg) !important;
   -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(200%) brightness(1.05);
@@ -34,6 +42,32 @@
   border: 0.5px solid var(--lg-border) !important;
   box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
   border-radius: var(--lg-radius) !important;
+}
+
+/* The right rail is a layout wrapper only — each np-panel carries its own glass,
+   so the container must be fully transparent (no empty glass box behind panels). */
+#rightPanelsStack {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-radius: 0 !important;
+}
+
+/* Status bar (coords + zoom readout): compact chip pinned to the very
+   bottom-left corner — clear and readable. */
+#statusBar {
+  bottom: 6px !important; left: 6px !important;
+  padding: 4px 11px !important;
+  font-size: 10.5px !important; font-weight: 600 !important;
+  letter-spacing: 0.3px !important;
+  border-radius: 9px !important;
+  color: var(--lg-text) !important;
+  background: rgba(8, 11, 20, 0.74) !important;
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  opacity: 1 !important;
 }
 
 /* Subtle top highlight (liquid sheen) on panels */
@@ -112,7 +146,9 @@
 .v2-head {
   background: linear-gradient(180deg, rgba(0,212,238,0.12), rgba(0,212,238,0)) !important;
   border-bottom: 0.5px solid var(--lg-border) !important;
-  letter-spacing: 0.5px;
+  /* match the right-rail header treatment: uppercase, tracked */
+  text-transform: uppercase !important;
+  letter-spacing: 0.7px !important;
 }
 .v2-label, .panel-title, .section-label {
   color: var(--lg-text-dim) !important;

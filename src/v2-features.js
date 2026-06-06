@@ -332,7 +332,7 @@ function buildV2Panel() {
   const panel = document.createElement('div');
   panel.id = 'v2Panel';
   panel.innerHTML =
-    '<div class="v2-head">⚙ Studio Tools v2</div>' +
+    '<div class="v2-head">⚙ Studio Tools</div>' +
     '<div class="v2-section">' +
       '<div class="v2-row">' +
         '<button id="v2UndoBtn" class="v2-btn" title="Undo (Ctrl+Z)">↶ Undo</button>' +

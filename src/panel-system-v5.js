@@ -7,7 +7,7 @@
    ============================================================ */
 (function() {
 'use strict';
-function ready(cb){ if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else setTimeout(()=>ready(cb),250); }
+function ready(cb,n){ n=n||0; if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else if(n<200) setTimeout(()=>ready(cb,n+1),250); }
 
 ready(function() {
   setTimeout(function(){
@@ -81,18 +81,18 @@ ready(function() {
     // --- Play buttons (text "▶ Play") ---
     ['animPlay'].forEach(function(id){
       const b=document.getElementById(id);
-      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\w]+/,'').trim();b.innerHTML=window.svgIcon('play',14)+' <span>'+t+'</span>';b.style.gap='5px';}
+      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\p{L}\p{N}]+/u,'').trim();b.innerHTML=window.svgIcon('play',14)+' <span>'+t+'</span>';b.style.gap='5px';}
     });
     // --- Delete buttons (🗑 Delete) ---
     ['deleteMarker','assetDelete'].forEach(function(id){
       const b=document.getElementById(id);
-      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\w]+/,'').trim();b.innerHTML=window.svgIcon('trash',14)+' <span>'+t+'</span>';b.style.gap='5px';}
+      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\p{L}\p{N}]+/u,'').trim();b.innerHTML=window.svgIcon('trash',14)+' <span>'+t+'</span>';b.style.gap='5px';}
     });
 
     // --- Remaining visible emoji ---
     document.querySelectorAll('.pt-btn').forEach(function(b){
       const t=b.textContent.trim();
-      if(t.indexOf('\u{1F441}')>=0||/👁/.test(b.innerHTML)){b.innerHTML=window.svgIcon('eye',14)+' <span>'+t.replace(/[^\w ]/g,'').trim()+'</span>';b.style.gap='5px';}
+      if(t.indexOf('\u{1F441}')>=0||/👁/.test(b.innerHTML)){b.innerHTML=window.svgIcon('eye',14)+' <span>'+t.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>';b.style.gap='5px';}
     });
     // touch mode button (✋)
     document.querySelectorAll('button,div').forEach(function(b){
@@ -102,10 +102,10 @@ ready(function() {
     });
     // Scenario (📋), storyboard title (🎬), storyboard prev/next
     document.querySelectorAll('.top-bar-btn').forEach(function(b){
-      if(/📋/.test(b.innerHTML)){b.innerHTML=window.svgIcon('clipboard',15)+' <span>'+b.textContent.replace(/[^\w ]/g,'').trim()+'</span>';b.style.gap='6px';}
+      if(/📋/.test(b.innerHTML)){b.innerHTML=window.svgIcon('clipboard',15)+' <span>'+b.textContent.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>';b.style.gap='6px';}
     });
     const stTitle=document.querySelector('.storyboard-title');
-    if(stTitle&&/🎬/.test(stTitle.innerHTML)){stTitle.innerHTML=window.svgIcon('film',15)+' <span>'+stTitle.textContent.replace(/[^\w ]/g,'').trim()+'</span>';stTitle.style.display='inline-flex';stTitle.style.alignItems='center';stTitle.style.gap='6px';}
+    if(stTitle&&/🎬/.test(stTitle.innerHTML)){stTitle.innerHTML=window.svgIcon('film',15)+' <span>'+stTitle.textContent.replace(/[^\p{L}\p{N} ]/gu,'').trim()+'</span>';stTitle.style.display='inline-flex';stTitle.style.alignItems='center';stTitle.style.gap='6px';}
     document.querySelectorAll('.storyboard-btn').forEach(function(b){
       const t=b.textContent.trim();
       if(/◀/.test(t)){b.innerHTML=window.svgIcon('prev',13)+' <span>Prev</span>';b.style.gap='4px';}
@@ -124,7 +124,7 @@ ready(function() {
     const btn = document.getElementById(id);
     if (!btn) return;
     // Strip leading emoji/symbol, keep text
-    let txt = btn.textContent.trim().replace(/^[^\w(]+\s*/, '');
+    let txt = btn.textContent.trim().replace(/^[^\p{L}\p{N}(]+\s*/u, '');
     btn.innerHTML = window.svgIcon(iconName, 15) + ' <span>' + txt + '</span>';
     btn.style.gap = '6px';
   }
