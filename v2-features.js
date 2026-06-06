@@ -398,6 +398,7 @@ function makeDraggable(el, handle) {
   let dragging = false, ox = 0, oy = 0;
   handle.style.cursor = 'move';
   handle.addEventListener('pointerdown', function(e) {
+    if (e.target.closest('.v2-collapse-btn')) return; // don't drag when hitting collapse
     dragging = true;
     const r = el.getBoundingClientRect();
     ox = e.clientX - r.left; oy = e.clientY - r.top;
@@ -405,9 +406,9 @@ function makeDraggable(el, handle) {
   });
   handle.addEventListener('pointermove', function(e) {
     if (!dragging) return;
-    el.style.left = (e.clientX - ox) + 'px';
-    el.style.top = (e.clientY - oy) + 'px';
-    el.style.right = 'auto';
+    el.style.setProperty('left', (e.clientX - ox) + 'px', 'important');
+    el.style.setProperty('top', (e.clientY - oy) + 'px', 'important');
+    el.style.setProperty('right', 'auto', 'important');
   });
   handle.addEventListener('pointerup', function(e) {
     dragging = false;
