@@ -4016,6 +4016,87 @@ body.hide-all-panels #v2Panel { display: none !important; }
 #rightPanelsStack { align-items: flex-end !important; }
 .np-panel.np-open { width: 184px !important; align-self: flex-end; }
 
+/* ============================================================
+   v6 — Major restructure fixes
+   ============================================================ */
+
+/* ---- Remove top bar entirely (merged into presenter bar) ---- */
+.top-bar { display: none !important; }
+
+/* ---- Floating AJ logo: alone in corner, NO bar behind it ---- */
+#brandHeader, .brand-header {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  top: 10px !important;
+  left: 12px !important;
+}
+
+/* ---- KILL grey box behind collapsed right-rail icons ---- */
+.np-panel:not(.np-open) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* The collapsed icon itself becomes the glass chip */
+.np-panel:not(.np-open) .np-head {
+  width: 44px !important; height: 44px !important;
+  margin-left: auto !important;
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(200%);
+  border: 0.5px solid var(--lg-border) !important;
+  border-radius: 13px !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+}
+.np-panel:not(.np-open) .np-head:hover {
+  border-color: var(--lg-accent) !important;
+}
+
+/* ---- Studio panel: fix collapse btn position + visible grip ---- */
+#v2Panel .v2-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
+  position: relative !important;
+}
+#v2Panel .v5-grip {
+  order: -1 !important;
+  display: inline-flex !important;
+  opacity: 1 !important;
+}
+#v2Panel .v2-collapse-btn, #v2Panel .v5-collapse {
+  position: static !important;
+  margin-left: auto !important;
+  order: 99 !important;
+}
+
+/* ---- Storyboard: slimmer + taller (vertical-ish), tidy ---- */
+#storyboardPanel, .storyboard-panel {
+  max-width: 360px !important;
+}
+.storyboard-strip, .storyboard-steps {
+  gap: 5px !important;
+}
+
+/* ---- Bottom bar sections divider ---- */
+.bs-section, .pb-merged { display: inline-flex; align-items: center; gap: 4px; }
+.pb-merged { border-left: 0.5px solid var(--lg-border); margin-left: 6px; padding-left: 6px; }
+.bs-undo { border-right: 0.5px solid var(--lg-border); margin-right: 6px; padding-right: 6px; }
+
+/* ---- Touch mode: bigger hit targets when active ---- */
+body.touch-mode .pb-btn, body.touch-mode .tool-btn,
+body.touch-mode .v2-btn, body.touch-mode .layer-btn {
+  min-height: 48px !important;
+}
+body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
+
 </style>
 </head>
 <body>
@@ -8003,7 +8084,7 @@ ready(function() {
     // Horizontal bars (top/bottom) — drag left/right along their edge
     register('presenterBar', { edge: 'top', icon: 'play' });
     register('storyboardPanel', { edge: 'bottom', icon: 'next' });
-    register('bottomStrip', { edge: 'bottom', icon: 'home' });
+    register('bottomStrip', { edge: 'bottom', icon: 'home', allowCenter: true });
     // Side panels (left/right) — drag up/down along their edge
     register('v2Panel', { edge: 'left', icon: 'studio', isStudio: true });
 
@@ -8149,6 +8230,7 @@ ready(function() {
       el.style.setProperty('top','auto','important');
       el.style.setProperty('left', clamp(r.left,m,vw-r.width-m)+'px','important');
       el.style.setProperty('transform','none','important');
+      // allowCenter bars keep their dragged horizontal position (incl. screen center)
     }
   }
 
@@ -8179,6 +8261,122 @@ ready(function() {
   }
 
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+});
+})();
+
+</script>
+<script id="ui-restructure-v6-js">
+/* ============================================================
+   UI RESTRUCTURE v6 — major reorganization per user spec
+   - Remove top grey bar, merge its buttons into presenter bar
+   - Float AJ logo alone in corner
+   - Move undo/redo OUT of studio INTO bottom bar
+   - Merge studio tools into a single button on left rail
+   - Touch mode button for presenters
+   ============================================================ */
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else setTimeout(()=>ready(cb),250); }
+
+ready(function() {
+  setTimeout(restructure, 1500);
+
+  function restructure() {
+    if (document.body.dataset.v6) return;
+    document.body.dataset.v6 = '1';
+
+    mergeTopBarIntoPresenter();
+    moveUndoRedoToBottomBar();
+    addTouchModeButton();
+    console.log('[v6] UI restructured');
+  }
+
+  // ---- 1. Remove top bar, move its actions into presenter bar ----
+  function mergeTopBarIntoPresenter() {
+    const topBar = document.querySelector('.top-bar');
+    const presenter = document.getElementById('presenterBar');
+    if (!topBar || !presenter) return;
+
+    // Buttons to relocate (compact icon form)
+    const relocate = [
+      { id: 'scenarioBtn', icon: 'clipboard', keepText: false },
+      { id: 'saveBtn', icon: 'save', keepText: false },
+      { id: 'loadBtn', icon: 'load', keepText: false },
+      { id: 'hideUIBtn', icon: 'hideui', keepText: false },
+      { id: 'presenterBtn', icon: 'play', keepText: true }
+    ];
+
+    // Build a new compact section in the presenter bar
+    const sect = document.createElement('div');
+    sect.className = 'pb-section pb-merged';
+
+    relocate.forEach(function(r) {
+      const btn = document.getElementById(r.id);
+      if (!btn) return;
+      // Convert to compact icon button
+      btn.classList.add('pb-btn');
+      btn.classList.remove('top-bar-btn');
+      const label = r.keepText ? ' <span>'+btn.textContent.replace(/[^\w ]/g,'').trim()+'</span>' : '';
+      btn.innerHTML = window.svgIcon(r.icon, 16) + label;
+      sect.appendChild(btn);
+    });
+
+    // Keep scenario menu working — move it to body (absolute)
+    const scenarioMenu = document.getElementById('scenarioMenu');
+    if (scenarioMenu) document.body.appendChild(scenarioMenu);
+
+    presenter.appendChild(sect);
+
+    // Remove the now-empty top bar entirely
+    topBar.remove();
+  }
+
+  // ---- 2. Move Undo/Redo from studio panel to bottom bar ----
+  function moveUndoRedoToBottomBar() {
+    const bottom = document.getElementById('bottomStrip');
+    const undoBtn = document.getElementById('v2UndoBtn');
+    const redoBtn = document.getElementById('v2RedoBtn');
+    if (!bottom) return;
+
+    const sect = document.createElement('div');
+    sect.className = 'bs-section bs-undo';
+
+    if (undoBtn) {
+      const u = document.createElement('button');
+      u.className = 'pb-btn'; u.id = 'bsUndo'; u.title = 'Undo (Ctrl+Z)';
+      u.innerHTML = window.svgIcon('undo', 16);
+      u.onclick = function(){ if(window.undoLast) window.undoLast(); };
+      sect.appendChild(u);
+    }
+    if (redoBtn) {
+      const r = document.createElement('button');
+      r.className = 'pb-btn'; r.id = 'bsRedo'; r.title = 'Redo (Ctrl+Y)';
+      r.innerHTML = window.svgIcon('redo', 16);
+      r.onclick = function(){ if(window.redoLast) window.redoLast(); };
+      sect.appendChild(r);
+    }
+    bottom.insertBefore(sect, bottom.firstChild);
+
+    // Remove the undo/redo row from studio panel
+    if (undoBtn) { const row = undoBtn.closest('.v2-row, .v2-section'); if(row) row.remove(); else undoBtn.remove(); }
+    if (redoBtn && redoBtn.parentNode) redoBtn.remove();
+  }
+
+  // ---- 3. Touch Mode button (presenter-friendly) ----
+  function addTouchModeButton() {
+    const bottom = document.getElementById('bottomStrip');
+    if (!bottom || document.getElementById('touchModeToggle')) return;
+    const btn = document.createElement('button');
+    btn.className = 'pb-btn'; btn.id = 'touchModeToggle';
+    btn.title = 'Touch mode (presenter)';
+    btn.innerHTML = window.svgIcon('touch', 16);
+    btn.onclick = function() {
+      document.body.classList.toggle('touch-mode');
+      btn.classList.toggle('is-on', document.body.classList.contains('touch-mode'));
+      if (window.toggleTouchMode) window.toggleTouchMode();
+    };
+    bottom.appendChild(btn);
+  }
 });
 })();
 
