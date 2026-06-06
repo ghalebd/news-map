@@ -3742,6 +3742,67 @@ body.hide-all-panels #v2Panel { display: none !important; }
   box-shadow: var(--lg-accent-glow), inset 0 0 10px rgba(0,212,238,0.2) !important;
 }
 
+/* ============================================================
+   v4.1 — UNIFORM BUTTON SIZES + NARROW RAIL (decisive fix)
+   ============================================================ */
+
+/* ---- NARROWER right rail (was 232 → 184) ---- */
+#rightPanelsStack {
+  width: 184px !important;
+  right: 10px !important;
+  gap: 8px !important;
+}
+
+/* ---- UNIFORM inline buttons: ALL same height (34px) ---- */
+.v2-btn, .top-bar-btn, .ltp-btn, .label-toggle, .bs-btn, .pb-btn,
+.pt-btn, .storyboard-btn, .clp-btn, .scenario-clear-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11.5px !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+/* full-width variants stay full width but same height */
+.v2-btn.v2-wide { width: 100% !important; }
+
+/* ---- Square icon buttons: uniform 38x38 ---- */
+.tool-btn, .zoom-btn, .dock-btn {
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important; max-height: 38px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important; justify-content: center !important;
+  font-size: 15px !important;
+}
+
+/* ---- Grid layer buttons: uniform 48px square-ish ---- */
+.np-body .layers-grid-wrap .layer-btn {
+  height: 48px !important;
+  min-height: 48px !important; max-height: 48px !important;
+  padding: 4px !important;
+  font-size: 9.5px !important;
+}
+
+/* ---- Live tracking + label rows: full width, uniform 36px ---- */
+.np-body .ltp-btn, .np-body .label-toggle {
+  height: 36px !important; min-height: 36px !important; max-height: 36px !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+  padding: 0 11px !important;
+}
+
+/* ---- Studio panel narrower to match aesthetic ---- */
+#v2Panel { width: 200px !important; }
+.v2-btn { font-size: 11px !important; }
+.v2-row { display: flex !important; gap: 6px !important; }
+.v2-row .v2-btn { flex: 1 !important; padding: 0 6px !important; }
+
 </style>
 </head>
 <body>
@@ -7498,6 +7559,96 @@ ready(function() {
 
     stack.dataset.v4built = '1';
     console.log('[Panel v4] Clean accordion system built');
+  }
+});
+})();
+
+</script>
+<script id="universal-panels-js">
+/* ============================================================
+   UNIVERSAL PANEL BEHAVIOR v4.1
+   Every floating panel: draggable + collapsible + edge-snap
+   ============================================================ */
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map) cb(); else setTimeout(()=>ready(cb),250); }
+
+ready(function() {
+  setTimeout(initUniversalPanels, 900);
+
+  function initUniversalPanels() {
+    // Panels that need drag+collapse but don't have it yet
+    const targets = [
+      { id: 'presenterBar', label: 'Presenter', horizontal: true },
+      { id: 'storyboardPanel', label: 'Storyboard', horizontal: true },
+      { id: 'bottomStrip', label: 'Controls', horizontal: true }
+    ];
+
+    targets.forEach(function(t) {
+      const el = document.getElementById(t.id);
+      if (!el || el.dataset.upbInit) return;
+      el.dataset.upbInit = '1';
+      makeDraggableSnap(el);
+    });
+    console.log('[UPB v4.1] Universal panel behavior applied');
+  }
+
+  // Drag with edge-snap (sticks to nearest edge when released near it)
+  function makeDraggableSnap(el) {
+    let dragging = false, sx, sy, ox, oy, moved = false;
+
+    // Use the element itself as drag handle (but not its buttons)
+    el.addEventListener('pointerdown', function(e) {
+      if (e.target.closest('button, input, select, a, .np-body')) return;
+      dragging = true; moved = false;
+      const r = el.getBoundingClientRect();
+      // Switch to absolute positioning from current spot
+      el.style.position = 'fixed';
+      el.style.left = r.left + 'px';
+      el.style.top = r.top + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.transform = 'none';
+      sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+      el.style.transition = 'none';
+      el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    el.addEventListener('pointermove', function(e) {
+      if (!dragging) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      el.style.left = (ox + dx) + 'px';
+      el.style.top = (oy + dy) + 'px';
+    });
+
+    el.addEventListener('pointerup', function(e) {
+      if (!dragging) return;
+      dragging = false;
+      el.releasePointerCapture(e.pointerId);
+      el.style.transition = 'all 0.25s cubic-bezier(0.4,0,0.2,1)';
+      if (moved) snapToEdge(el);
+    });
+  }
+
+  function snapToEdge(el) {
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const margin = 12;
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    // distances to each edge
+    const dLeft = cx, dRight = vw - cx, dTop = cy, dBottom = vh - cy;
+    const minH = Math.min(dLeft, dRight);
+    const minV = Math.min(dTop, dBottom);
+    // Snap horizontally if closer to a side edge; else vertical
+    if (minH < minV) {
+      el.style.left = (dLeft < dRight ? margin : vw - r.width - margin) + 'px';
+      el.style.top = Math.max(margin, Math.min(vh - r.height - margin, r.top)) + 'px';
+    } else {
+      el.style.top = (dTop < dBottom ? margin : vh - r.height - margin) + 'px';
+      el.style.left = Math.max(margin, Math.min(vw - r.width - margin, r.left)) + 'px';
+    }
   }
 });
 })();
