@@ -7913,6 +7913,29 @@ ready(function() {
     studioBtnIcon('v2LogoBtn','logo'); studioBtnIcon('v2RingBtn','rangering');
     studioBtnIcon('v2AutoSaveBtn','autosave'); studioBtnIcon('v2RestoreBtn','restore');
     studioBtnIcon('v2SavePresetBtn','preset');
+
+    // --- Presenter bar prev/next/play (data-pb) ---
+    document.querySelectorAll('[data-pb]').forEach(function(btn){
+      const k=btn.dataset.pb;
+      const m={'prev':'prev','next':'next','play':'play','pause':'play','zoom-in':'zoomin','zoom-out':'zoomout','home':'home'};
+      if(m[k]&&!btn.querySelector('svg')) btn.innerHTML=window.svgIcon(m[k],16);
+    });
+    // --- Presenter dock prev/next (data-pt) ---
+    document.querySelectorAll('[data-pt]').forEach(function(btn){
+      const k=btn.dataset.pt;
+      if(k==='prev'){btn.innerHTML=window.svgIcon('prev',14)+' <span>Prev</span>';btn.style.gap='5px';}
+      else if(k==='next'){btn.innerHTML='<span>Next</span> '+window.svgIcon('next',14);btn.style.gap='5px';}
+    });
+    // --- Play buttons (text "▶ Play") ---
+    ['animPlay'].forEach(function(id){
+      const b=document.getElementById(id);
+      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\w]+/,'').trim();b.innerHTML=window.svgIcon('play',14)+' <span>'+t+'</span>';b.style.gap='5px';}
+    });
+    // --- Delete buttons (🗑 Delete) ---
+    ['deleteMarker','assetDelete'].forEach(function(id){
+      const b=document.getElementById(id);
+      if(b&&!b.querySelector('svg')){const t=b.textContent.replace(/^[^\w]+/,'').trim();b.innerHTML=window.svgIcon('trash',14)+' <span>'+t+'</span>';b.style.gap='5px';}
+    });
   }
 
   function replaceBtnEmoji(id, iconName, label) {
