@@ -3909,7 +3909,13 @@ body.hide-all-panels #v2Panel { display: none !important; }
     width: auto !important;
     transform: none !important;
     top: 68px !important;
+    height: 44px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
   }
+  .presenter-bar::-webkit-scrollbar { height: 0 !important; }
   /* Side panels start BELOW the presenter bar (no top:70 collision) */
   #v2Panel {
     left: 56px !important;
@@ -3927,15 +3933,7 @@ body.hide-all-panels #v2Panel { display: none !important; }
 
 /* Very narrow / portrait: collapse studio panel by default, stack vertically */
 @media (max-width: 740px) {
-  #v2Panel { 
-    left: 56px !important; 
-    width: 168px !important;
-  }
-  .presenter-bar {
-    flex-wrap: wrap !important;
-    height: auto !important;
-    max-width: calc(100vw - 70px) !important;
-  }
+  #v2Panel { left: 52px !important; width: 164px !important; top: 122px !important; }
 }
 
 </style>
