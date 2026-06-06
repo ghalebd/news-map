@@ -9,6 +9,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); -web
 #map { position: absolute; inset: 0; z-index: var(--z-map); background: #05080a; cursor: crosshair; }
 button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
 svg { display: block; }
+[hidden] { display: none !important; }   /* enforce the hidden attribute over class display */
 
 /* ---------- ambient HUD ---------- */
 .hud-grid { position: fixed; inset: 0; z-index: var(--z-grid); pointer-events: none;
@@ -167,3 +168,24 @@ body.mode-live  .hud-frame::before { background:
 
 /* in Presenter mode the launcher stays (the presenter can draw too), just calmer */
 body.mode-live .fab { background: var(--green); border-color: var(--green); box-shadow: var(--glow-green), var(--shadow); }
+
+/* ============================================================
+   PRESENTER QUICK TOOLBAR — vertical, left edge, on-air only.
+   ============================================================ */
+.qtools { position: fixed; left: 14px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar);
+  display: none; flex-direction: column; align-items: center; gap: 5px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+body.mode-live .qtools { display: flex; }      /* presenter only */
+.qtools__sep { width: 22px; height: 1px; background: var(--line-faint); margin: 2px 0; }
+.qtool { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r); color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--line-faint);
+  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.qtool svg { width: 19px; height: 19px; }
+.qtool:hover { color: var(--green); border-color: var(--line-hi); }
+.qtool.is-on { color: var(--green); border-color: var(--green); box-shadow: var(--glow-green), inset 0 0 12px var(--green-soft); }
+.qtool--color { position: relative; }
+.qtool__dot { width: 20px; height: 20px; border-radius: 3px; border: 1px solid var(--line-hi); }
+.qtools-pop { position: absolute; left: 52px; top: 50%; transform: translateY(-50%); z-index: var(--z-flyout);
+  display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+.qtools-pop__sw { width: 20px; height: 20px; border-radius: 3px; cursor: pointer; border: 1px solid var(--line-faint); }
+.qtools-pop__sw:hover { border-color: var(--green); transform: scale(1.12); }

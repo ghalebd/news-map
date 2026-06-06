@@ -10,7 +10,7 @@ const Draw = (() => {
   const fmtDist = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
   const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${color}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
 
-  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null;
+  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {};
 
   /* ---------------- render the active scene ---------------- */
   function render() {
@@ -49,7 +49,7 @@ const Draw = (() => {
 
   /* ---------------- tools ---------------- */
   const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure'];
-  function setTool(t) { tool = t; deselect(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); }
+  function setTool(t) { tool = t; deselect(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t)); }
 
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = tool === 'sketch' ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => { if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost); });
@@ -136,6 +136,31 @@ const Draw = (() => {
     const x = h('button', 'armchip__x', I.close); x.title = 'Done (Esc)'; x.onclick = () => setTool('select');
     arm.appendChild(x); arm.hidden = false;
   }
+
+  /* ---------------- presenter quick toolbar (vertical, left edge) ---------------- */
+  const QTOOLS = [
+    ['select', I.pan, 'Select / Pan'],
+    ['arrow', I.arrow, 'Arrow'],
+    ['marker', I.marker, 'Marker'],
+    ['ring', I.target, 'Range ring'],
+    ['text', I.text, 'Label'],
+    ['erase', I.erase, 'Erase'],
+  ];
+  const qbar = h('div', 'qtools');
+  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.onclick = () => setTool(id); qbar.appendChild(b); qbtns[id] = b; });
+  qbar.appendChild(h('div', 'qtools__sep'));
+  // colour button + popover
+  const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour';
+  const setDot = () => qcolor.querySelector('.qtool__dot').style.background = S.state.color;
+  setDot();
+  const qpop = h('div', 'qtools-pop'); qpop.hidden = true;
+  ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'].forEach(c => { const s = h('button', 'qtools-pop__sw'); s.style.background = c; s.onclick = () => { S.setColor(c); setDot(); qpop.hidden = true; }; qpop.appendChild(s); });
+  qcolor.onclick = e => { e.stopPropagation(); qpop.hidden = !qpop.hidden; };
+  document.addEventListener('click', e => { if (e.target !== qcolor && !qpop.contains(e.target)) qpop.hidden = true; });
+  qbar.append(qcolor, qpop);
+  // undo
+  const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
+  document.body.appendChild(qbar);
 
   return { render, setTool, openMenu, closeMenu, toggleMenu, deselect, get tool() { return tool; } };
 })();
