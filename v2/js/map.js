@@ -16,11 +16,12 @@ const GameMap = (() => {
 
   const map = L.map('map', { zoomControl: false, attributionControl: false, fadeAnimation: true }).setView([29.5, 45], 5);
 
-  // UNDERLAY: coarse (maxNativeZoom 4) so it's few big tiles. A generous
-  // keepBuffer + loading DURING zoom means the surrounding area is already
-  // covered when you zoom OUT (no blank ring). Cheap because the tiles are coarse.
+  // PERMANENT LOW-RES BACKDROP: very coarse (maxNativeZoom 3) so a few big tiles
+  // cover the whole region and stay loaded. It always sits behind the sharp
+  // layer, so if anything is missing (still loading, network drop, far jump,
+  // zoom-out) there is never a blank — a light version is always there.
   const underlay = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, maxNativeZoom: 4, tileSize: 256, keepBuffer: 4, className: 'tiles-underlay',
+    maxZoom: 20, maxNativeZoom: 3, tileSize: 256, keepBuffer: 4, className: 'tiles-underlay',
   }).addTo(map);
 
   // BASE: full detail. Defer tile loading until the zoom animation ends so the
