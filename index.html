@@ -3846,6 +3846,92 @@ body.hide-all-panels #v2Panel { display: none !important; }
   gap: 2px !important;
 }
 
+/* ============================================================
+   v4.3 — FIX: icon buttons (SVG) showing as empty boxes
+   ============================================================ */
+/* pb-btn and other icon-only buttons must be SQUARE with visible SVG */
+.pb-btn {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+}
+/* Force ALL button SVGs to a visible size */
+.pb-btn svg, .tool-btn svg, .zoom-btn svg, .ltp-btn svg,
+.top-bar-btn svg, .v2-btn svg, .bs-btn svg, .dock-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  min-width: 17px !important;
+  flex: 0 0 auto !important;
+  display: block !important;
+}
+/* Buttons with text+icon: let icon be smaller, keep auto width */
+.v2-btn svg, .top-bar-btn svg, .ltp-btn svg, .bs-btn svg {
+  width: 14px !important; height: 14px !important;
+  margin-right: 5px;
+}
+/* Don't clip button content */
+.pb-btn, .tool-btn, .zoom-btn, .v2-btn, .ltp-btn, .top-bar-btn, .bs-btn {
+  overflow: visible !important;
+}
+/* presenter bar sections keep tight spacing */
+.pb-section { gap: 4px !important; }
+
+/* ============================================================
+   v4.4 — FIX OVERLAPS: v2Panel off the toolbar, clean zones
+   ============================================================ */
+/* Studio panel: move to LEFT but CLEAR of the toolbar (toolbar ends ~48px) */
+#v2Panel {
+  left: 60px !important;
+  top: 70px !important;
+  right: auto !important;
+  width: 196px !important;
+  z-index: 1500 !important;
+}
+/* When toolbar is hidden, studio can shift left — handled by JS if needed */
+
+/* presenterBar: must not collide with side panels — center it, narrower zone */
+.presenter-bar {
+  max-width: calc(100vw - 540px) !important;
+}
+
+/* statusBar vs bottomStrip: stack status ABOVE strip on narrow screens */
+@media (max-width: 900px) {
+  #v2Panel { 
+    left: 60px !important; 
+    width: 180px !important;
+    max-height: calc(100vh - 360px) !important;
+  }
+  .presenter-bar { 
+    max-width: calc(100vw - 130px) !important;
+    left: 60px !important;
+    transform: none !important;
+  }
+  #statusBar { bottom: 56px !important; }
+  .right-panels-stack { 
+    top: auto !important; 
+    bottom: 100px !important;
+    max-height: 50vh !important;
+  }
+}
+
+/* Very narrow / portrait: collapse studio panel by default, stack vertically */
+@media (max-width: 740px) {
+  #v2Panel { 
+    left: 56px !important; 
+    width: 168px !important;
+  }
+  .presenter-bar {
+    flex-wrap: wrap !important;
+    height: auto !important;
+    max-width: calc(100vw - 70px) !important;
+  }
+}
+
 </style>
 </head>
 <body>
