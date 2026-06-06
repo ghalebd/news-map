@@ -8129,7 +8129,11 @@ ready(function() {
     const vw=window.innerWidth, vh=window.innerHeight, m=10;
     el.style.setProperty('position','fixed','important');
     if (opts.edge==='left') {
-      el.style.setProperty('left', m+'px','important');
+      // Clear the main toolbar if present
+      let leftPos = m;
+      const tb = document.querySelector('.toolbar');
+      if (tb) { const tr = tb.getBoundingClientRect(); if (tr.width>0) leftPos = Math.round(tr.right) + 8; }
+      el.style.setProperty('left', leftPos+'px','important');
       el.style.setProperty('right','auto','important');
       el.style.setProperty('top', clamp(r.top,68,vh-r.height-m)+'px','important');
     } else if (opts.edge==='right') {
@@ -8157,10 +8161,15 @@ ready(function() {
         const ox=Math.max(0,Math.min(ra.right,rb.right)-Math.max(ra.left,rb.left));
         const oy=Math.max(0,Math.min(ra.bottom,rb.bottom)-Math.max(ra.top,rb.top));
         if (ox>4 && oy>4) {
-          // nudge b downward (or right if same edge orientation)
           const bo=b.__dock;
           if (bo && (bo.edge==='left'||bo.edge==='right')) {
             b.style.setProperty('top', Math.min(window.innerHeight-rb.height-10, ra.bottom+10)+'px','important');
+          } else if (bo && bo.edge==='bottom') {
+            // stack this bottom bar ABOVE the other bottom bar
+            b.style.setProperty('bottom', (window.innerHeight - ra.top + 10)+'px','important');
+            b.style.setProperty('top','auto','important');
+          } else if (bo && bo.edge==='top') {
+            b.style.setProperty('top', (ra.bottom+10)+'px','important');
           } else {
             b.style.setProperty('left', Math.min(window.innerWidth-rb.width-10, ra.right+10)+'px','important');
           }
