@@ -3936,6 +3936,86 @@ body.hide-all-panels #v2Panel { display: none !important; }
   #v2Panel { left: 52px !important; width: 164px !important; top: 122px !important; }
 }
 
+/* ============================================================
+   v5 — Collapsed squares, pro icons, grips
+   ============================================================ */
+/* Pro SVG icons: consistent sizing, centered */
+.pro-icon { display: inline-block; vertical-align: middle; flex: 0 0 auto; }
+.layer-icon .pro-icon, .layer-emoji.pro-icon, .toggle-icon .pro-icon,
+.ltp-icon .pro-icon { display: block; margin: 0 auto; }
+
+/* Buttons with icon+label: center content, consistent gap */
+.v2-btn, .top-bar-btn, .ltp-btn, .label-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.v2-btn span, .top-bar-btn span, .ltp-btn span { line-height: 1; }
+
+/* --- pb-btn: PERFECT centering of SVG (fix bottom bar) --- */
+.pb-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+.pb-btn svg { margin: 0 !important; display: block !important; }
+
+/* --- v5 grip handle --- */
+.v5-grip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; min-width: 20px; height: 26px; flex: 0 0 auto;
+  color: var(--lg-text-dim); cursor: grab; border-radius: 6px;
+  transition: all var(--lg-transition);
+}
+.v5-grip:hover { color: var(--lg-accent); background: rgba(0,212,238,0.12); }
+.v5-grip:active { cursor: grabbing; }
+
+/* --- v5 collapse button --- */
+.v5-collapse {
+  width: 24px !important; height: 24px !important; min-width: 24px !important;
+  flex: 0 0 auto !important; border-radius: 7px !important;
+  background: transparent !important; border: 0.5px solid transparent !important;
+  color: var(--lg-text-dim) !important; cursor: pointer !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  margin-left: auto !important;
+  transition: all var(--lg-transition) !important;
+}
+.v5-collapse:hover { background: rgba(0,212,238,0.18) !important; color: var(--lg-accent) !important; border-color: var(--lg-accent) !important; }
+
+/* --- COLLAPSED SQUARE: small icon-only box --- */
+.v5-square {
+  width: 46px !important; min-width: 46px !important; max-width: 46px !important;
+  height: 46px !important; min-height: 46px !important; max-height: 46px !important;
+  padding: 0 !important;
+  border-radius: 13px !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+}
+.v5-square > *:not(.v5-square-icon) { display: none !important; }
+.v5-square-icon {
+  display: flex !important; align-items: center; justify-content: center;
+  width: 100%; height: 100%; color: var(--lg-accent);
+}
+.v5-square-icon .pro-icon { width: 22px; height: 22px; }
+
+/* --- Collapsed np-panel (right rail) = square too --- */
+.np-panel:not(.np-open) {
+  width: 46px !important; min-width: 46px !important;
+  margin-left: auto !important;
+}
+.np-panel:not(.np-open) .np-head { padding: 0 !important; height: 46px !important; justify-content: center !important; }
+.np-panel:not(.np-open) .np-head-title,
+.np-panel:not(.np-open) .np-head-chevron { display: none !important; }
+.np-panel:not(.np-open) .np-head-icon { font-size: 0 !important; }
+/* Give collapsed np-panel its pro icon */
+.np-panel:not(.np-open) .np-head-icon::before { font-size: 22px; }
+
+/* Right rail aligns collapsed squares to the right edge */
+#rightPanelsStack { align-items: flex-end !important; }
+.np-panel.np-open { width: 184px !important; align-self: flex-end; }
+
 </style>
 </head>
 <body>
@@ -7697,71 +7777,287 @@ ready(function() {
 })();
 
 </script>
+<script id="pro-icons-js">
+/* ============================================================
+   PRO ICON SYSTEM — inline SVG, unified stroke style
+   Replaces ALL emoji across the UI with professional icons.
+   Stroke-based, 24x24 viewBox, currentColor.
+   ============================================================ */
+window.NEWSMAP_ICONS = {
+  // --- Map style layers ---
+  news:       '<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>',
+  marine:     '<path d="M3 14c2 1 3 1 5 0s3-1 5 0 3 1 5 0"/><path d="M3 18c2 1 3 1 5 0s3-1 5 0 3 1 5 0"/><path d="M12 4v7"/><path d="M8 7l4-3 4 3"/>',
+  satellite:  '<path d="M5 12l-2-2 3-3 2 2"/><path d="M12 5l3-3 3 3-3 3z"/><path d="M9 9l6 6"/><path d="M14 14l-2 2 3 3 2-3z" fill="currentColor"/>',
+  terrain:    '<path d="M3 18l5-8 4 5 3-4 6 7z"/>',
+  topo:       '<path d="M12 3l8 14H4z"/><path d="M9 12h6"/>',
+  dark:       '<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>',
+  toner:      '<circle cx="12" cy="12" r="8" fill="currentColor"/>',
+  streets:    '<path d="M7 3v18M17 3v18"/><path d="M3 7h18M3 17h18"/>',
+  hybrid:     '<path d="M12 5l3-3 3 3-3 3z"/><path d="M9 9l6 6"/><circle cx="7" cy="17" r="2"/>',
+  dataviz:    '<path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/>',
+  positron:   '<path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="currentColor"/>',
+  bright:     '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+  // --- Labels ---
+  globe:      '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  star:       '<path d="M12 3l2.5 6 6.5.5-5 4.5 1.5 6.5L12 17l-5.5 3.5L8 14 3 9.5 9.5 9z" fill="currentColor"/>',
+  pin:        '<path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/>',
+  // --- Live tracking ---
+  ship:       '<path d="M3 15l1.5 5h15L21 15z"/><path d="M5 15V9h14v6"/><path d="M12 3v6"/><path d="M9 9h6"/>',
+  plane:      '<path d="M12 2l2 7 7 3-7 1-2 8-2-8-7-1 7-3z" fill="currentColor"/>',
+  radar:      '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l7-4"/>',
+  // --- Tools / actions ---
+  undo:       '<path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10h-3"/>',
+  redo:       '<path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 0 0 0 10h3"/>',
+  motionpath: '<path d="M3 17c4 0 4-10 8-10s4 10 8 10"/><circle cx="3" cy="17" r="2" fill="currentColor"/><circle cx="19" cy="17" r="2" fill="currentColor"/>',
+  spotlight:  '<circle cx="12" cy="12" r="5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  logo:       '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16l3-6 3 4 2-3"/>',
+  rangering:  '<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2" fill="currentColor"/>',
+  autosave:   '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M7 3v5h8"/><circle cx="12" cy="14" r="3"/>',
+  restore:    '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  preset:     '<path d="M12 3l2.5 6 6.5.5-5 4.5 1.5 6.5L12 17l-5.5 3.5L8 14 3 9.5 9.5 9z"/>',
+  trash:      '<path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>',
+  save:       '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M7 3v5h8M7 21v-7h10v7"/>',
+  load:       '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  zoomin:     '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/>',
+  zoomout:    '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/>',
+  home:       '<path d="M3 11l9-8 9 8"/><path d="M5 9v11h14V9"/>',
+  play:       '<path d="M7 4l12 8-12 8z" fill="currentColor"/>',
+  prev:       '<path d="M15 4L7 12l8 8z" fill="currentColor"/>',
+  next:       '<path d="M9 4l8 8-8 8z" fill="currentColor"/>',
+  close:      '<path d="M5 5l14 14M19 5L5 19"/>',
+  hideui:     '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',
+  countries:  '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  // panel header icons
+  mapstyle:   '<path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>',
+  labels:     '<path d="M9 3H4v5l11 11 5-5z"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/>',
+  tracking:   '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l7-4"/>',
+  studio:     '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'
+};
+
+// Helper: build an <svg> string
+window.svgIcon = function(name, size) {
+  size = size || 18;
+  const body = window.NEWSMAP_ICONS[name];
+  if (!body) return '';
+  return '<svg class="pro-icon" viewBox="0 0 24 24" width="'+size+'" height="'+size+'" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    body + '</svg>';
+};
+
+</script>
+<script id="panel-system-v5-js">
+/* ============================================================
+   ICON REPLACER + PANEL SYSTEM v5
+   1. Replace all emoji with pro SVG icons
+   2. Collapsed panel = small icon-only square
+   3. Auto edge-snap + constrained drag along edges
+   4. No panel-in-panel (collision prevention)
+   ============================================================ */
+(function() {
+'use strict';
+function ready(cb){ if(typeof map!=='undefined'&&map&&window.svgIcon) cb(); else setTimeout(()=>ready(cb),250); }
+
+ready(function() {
+  setTimeout(function(){
+    replaceEmojiIcons();
+    console.log('[v5] Pro icons applied');
+  }, 1100);
+
+  function setIcon(el, name, size) {
+    if (!el) return;
+    const ic = window.svgIcon(name, size || 18);
+    if (ic) el.innerHTML = ic;
+  }
+
+  function replaceEmojiIcons() {
+    // --- Map style layer icons ---
+    const layerMap = {
+      'newsv2':'news','marine_dark':'marine','satellite':'satellite','terrain':'terrain',
+      'topographic':'topo','basic_dark':'dark','toner':'toner','streets_dark':'streets',
+      'hybrid':'hybrid','dataviz_dark':'dataviz','positron_dark':'positron',
+      'bright_dark':'bright','satellite_hd':'satellite'
+    };
+    document.querySelectorAll('.layer-btn').forEach(function(btn){
+      const layer = btn.dataset.layer;
+      const iconName = layerMap[layer];
+      if (!iconName) return;
+      let iconEl = btn.querySelector('.layer-icon, .layer-emoji');
+      if (iconEl) setIcon(iconEl, iconName, 18);
+    });
+
+    // --- Label toggles ---
+    const labelMap = { 'countries':'globe','capitals':'star','cities':'pin' };
+    document.querySelectorAll('.label-toggle').forEach(function(btn){
+      const k = btn.dataset.labels;
+      const iconEl = btn.querySelector('.toggle-icon');
+      if (iconEl && labelMap[k]) setIcon(iconEl, labelMap[k], 16);
+    });
+
+    // --- Live tracking buttons ---
+    const ships = document.getElementById('shipsToggleBtn');
+    const flights = document.getElementById('flightsToggleBtn');
+    if (ships) { const i=ships.querySelector('.ltp-icon'); if(i) setIcon(i,'ship',16); }
+    if (flights) { const i=flights.querySelector('.ltp-icon'); if(i) setIcon(i,'plane',16); }
+
+    // --- Top bar buttons (emoji prefix → icon) ---
+    replaceBtnEmoji('saveBtn', 'save', 'Save');
+    replaceBtnEmoji('loadBtn', 'load', 'Load');
+    replaceBtnEmoji('undoBtn', 'undo', '');
+    replaceBtnEmoji('clearAllBtn', 'trash', '');
+    replaceBtnEmoji('hideUIBtn', 'hideui', 'Hide UI');
+    replaceBtnEmoji('presenterBtn', 'play', 'Presenter');
+
+    // --- Studio panel buttons (text-based, prepend icon) ---
+    studioBtnIcon('v2UndoBtn','undo'); studioBtnIcon('v2RedoBtn','redo');
+    studioBtnIcon('v2PathBtn','motionpath'); studioBtnIcon('v2SpotBtn','spotlight');
+    studioBtnIcon('v2LogoBtn','logo'); studioBtnIcon('v2RingBtn','rangering');
+    studioBtnIcon('v2AutoSaveBtn','autosave'); studioBtnIcon('v2RestoreBtn','restore');
+    studioBtnIcon('v2SavePresetBtn','preset');
+  }
+
+  function replaceBtnEmoji(id, iconName, label) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.innerHTML = window.svgIcon(iconName, 16) + (label ? ' <span>'+label+'</span>' : '');
+    btn.style.gap = '6px';
+  }
+
+  function studioBtnIcon(id, iconName) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    // Strip leading emoji/symbol, keep text
+    let txt = btn.textContent.trim().replace(/^[^\w(]+\s*/, '');
+    btn.innerHTML = window.svgIcon(iconName, 15) + ' <span>' + txt + '</span>';
+    btn.style.gap = '6px';
+  }
+});
+})();
+
+</script>
 <script id="universal-panels-js">
 /* ============================================================
-   UNIVERSAL PANEL BEHAVIOR v4.2
-   Injects grip handle + collapse btn into floating bars.
-   Drag via grip · collapse · edge-snap.
+   PANEL DOCK SYSTEM v5 — collapsed squares · edge-snap ·
+   constrained drag · NO panel-in-panel (collision avoidance)
    ============================================================ */
 (function() {
 'use strict';
 function ready(cb){ if(typeof map!=='undefined'&&map) cb(); else setTimeout(()=>ready(cb),250); }
 
 ready(function() {
-  setTimeout(initUniversalPanels, 1000);
+  setTimeout(initDock, 1300);
 
-  function initUniversalPanels() {
-    const targets = ['presenterBar', 'storyboardPanel', 'bottomStrip'];
-    targets.forEach(function(id) {
-      const el = document.getElementById(id);
-      if (!el || el.dataset.upb2) return;
-      el.dataset.upb2 = '1';
-      injectControls(el);
+  // Registry of all managed floating panels
+  const panels = [];
+
+  function initDock() {
+    // Horizontal bars (top/bottom) — drag left/right along their edge
+    register('presenterBar', { edge: 'top', icon: 'play' });
+    register('storyboardPanel', { edge: 'bottom', icon: 'next' });
+    register('bottomStrip', { edge: 'bottom', icon: 'home' });
+    // Side panels (left/right) — drag up/down along their edge
+    register('v2Panel', { edge: 'left', icon: 'studio', isStudio: true });
+
+    // The right rail np-panels already collapse via accordion; give them square mode too
+    document.querySelectorAll('#rightPanelsStack .np-panel').forEach(function(p, i) {
+      enableSquareCollapse(p, ['mapstyle','labels','tracking'][i] || 'mapstyle');
     });
-    console.log('[UPB v4.2] grips + collapse + snap applied');
+
+    // Continuous collision check
+    setInterval(preventOverlaps, 600);
+    window.addEventListener('resize', function(){ panels.forEach(snapToEdge); });
+    console.log('[Dock v5] ' + panels.length + ' panels managed');
   }
 
-  function injectControls(el) {
-    // Grip handle (drag)
+  function register(id, opts) {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.v5) return;
+    el.dataset.v5 = '1';
+    el.__dock = opts;
+    panels.push(el);
+    addControls(el, opts);
+    // initial snap to its edge
+    setTimeout(function(){ snapToEdge(el); }, 100);
+  }
+
+  // Add grip + collapse-to-square button
+  function addControls(el, opts) {
+    if (el.querySelector('.v5-grip')) return;
     const grip = document.createElement('div');
-    grip.className = 'upb-grip';
-    grip.innerHTML = '⋮⋮';
-    grip.title = 'Drag to move';
-    // Collapse button
+    grip.className = 'v5-grip';
+    grip.innerHTML = window.svgIcon ? window.svgIcon('home',12).replace('home','') : '⋮⋮';
+    grip.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="14"><circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/></svg>';
+    grip.title = 'Drag along edge';
+
     const collapse = document.createElement('button');
-    collapse.className = 'upb-collapse';
-    collapse.innerHTML = '−';
-    collapse.title = 'Collapse';
+    collapse.className = 'v5-collapse';
+    collapse.innerHTML = window.svgIcon ? window.svgIcon('close', 13) : '−';
+    collapse.title = 'Collapse to icon';
+    collapse.dataset.icon = opts.icon;
 
     el.insertBefore(grip, el.firstChild);
     el.appendChild(collapse);
 
-    // Collapse logic: hide all children except grip+collapse
-    collapse.addEventListener('click', function(e) {
+    collapse.addEventListener('click', function(e){
       e.stopPropagation();
-      el.classList.toggle('upb-collapsed');
-      collapse.innerHTML = el.classList.contains('upb-collapsed') ? '+' : '−';
+      toggleSquare(el, opts.icon);
     });
 
-    // Drag via grip — document-level listeners (robust)
+    // Expand when clicking the collapsed square
+    el.addEventListener('click', function(e){
+      if (el.classList.contains('v5-square')) {
+        e.stopPropagation();
+        toggleSquare(el, opts.icon);
+      }
+    });
+
+    enableEdgeDrag(el, grip, opts);
+  }
+
+  function toggleSquare(el, iconName) {
+    const sq = el.classList.toggle('v5-square');
+    if (sq) {
+      el.dataset.prevHTML = '1';
+      el.__squareIcon = document.createElement('div');
+      el.__squareIcon.className = 'v5-square-icon';
+      el.__squareIcon.innerHTML = window.svgIcon(iconName, 22);
+      el.appendChild(el.__squareIcon);
+    } else {
+      if (el.__squareIcon) { el.__squareIcon.remove(); el.__squareIcon = null; }
+    }
+    setTimeout(function(){ snapToEdge(el); preventOverlaps(); }, 50);
+  }
+
+  function enableSquareCollapse(panel, iconName) {
+    // np-panels: clicking header already toggles open; add square when all closed handled by CSS
+    panel.dataset.squareIcon = iconName;
+  }
+
+  // Constrained drag: side panels move vertically, bars move horizontally
+  function enableEdgeDrag(el, grip, opts) {
     let dragging=false, sx, sy, ox, oy, moved=false;
-    function onMove(e){
+    function move(e){
       if(!dragging)return;
       const dx=e.clientX-sx, dy=e.clientY-sy;
       if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
-      el.style.setProperty('left',(ox+dx)+'px','important'); el.style.setProperty('top',(oy+dy)+'px','important');
+      if (opts.edge==='left' || opts.edge==='right') {
+        // vertical movement only
+        el.style.setProperty('top', clamp(oy+dy, 8, window.innerHeight-el.offsetHeight-8)+'px','important');
+      } else {
+        // horizontal movement only
+        el.style.setProperty('left', clamp(ox+dx, 8, window.innerWidth-el.offsetWidth-8)+'px','important');
+        el.style.setProperty('transform','none','important');
+      }
     }
-    function onUp(e){
-      if(!dragging)return;
-      dragging=false;
-      document.removeEventListener('pointermove',onMove);
-      document.removeEventListener('pointerup',onUp);
-      el.style.transition='all 0.25s cubic-bezier(0.4,0,0.2,1)';
-      if(moved) snapToEdge(el);
+    function up(){
+      if(!dragging)return; dragging=false;
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      el.style.transition='all 0.2s cubic-bezier(0.4,0,0.2,1)';
+      snapToEdge(el); preventOverlaps();
     }
-    grip.addEventListener('pointerdown', function(e) {
+    grip.addEventListener('pointerdown', function(e){
       dragging=true; moved=false;
-      const r = el.getBoundingClientRect();
+      const r=el.getBoundingClientRect();
       el.style.setProperty('position','fixed','important');
       el.style.setProperty('left',r.left+'px','important');
       el.style.setProperty('top',r.top+'px','important');
@@ -7770,26 +8066,60 @@ ready(function() {
       el.style.setProperty('transform','none','important');
       sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
       el.style.transition='none';
-      document.addEventListener('pointermove',onMove);
-      document.addEventListener('pointerup',onUp);
+      document.addEventListener('pointermove',move);
+      document.addEventListener('pointerup',up);
       e.preventDefault(); e.stopPropagation();
     });
   }
 
+  // Snap to the nearest relevant edge
   function snapToEdge(el) {
-    const r=el.getBoundingClientRect();
-    const vw=window.innerWidth, vh=window.innerHeight, m=12;
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    const dL=cx, dR=vw-cx, dT=cy, dB=vh-cy;
-    const minH=Math.min(dL,dR), minV=Math.min(dT,dB);
-    if(minH<minV){
-      el.style.setProperty('left',(dL<dR?m:vw-r.width-m)+'px','important');
-      el.style.setProperty('top',Math.max(m,Math.min(vh-r.height-m,r.top))+'px','important');
-    } else {
-      el.style.setProperty('top',(dT<dB?m:vh-r.height-m)+'px','important');
-      el.style.setProperty('left',Math.max(m,Math.min(vw-r.width-m,r.left))+'px','important');
+    const opts = el.__dock; if(!opts) return;
+    const r = el.getBoundingClientRect();
+    const vw=window.innerWidth, vh=window.innerHeight, m=10;
+    el.style.setProperty('position','fixed','important');
+    if (opts.edge==='left') {
+      el.style.setProperty('left', m+'px','important');
+      el.style.setProperty('right','auto','important');
+      el.style.setProperty('top', clamp(r.top,68,vh-r.height-m)+'px','important');
+    } else if (opts.edge==='right') {
+      el.style.setProperty('right', m+'px','important');
+      el.style.setProperty('left','auto','important');
+      el.style.setProperty('top', clamp(r.top,68,vh-r.height-m)+'px','important');
+    } else if (opts.edge==='top') {
+      el.style.setProperty('top', 68+'px','important');
+      el.style.setProperty('left', clamp(r.left,m,vw-r.width-m)+'px','important');
+      el.style.setProperty('transform','none','important');
+    } else { // bottom
+      el.style.setProperty('bottom', m+'px','important');
+      el.style.setProperty('top','auto','important');
+      el.style.setProperty('left', clamp(r.left,m,vw-r.width-m)+'px','important');
+      el.style.setProperty('transform','none','important');
     }
   }
+
+  // Prevent any panel overlapping another — nudge apart
+  function preventOverlaps() {
+    for (let i=0;i<panels.length;i++){
+      for (let j=i+1;j<panels.length;j++){
+        const a=panels[i], b=panels[j];
+        const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect();
+        const ox=Math.max(0,Math.min(ra.right,rb.right)-Math.max(ra.left,rb.left));
+        const oy=Math.max(0,Math.min(ra.bottom,rb.bottom)-Math.max(ra.top,rb.top));
+        if (ox>4 && oy>4) {
+          // nudge b downward (or right if same edge orientation)
+          const bo=b.__dock;
+          if (bo && (bo.edge==='left'||bo.edge==='right')) {
+            b.style.setProperty('top', Math.min(window.innerHeight-rb.height-10, ra.bottom+10)+'px','important');
+          } else {
+            b.style.setProperty('left', Math.min(window.innerWidth-rb.width-10, ra.right+10)+'px','important');
+          }
+        }
+      }
+    }
+  }
+
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 });
 })();
 
