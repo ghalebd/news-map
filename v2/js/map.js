@@ -14,13 +14,27 @@ const GameMap = (() => {
     { id: 'ocean', ar: 'بحري' },
   ];
 
-  const map = L.map('map', { zoomControl: false, attributionControl: false, zoomSnap: 0.25 }).setView([29.5, 45], 5);
-  const base = L.tileLayer(tile('satellite'), { maxZoom: 20, tileSize: 256 }).addTo(map);
+  const map = L.map('map', { zoomControl: false, attributionControl: false, zoomSnap: 0.25, fadeAnimation: true }).setView([29.5, 45], 5);
+
+  // UNDERLAY: same style, capped to a low native zoom so a handful of coarse
+  // tiles upscale to fill the whole view instantly — no blank gaps while the
+  // sharp layer loads. (low-res first, then high-res on top)
+  const underlay = L.tileLayer(tile('satellite'), {
+    maxZoom: 20, maxNativeZoom: 6, tileSize: 256,
+    keepBuffer: 16, updateWhenZooming: false, className: 'tiles-underlay',
+  }).addTo(map);
+
+  // BASE: full detail, kept tiles around the viewport so panning rarely blanks.
+  const base = L.tileLayer(tile('satellite'), {
+    maxZoom: 20, tileSize: 256,
+    keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: false, className: 'tiles-base',
+  }).addTo(map);
+
   L.control.attribution({ position: 'bottomright', prefix: false }).addAttribution('© MapTiler © OpenStreetMap').addTo(map);
 
   const drawn = L.layerGroup().addTo(map);   // rendered elements of the active scene live here
 
-  function setStyle(id) { base.setUrl(tile(id)); }
+  function setStyle(id) { underlay.setUrl(tile(id)); base.setUrl(tile(id)); }
   function currentView() { const c = map.getCenter(); return { lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), zoom: +map.getZoom().toFixed(2) }; }
   function flyToView(view, t) {
     if (!view) return;
