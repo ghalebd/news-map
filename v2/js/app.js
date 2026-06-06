@@ -27,6 +27,9 @@
   const state = { tool: 'pan', color: '#ff3b30', drawn: L.layerGroup().addTo(map) };
   const COLORS = ['#ff3b30', '#ff9500', '#ffcc00', '#30d158', '#00d4ee', '#0a84ff', '#bf5af2', '#ffffff'];
 
+  /* ---------------- HUD overlay (grid · scanlines · viewport brackets) ---------------- */
+  ['hud-grid', 'hud-scan', 'hud-frame'].forEach(c => document.body.appendChild(h('div', c)));
+
   /* ---------------- brand + status ---------------- */
   const brand = h('div', 'brand', `<img src="../live_assets/aljazeera_logo.png" alt="Al Jazeera" onerror="this.style.display='none'">`);
   const status = h('div', 'status'); document.body.append(brand, status);

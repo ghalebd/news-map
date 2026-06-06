@@ -1,60 +1,58 @@
 /* ============================================================
-   DESIGN TOKENS — single source of truth for the whole UI.
-   No component ever hard-codes a colour/size; it reads a token.
+   DESIGN TOKENS — "TACTICAL COMMAND HUD"
+   Phosphor lines, corner brackets, monospace. No glass, no blur.
    ============================================================ */
 :root {
-  /* ---- palette ---- */
-  --bg-void: #070a12;
-  --accent: #00d4ee;
-  --accent-2: #00b8d4;
-  --accent-soft: rgba(0, 212, 238, 0.16);
-  --danger: #ff453a;
-  --warn: #ff9f0a;
-  --ok: #30d158;
-  --live: #ff3b30;
+  /* ---- phosphor palette ---- */
+  --bg: #04070a;
+  --amber: #ffb000;          /* primary HUD */
+  --amber-dim: rgba(255, 176, 0, 0.55);
+  --green: #36ff9e;          /* secondary / OK */
+  --cyan: #38e6ff;           /* data / info */
+  --red: #ff3b3b;            /* alert */
+  --amber-soft: rgba(255, 176, 0, 0.10);
+  --green-soft: rgba(54, 255, 158, 0.12);
 
-  /* ---- glass surfaces ---- */
-  --glass: rgba(16, 20, 32, 0.55);
-  --glass-2: rgba(26, 32, 48, 0.62);
-  --glass-hover: rgba(34, 44, 68, 0.6);
-  --glass-active: rgba(0, 184, 212, 0.22);
-  --stroke: rgba(255, 255, 255, 0.14);
-  --stroke-hi: rgba(255, 255, 255, 0.34);
-  --blur: 26px;
+  /* ---- surfaces: flat, dark, line-defined (NOT glass) ---- */
+  --surface: rgba(6, 11, 13, 0.82);
+  --surface-2: rgba(10, 16, 18, 0.7);
+  --surface-solid: #060b0d;
+  --line: rgba(255, 176, 0, 0.32);     /* default border */
+  --line-hi: rgba(255, 176, 0, 0.7);
+  --line-faint: rgba(255, 176, 0, 0.14);
+  --grid: rgba(54, 255, 158, 0.05);    /* background grid */
+  --scan: rgba(0, 0, 0, 0.22);         /* scanline */
 
   /* ---- text ---- */
-  --text: #f2f6fc;
-  --text-dim: #9aa6bd;
-  --text-mute: #6b7689;
+  --text: #d6e4dc;
+  --text-dim: #7e9a8b;
+  --text-mute: #4f6a5c;
 
-  /* ---- typography ---- */
-  --font: -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+  /* ---- type (monospace HUD) ---- */
+  --font: "SF Mono", "JetBrains Mono", "Consolas", ui-monospace, monospace;
+  --font-ui: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
 
-  /* ---- geometry ---- */
-  --r-sm: 9px;
-  --r-md: 13px;
-  --r-lg: 18px;
-  --r-pill: 999px;
-  --btn: 44px;              /* canonical icon-button / chip / square size   */
+  /* ---- geometry: sharp, technical ---- */
+  --r: 2px;                 /* almost square */
+  --r-0: 0px;
+  --btn: 40px;
   --gap: 8px;
+  --bracket: 9px;           /* corner-bracket arm length */
 
-  /* ---- elevation ---- */
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
-  --inner: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -16px 32px rgba(0, 0, 0, 0.14);
-  --glow: 0 0 16px rgba(0, 212, 238, 0.5);
+  /* ---- glow / elevation ---- */
+  --glow-amber: 0 0 10px rgba(255, 176, 0, 0.45);
+  --glow-green: 0 0 10px rgba(54, 255, 158, 0.5);
+  --shadow: 0 6px 26px rgba(0, 0, 0, 0.55);
 
-  /* ---- motion (one easing + duration set everywhere) ---- */
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-bounce: cubic-bezier(0.34, 1.3, 0.5, 1);
-  --t-fast: 0.13s;
-  --t: 0.2s;
+  /* ---- motion ---- */
+  --ease: cubic-bezier(0.3, 0.8, 0.3, 1);
+  --t-fast: 0.1s;
+  --t: 0.16s;
 
-  /* ---- z-index scale ---- */
+  /* ---- z ---- */
   --z-map: 1;
+  --z-grid: 5;
   --z-panel: 1000;
   --z-bar: 1100;
   --z-flyout: 2000;
-  --z-modal: 3000;
 }
