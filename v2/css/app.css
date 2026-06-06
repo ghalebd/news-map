@@ -7,9 +7,7 @@
 html, body { height: 100%; overflow: hidden; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; letter-spacing: 0.3px; }
 #map { position: absolute; inset: 0; z-index: var(--z-map); background: #0e1622; cursor: crosshair; }
-/* low-res underlay: soften the upscaled coarse tiles so they read as a smooth
-   placeholder rather than pixelated blocks while the sharp layer loads */
-.tiles-underlay { filter: blur(1.5px); }
+/* underlay tiles render smoothly when upscaled (no GPU-heavy blur filter) */
 .tiles-underlay img { image-rendering: auto; }
 button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
 svg { display: block; }

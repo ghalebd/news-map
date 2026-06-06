@@ -16,18 +16,16 @@ const GameMap = (() => {
 
   const map = L.map('map', { zoomControl: false, attributionControl: false, zoomSnap: 0.25, fadeAnimation: true }).setView([29.5, 45], 5);
 
-  // UNDERLAY: same style, capped to a low native zoom so a handful of coarse
-  // tiles upscale to fill the whole view instantly — no blank gaps while the
-  // sharp layer loads. (low-res first, then high-res on top)
+  // UNDERLAY: same style capped to a low native zoom — a few big coarse tiles
+  // upscale to fill the view instantly (cheap: no blur, tiny buffer) so there's
+  // always something under the sharp layer while it loads.
   const underlay = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, maxNativeZoom: 6, tileSize: 256,
-    keepBuffer: 16, updateWhenZooming: false, className: 'tiles-underlay',
+    maxZoom: 20, maxNativeZoom: 5, tileSize: 256, keepBuffer: 2, className: 'tiles-underlay',
   }).addTo(map);
 
-  // BASE: full detail, kept tiles around the viewport so panning rarely blanks.
+  // BASE: full detail, default (fast) loading + a modest buffer for panning.
   const base = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, tileSize: 256,
-    keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: false, className: 'tiles-base',
+    maxZoom: 20, tileSize: 256, keepBuffer: 3, className: 'tiles-base',
   }).addTo(map);
 
   L.control.attribution({ position: 'bottomright', prefix: false }).addAttribution('© MapTiler © OpenStreetMap').addTo(map);
