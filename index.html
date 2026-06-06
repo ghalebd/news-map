@@ -4097,6 +4097,21 @@ body.touch-mode .v2-btn, body.touch-mode .layer-btn {
 }
 body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
 
+/* ============================================================
+   v6.1 — presenter bar must not reach the right rail
+   ============================================================ */
+.presenter-bar {
+  max-width: calc(100vw - 280px) !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  flex-wrap: nowrap !important;
+}
+.presenter-bar::-webkit-scrollbar { height: 0 !important; }
+/* When centered (default), keep it clear of both side panels */
+@media (min-width: 1101px) {
+  .presenter-bar { left: 250px !important; transform: none !important; }
+}
+
 </style>
 </head>
 <body>
