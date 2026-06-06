@@ -1,0 +1,285 @@
+/* ============================================================
+   LIQUID GLASS DESIGN SYSTEM  (v3.0)
+   Unified modern broadcast UI — Apple-style liquid glass
+   ============================================================ */
+:root {
+  --lg-blur: 40px;
+  --lg-blur-strong: 60px;
+  --lg-bg: rgba(16, 20, 32, 0.42);
+  --lg-bg-hover: rgba(34, 44, 68, 0.55);
+  --lg-bg-active: rgba(0, 184, 212, 0.22);
+  --lg-border: rgba(255, 255, 255, 0.18);
+  --lg-border-hi: rgba(255, 255, 255, 0.4);
+  --lg-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 0.5px rgba(255,255,255,0.1), inset 0 -20px 40px rgba(0,0,0,0.15);
+  --lg-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0,0,0,0.3);
+  --lg-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0,0,0,0.4);
+  --lg-accent: #00d4ee;
+  --lg-accent-glow: 0 0 16px rgba(0, 212, 238, 0.5);
+  --lg-radius: 14px;
+  --lg-radius-sm: 10px;
+  --lg-radius-pill: 999px;
+  --lg-text: #f2f6fc;
+  --lg-text-dim: #9aa6bd;
+  --lg-transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- UNIFIED PANELS (liquid glass surfaces) ---------- */
+#v2Panel, #presenterBar, #brandHeader, #storyboardPanel, #bottomStrip,
+#statusBar, #rightPanelsStack, #animatePanel, #assetEditPanel, #editPanel,
+#labelsPanel, #customLabelsPanel, #liveTrackingPanel, #presenterDock,
+.panel, .glass-panel, .right-panel, .dock {
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(var(--lg-blur)) saturate(200%) brightness(1.05);
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+  border-radius: var(--lg-radius) !important;
+}
+
+/* Subtle top highlight (liquid sheen) on panels */
+#v2Panel::before, #presenterBar::before, #storyboardPanel::before,
+.glass-panel::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- UNIFIED BUTTONS (all 15 legacy classes) ---------- */
+.tool-btn, .dock-btn, .top-bar-btn, .v2-btn, .bs-btn, .pb-btn,
+.layer-btn, .zoom-btn, .pt-btn, .rot-btn, .rot-quick-btn,
+.storyboard-btn, .ltp-btn, .clp-btn, .panel-collapse-btn,
+.scenario-clear-btn, .color-picker-btn, .label-toggle {
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
+  backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
+  border: 0.5px solid var(--lg-border) !important;
+  border-radius: var(--lg-radius-sm) !important;
+  color: var(--lg-text) !important;
+  box-shadow: var(--lg-inner-glow) !important;
+  transition: all var(--lg-transition) !important;
+  font-family: 'Inter','Segoe UI',sans-serif !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover: liquid lift + glow */
+.tool-btn:hover, .dock-btn:hover, .top-bar-btn:hover, .v2-btn:hover,
+.bs-btn:hover, .pb-btn:hover, .layer-btn:hover, .zoom-btn:hover,
+.pt-btn:hover, .rot-btn:hover, .rot-quick-btn:hover, .storyboard-btn:hover,
+.ltp-btn:hover, .clp-btn:hover, .panel-collapse-btn:hover,
+.scenario-clear-btn:hover, .color-picker-btn:hover, .label-toggle:hover {
+  background: var(--lg-bg-hover) !important;
+  border-color: var(--lg-border-hi) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+}
+
+.tool-btn:active, .dock-btn:active, .top-bar-btn:active, .v2-btn:active,
+.bs-btn:active, .pb-btn:active, .layer-btn:active, .zoom-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Active / selected state: accent liquid fill + glow ring */
+.tool-btn.active, .dock-btn.active, .layer-btn.active, .bs-btn.active,
+.pb-btn.active, .v2-btn.is-on, .pt-btn.active, .label-toggle.active,
+.tool-btn.selected {
+  background: linear-gradient(135deg, rgba(0,212,238,0.30), rgba(0,184,212,0.18)) !important;
+  border-color: var(--lg-accent) !important;
+  color: #fff !important;
+  box-shadow: var(--lg-accent-glow), var(--lg-inner-glow), inset 0 0 12px rgba(0,212,238,0.25) !important;
+}
+
+/* ---------- INPUTS / SELECTS (glass fields) ---------- */
+.v2-input, .v2-num, input[type="text"], input[type="number"], select, textarea {
+  background: rgba(0,0,0,0.28) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 0.5px solid var(--lg-border) !important;
+  border-radius: var(--lg-radius-sm) !important;
+  color: var(--lg-text) !important;
+  transition: all var(--lg-transition) !important;
+}
+.v2-input:focus, .v2-num:focus, input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--lg-accent) !important;
+  box-shadow: 0 0 0 3px rgba(0,212,238,0.18), var(--lg-accent-glow) !important;
+}
+
+/* ---------- HEADERS / LABELS ---------- */
+.v2-head {
+  background: linear-gradient(180deg, rgba(0,212,238,0.12), rgba(0,212,238,0)) !important;
+  border-bottom: 0.5px solid var(--lg-border) !important;
+  letter-spacing: 0.5px;
+}
+.v2-label, .panel-title, .section-label {
+  color: var(--lg-text-dim) !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+}
+
+/* ---------- BRAND HEADER (logo) — refined glass pill ---------- */
+#brandHeader {
+  border-radius: var(--lg-radius-pill) !important;
+  padding: 6px 16px !important;
+}
+
+/* ---------- SCROLLBARS (thin glass) ---------- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,238,0.4); }
+
+/* ---------- TOOL DOCK: floating liquid bar ---------- */
+.tool-dock, #toolDock, .dock-container {
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(200%) brightness(1.05);
+  border: 0.5px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow-lg), var(--lg-inner-glow) !important;
+  border-radius: var(--lg-radius-pill) !important;
+}
+
+/* ---------- ACCENT / PRIMARY buttons ---------- */
+.btn-primary, .primary, .clp-btn-add {
+  background: linear-gradient(135deg, var(--lg-accent), #00a5c4) !important;
+  border: none !important;
+  color: #04141a !important;
+  font-weight: 700 !important;
+  box-shadow: var(--lg-accent-glow), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+}
+.btn-primary:hover, .primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ---------- DANGER buttons ---------- */
+.btn-danger, .btn-secondary.danger, .scenario-clear-btn {
+  border-color: rgba(255,59,48,0.4) !important;
+}
+.btn-danger:hover { background: rgba(255,59,48,0.22) !important; border-color: var(--danger) !important; }
+
+/* ---------- SHIMMER on active tool (subtle liquid motion) ---------- */
+@keyframes lg-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.tool-btn.active::after, .dock-btn.active::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: lg-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ---------- SPECIFICITY BOOST (beat compound legacy selectors) ---------- */
+/* Doubled class = higher specificity, later in cascade = wins */
+.tool-btn.tool-btn, .dock-btn.dock-btn, .bs-btn.bs-btn, .pb-btn.pb-btn,
+.layer-btn.layer-btn, .zoom-btn.zoom-btn, .top-bar-btn.top-bar-btn,
+.v2-btn.v2-btn, .pt-btn.pt-btn, .storyboard-btn.storyboard-btn {
+  border-radius: var(--lg-radius-sm) !important;
+  background: var(--lg-bg) !important;
+  border: 0.5px solid var(--lg-border) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
+  backdrop-filter: blur(var(--lg-blur)) saturate(190%) brightness(1.04);
+  color: var(--lg-text) !important;
+}
+.toolbar .tool-btn.active, .tool-btn.tool-btn.active,
+.dock-btn.dock-btn.active, .layer-btn.layer-btn.active,
+.bs-btn.bs-btn.active {
+  background: linear-gradient(135deg, rgba(0,212,238,0.30), rgba(0,184,212,0.18)) !important;
+  border-color: var(--lg-accent) !important;
+  box-shadow: var(--lg-accent-glow), var(--lg-inner-glow), inset 0 0 12px rgba(0,212,238,0.25) !important;
+}
+.toolbar .tool-btn:hover, .tool-btn.tool-btn:hover,
+.dock-btn.dock-btn:hover {
+  background: var(--lg-bg-hover) !important;
+  border-color: var(--lg-border-hi) !important;
+}
+
+/* ============================================================
+   v3.1 — PANEL FIXES: collapse btn, no grey bg, dynamics
+   ============================================================ */
+
+/* ---- Elegant collapse button (bigger, glassy, no grey box) ---- */
+.panel-collapse-btn {
+  width: 26px !important; height: 26px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 0.5px solid transparent !important;
+  color: var(--lg-text-dim) !important;
+  font-size: 15px !important;
+  top: 8px !important; right: 8px !important;
+  transition: all var(--lg-transition) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+.panel-collapse-btn:hover {
+  background: rgba(0,212,238,0.18) !important;
+  border-color: var(--lg-accent) !important;
+  color: var(--lg-accent) !important;
+  transform: none !important;
+}
+
+/* ---- Remove grey background behind ALL panel icon areas ---- */
+.layer-icon, .label-icon, .ltp-icon, .panel-icon,
+.layers-title, .labels-title, .panel-title {
+  background: transparent !important;
+}
+/* Layer/label/tracking buttons: remove inner grey, keep glass only on button */
+.layer-btn .layer-icon, .ltp-btn .ltp-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---- Collapsed panel = neat glass pill ---- */
+.is-collapsed {
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center; justify-content: center;
+}
+.is-collapsed .panel-collapse-btn { display: none !important; }
+
+/* ---- Studio panel (v2Panel) collapse support ---- */
+#v2Panel.is-collapsed {
+  width: 48px !important; height: 48px !important;
+  min-height: 48px !important; max-height: 48px !important;
+}
+#v2Panel.is-collapsed > * { display: none !important; }
+#v2Panel.is-collapsed::after {
+  content: '⚙';
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+  font-size: 22px; color: var(--lg-accent);
+}
+/* Studio panel header gets a collapse button */
+.v2-head {
+  position: relative;
+  cursor: pointer;
+  padding-right: 34px !important;
+}
+.v2-collapse-btn {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  width: 24px; height: 24px; border-radius: 7px;
+  background: transparent; border: 0.5px solid transparent;
+  color: var(--lg-text-dim); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--lg-transition);
+}
+.v2-collapse-btn:hover { background: rgba(0,212,238,0.18); color: var(--lg-accent); border-color: var(--lg-accent); }
+
+/* Smooth panel transitions for dynamic open/close */
+#v2Panel, .layers-panel, .labels-panel, .live-tracking-panel, .storyboard-panel {
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), height 0.3s cubic-bezier(0.4,0,0.2,1),
+              max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s, transform 0.3s !important;
+}
+

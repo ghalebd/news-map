@@ -1,0 +1,522 @@
+/* ============================================================
+   PANEL SYSTEM v4 — CLEAN REBUILD
+   Compact · dynamic · accordion · no clutter · unified
+   This file OVERRIDES all legacy panel CSS.
+   ============================================================ */
+
+/* ---- Right rail container: clean vertical stack ---- */
+#rightPanelsStack {
+  position: fixed !important;
+  top: 64px !important;
+  right: 12px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 232px !important;
+  max-height: calc(100vh - 84px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  overflow: visible !important;
+  z-index: 1000 !important;
+  padding: 0 !important;
+}
+
+/* ---- Panel card: ONE glass surface, no nested backgrounds ---- */
+.np-panel {
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+  border: 0.5px solid var(--lg-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+  overflow: hidden !important;
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.2s !important;
+  position: relative !important;
+}
+
+/* ---- Panel header: title + chevron, draggable ---- */
+.np-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 11px 12px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  border-bottom: 0.5px solid transparent;
+  transition: border-color 0.2s;
+}
+.np-panel.np-open .np-head { border-bottom-color: var(--lg-border) !important; }
+.np-head-icon { font-size: 16px !important; line-height: 1 !important; width: 20px; text-align: center; flex: 0 0 auto; }
+.np-head-title {
+  flex: 1 !important;
+  font-size: 11.5px !important; font-weight: 700 !important;
+  letter-spacing: 0.7px !important; text-transform: uppercase !important;
+  color: var(--lg-text) !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.np-head-chevron {
+  font-size: 11px !important; color: var(--lg-text-dim) !important;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+  flex: 0 0 auto;
+}
+.np-panel.np-open .np-head-chevron { transform: rotate(180deg) !important; }
+.np-head:hover .np-head-title { color: var(--lg-accent) !important; }
+.np-head:hover .np-head-chevron { color: var(--lg-accent) !important; }
+
+/* ---- Panel body: collapses cleanly ---- */
+.np-body {
+  max-height: 0 !important;
+  overflow: hidden !important;
+  transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), padding 0.32s !important;
+  padding: 0 12px !important;
+}
+.np-panel.np-open .np-body {
+  max-height: 60vh !important;
+  overflow-y: auto !important;
+  padding: 10px 12px 12px !important;
+}
+
+/* ---- Unified emoji size in buttons (FIX: consistent icon size) ---- */
+.np-body .layer-icon, .np-body .layer-emoji,
+.np-body .toggle-icon, .np-body .ltp-icon,
+.np-emoji {
+  font-size: 15px !important;
+  width: 20px !important; height: 20px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  flex: 0 0 auto !important;
+  background: none !important;
+  line-height: 1 !important;
+}
+
+/* ---- Map-style grid: 2 columns, compact ---- */
+.np-body .layers-grid-wrap {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 6px !important;
+}
+.np-body .layers-grid-wrap .layer-btn {
+  flex-direction: column !important;
+  align-items: center !important; justify-content: center !important;
+  text-align: center !important;
+  gap: 4px !important;
+  padding: 9px 4px !important;
+  font-size: 10px !important;
+  min-height: 50px !important;
+  border-radius: 11px !important;
+}
+.np-body .layers-grid-wrap .layer-btn span { white-space: nowrap; }
+
+/* ---- Label toggles: clean rows ---- */
+.np-body .label-toggle {
+  display: flex !important; align-items: center !important; gap: 9px !important;
+  width: 100% !important; padding: 9px 11px !important;
+  font-size: 11.5px !important; margin-bottom: 5px !important;
+  border-radius: 11px !important;
+}
+.np-body .label-toggle:last-child { margin-bottom: 0 !important; }
+.np-body .toggle-name { flex: 1 !important; text-align: left !important; }
+.np-body .toggle-state {
+  font-size: 9px !important; font-weight: 700 !important; letter-spacing: 0.5px;
+  color: var(--lg-text-dim) !important; text-transform: uppercase;
+}
+.np-body .label-toggle.active .toggle-state { color: var(--lg-accent) !important; }
+
+/* ---- Live tracking buttons ---- */
+.np-body .ltp-btn {
+  display: flex !important; align-items: center !important; gap: 9px !important;
+  width: 100% !important; padding: 10px 11px !important;
+  font-size: 11.5px !important; margin-bottom: 6px !important;
+  border-radius: 11px !important;
+}
+.np-body .ltp-state, .np-body .ltp-count {
+  font-size: 9px !important; font-weight: 700 !important;
+  margin-left: auto !important;
+}
+
+/* ---- Hide legacy collapse buttons & handles inside new system ---- */
+.np-panel .panel-collapse-btn, .np-panel .ltp-handle,
+.np-panel .layers-title, .np-panel .labels-title, .np-panel .ltp-title {
+  display: none !important;
+}
+
+/* ---- KILL all legacy grey backgrounds behind sub-elements ---- */
+.np-body * { background-color: transparent; }
+.np-body .layer-btn, .np-body .label-toggle, .np-body .ltp-btn {
+  background: var(--lg-bg) !important;
+}
+.np-body .layer-btn.active, .np-body .label-toggle.active, .np-body .ltp-btn.active {
+  background: linear-gradient(135deg, rgba(0,212,238,0.30), rgba(0,184,212,0.16)) !important;
+  border-color: var(--lg-accent) !important;
+  box-shadow: var(--lg-accent-glow), inset 0 0 10px rgba(0,212,238,0.2) !important;
+}
+
+/* ============================================================
+   v4.1 — UNIFORM BUTTON SIZES + NARROW RAIL (decisive fix)
+   ============================================================ */
+
+/* ---- NARROWER right rail (was 232 → 184) ---- */
+#rightPanelsStack {
+  width: 184px !important;
+  right: 10px !important;
+  gap: 8px !important;
+}
+
+/* ---- UNIFORM inline buttons: ALL same height (34px) ---- */
+.v2-btn, .top-bar-btn, .ltp-btn, .label-toggle, .bs-btn, .pb-btn,
+.pt-btn, .storyboard-btn, .clp-btn, .scenario-clear-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11.5px !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+/* full-width variants stay full width but same height */
+.v2-btn.v2-wide { width: 100% !important; }
+
+/* ---- Square icon buttons: uniform 38x38 ---- */
+.tool-btn, .zoom-btn, .dock-btn {
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important; max-height: 38px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important; justify-content: center !important;
+  font-size: 15px !important;
+}
+
+/* ---- Grid layer buttons: uniform 48px square-ish ---- */
+.np-body .layers-grid-wrap .layer-btn {
+  height: 48px !important;
+  min-height: 48px !important; max-height: 48px !important;
+  padding: 4px !important;
+  font-size: 9.5px !important;
+}
+
+/* ---- Live tracking + label rows: full width, uniform 36px ---- */
+.np-body .ltp-btn, .np-body .label-toggle {
+  height: 36px !important; min-height: 36px !important; max-height: 36px !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+  padding: 0 11px !important;
+}
+
+/* ---- Studio panel narrower to match aesthetic ---- */
+#v2Panel { width: 200px !important; }
+.v2-btn { font-size: 11px !important; }
+.v2-row { display: flex !important; gap: 6px !important; }
+.v2-row .v2-btn { flex: 1 !important; padding: 0 6px !important; }
+
+/* ============================================================
+   v4.2 — Grip handles, uniform collapse btns, collapsed bars
+   ============================================================ */
+/* Drag grip */
+.upb-grip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 28px; flex: 0 0 auto;
+  color: var(--lg-text-dim); cursor: grab;
+  font-size: 12px; letter-spacing: -2px;
+  border-radius: 7px; margin-right: 4px;
+  transition: all var(--lg-transition);
+}
+.upb-grip:hover { color: var(--lg-accent); background: rgba(0,212,238,0.12); }
+.upb-grip:active { cursor: grabbing; }
+
+/* Uniform collapse buttons everywhere (24x24) */
+.upb-collapse, .v2-collapse-btn, .panel-collapse-btn {
+  width: 24px !important; height: 24px !important;
+  min-width: 24px !important; flex: 0 0 auto !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  border: 0.5px solid transparent !important;
+  color: var(--lg-text-dim) !important;
+  font-size: 14px !important; line-height: 1 !important;
+  cursor: pointer !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  margin-left: 4px;
+  transition: all var(--lg-transition) !important;
+}
+.upb-collapse:hover, .v2-collapse-btn:hover, .panel-collapse-btn:hover {
+  background: rgba(0,212,238,0.18) !important;
+  color: var(--lg-accent) !important;
+  border-color: var(--lg-accent) !important;
+}
+
+/* Collapsed horizontal bar = compact pill (grip + collapse only) */
+.upb-collapsed > *:not(.upb-grip):not(.upb-collapse) { display: none !important; }
+.upb-collapsed {
+  width: auto !important; min-width: 0 !important;
+  padding: 6px 8px !important;
+  gap: 2px !important;
+}
+
+/* ============================================================
+   v4.3 — FIX: icon buttons (SVG) showing as empty boxes
+   ============================================================ */
+/* pb-btn and other icon-only buttons must be SQUARE with visible SVG */
+.pb-btn {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+}
+/* Force ALL button SVGs to a visible size */
+.pb-btn svg, .tool-btn svg, .zoom-btn svg, .ltp-btn svg,
+.top-bar-btn svg, .v2-btn svg, .bs-btn svg, .dock-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  min-width: 17px !important;
+  flex: 0 0 auto !important;
+  display: block !important;
+}
+/* Buttons with text+icon: let icon be smaller, keep auto width */
+.v2-btn svg, .top-bar-btn svg, .ltp-btn svg, .bs-btn svg {
+  width: 14px !important; height: 14px !important;
+  margin-right: 5px;
+}
+/* Don't clip button content */
+.pb-btn, .tool-btn, .zoom-btn, .v2-btn, .ltp-btn, .top-bar-btn, .bs-btn {
+  overflow: visible !important;
+}
+/* presenter bar sections keep tight spacing */
+.pb-section { gap: 4px !important; }
+
+/* ============================================================
+   v4.4 — FIX OVERLAPS: v2Panel off the toolbar, clean zones
+   ============================================================ */
+/* Studio panel: move to LEFT but CLEAR of the toolbar (toolbar ends ~48px) */
+#v2Panel {
+  left: 60px !important;
+  top: 70px !important;
+  right: auto !important;
+  width: 196px !important;
+  z-index: 1500 !important;
+}
+/* When toolbar is hidden, studio can shift left — handled by JS if needed */
+
+/* presenterBar: must not collide with side panels — center it, narrower zone */
+.presenter-bar {
+  max-width: calc(100vw - 540px) !important;
+}
+
+/* statusBar vs bottomStrip: stack status ABOVE strip on narrow screens */
+@media (max-width: 1100px) {
+  /* Presenter bar stays full-width at very top */
+  .presenter-bar {
+    left: 56px !important;
+    right: 12px !important;
+    max-width: none !important;
+    width: auto !important;
+    transform: none !important;
+    top: 68px !important;
+    height: 44px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
+  }
+  .presenter-bar::-webkit-scrollbar { height: 0 !important; }
+  /* Side panels start BELOW the presenter bar (no top:70 collision) */
+  #v2Panel {
+    left: 56px !important;
+    top: 118px !important;
+    width: 190px !important;
+    max-height: calc(100vh - 240px) !important;
+  }
+  #rightPanelsStack {
+    top: 118px !important;
+    right: 12px !important;
+    max-height: calc(100vh - 240px) !important;
+  }
+  #statusBar { bottom: 56px !important; }
+}
+
+/* Very narrow / portrait: collapse studio panel by default, stack vertically */
+@media (max-width: 740px) {
+  #v2Panel { left: 52px !important; width: 164px !important; top: 122px !important; }
+}
+
+/* ============================================================
+   v5 — Collapsed squares, pro icons, grips
+   ============================================================ */
+/* Pro SVG icons: consistent sizing, centered */
+.pro-icon { display: inline-block; vertical-align: middle; flex: 0 0 auto; }
+.layer-icon .pro-icon, .layer-emoji.pro-icon, .toggle-icon .pro-icon,
+.ltp-icon .pro-icon { display: block; margin: 0 auto; }
+
+/* Buttons with icon+label: center content, consistent gap */
+.v2-btn, .top-bar-btn, .ltp-btn, .label-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.v2-btn span, .top-bar-btn span, .ltp-btn span { line-height: 1; }
+
+/* --- pb-btn: PERFECT centering of SVG (fix bottom bar) --- */
+.pb-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+.pb-btn svg { margin: 0 !important; display: block !important; }
+
+/* --- v5 grip handle --- */
+.v5-grip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; min-width: 20px; height: 26px; flex: 0 0 auto;
+  color: var(--lg-text-dim); cursor: grab; border-radius: 6px;
+  transition: all var(--lg-transition);
+}
+.v5-grip:hover { color: var(--lg-accent); background: rgba(0,212,238,0.12); }
+.v5-grip:active { cursor: grabbing; }
+
+/* --- v5 collapse button --- */
+.v5-collapse {
+  width: 24px !important; height: 24px !important; min-width: 24px !important;
+  flex: 0 0 auto !important; border-radius: 7px !important;
+  background: transparent !important; border: 0.5px solid transparent !important;
+  color: var(--lg-text-dim) !important; cursor: pointer !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  margin-left: auto !important;
+  transition: all var(--lg-transition) !important;
+}
+.v5-collapse:hover { background: rgba(0,212,238,0.18) !important; color: var(--lg-accent) !important; border-color: var(--lg-accent) !important; }
+
+/* --- COLLAPSED SQUARE: small icon-only box --- */
+.v5-square {
+  width: 46px !important; min-width: 46px !important; max-width: 46px !important;
+  height: 46px !important; min-height: 46px !important; max-height: 46px !important;
+  padding: 0 !important;
+  border-radius: 13px !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+}
+.v5-square > *:not(.v5-square-icon) { display: none !important; }
+.v5-square-icon {
+  display: flex !important; align-items: center; justify-content: center;
+  width: 100%; height: 100%; color: var(--lg-accent);
+}
+.v5-square-icon .pro-icon { width: 22px; height: 22px; }
+
+/* --- Collapsed np-panel (right rail) = square too --- */
+.np-panel:not(.np-open) {
+  width: 46px !important; min-width: 46px !important;
+  margin-left: auto !important;
+}
+.np-panel:not(.np-open) .np-head { padding: 0 !important; height: 46px !important; justify-content: center !important; }
+.np-panel:not(.np-open) .np-head-title,
+.np-panel:not(.np-open) .np-head-chevron { display: none !important; }
+.np-panel:not(.np-open) .np-head-icon { font-size: 0 !important; }
+/* Give collapsed np-panel its pro icon */
+.np-panel:not(.np-open) .np-head-icon::before { font-size: 22px; }
+
+/* Right rail aligns collapsed squares to the right edge */
+#rightPanelsStack { align-items: flex-end !important; }
+.np-panel.np-open { width: 184px !important; align-self: flex-end; }
+
+/* ============================================================
+   v6 — Major restructure fixes
+   ============================================================ */
+
+/* ---- Remove top bar entirely (merged into presenter bar) ---- */
+.top-bar { display: none !important; }
+
+/* ---- Floating AJ logo: alone in corner, NO bar behind it ---- */
+#brandHeader, .brand-header {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  top: 10px !important;
+  left: 12px !important;
+}
+
+/* ---- KILL grey box behind collapsed right-rail icons ---- */
+.np-panel:not(.np-open) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* The collapsed icon itself becomes the glass chip */
+.np-panel:not(.np-open) .np-head {
+  width: 44px !important; height: 44px !important;
+  margin-left: auto !important;
+  background: var(--lg-bg) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(200%);
+  border: 0.5px solid var(--lg-border) !important;
+  border-radius: 13px !important;
+  box-shadow: var(--lg-shadow), var(--lg-inner-glow) !important;
+}
+.np-panel:not(.np-open) .np-head:hover {
+  border-color: var(--lg-accent) !important;
+}
+
+/* ---- Studio panel: fix collapse btn position + visible grip ---- */
+#v2Panel .v2-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
+  position: relative !important;
+}
+#v2Panel .v5-grip {
+  order: -1 !important;
+  display: inline-flex !important;
+  opacity: 1 !important;
+}
+#v2Panel .v2-collapse-btn, #v2Panel .v5-collapse {
+  position: static !important;
+  margin-left: auto !important;
+  order: 99 !important;
+}
+
+/* ---- Storyboard: slimmer + taller (vertical-ish), tidy ---- */
+#storyboardPanel, .storyboard-panel {
+  max-width: 360px !important;
+}
+.storyboard-strip, .storyboard-steps {
+  gap: 5px !important;
+}
+
+/* ---- Bottom bar sections divider ---- */
+.bs-section, .pb-merged { display: inline-flex; align-items: center; gap: 4px; }
+.pb-merged { border-left: 0.5px solid var(--lg-border); margin-left: 6px; padding-left: 6px; }
+.bs-undo { border-right: 0.5px solid var(--lg-border); margin-right: 6px; padding-right: 6px; }
+
+/* ---- Touch mode: bigger hit targets when active ---- */
+body.touch-mode .pb-btn, body.touch-mode .tool-btn,
+body.touch-mode .v2-btn, body.touch-mode .layer-btn {
+  min-height: 48px !important;
+}
+body.touch-mode .tool-btn { width: 52px !important; height: 52px !important; }
+
+/* ============================================================
+   v6.1 — presenter bar must not reach the right rail
+   ============================================================ */
+.presenter-bar {
+  max-width: calc(100vw - 280px) !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  flex-wrap: nowrap !important;
+}
+.presenter-bar::-webkit-scrollbar { height: 0 !important; }
+/* When centered (default), keep it clear of both side panels */
+@media (min-width: 1101px) {
+  .presenter-bar { left: 250px !important; transform: none !important; }
+}

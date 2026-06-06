@@ -1,2 +1,6 @@
-
-.netlify
+.DS_Store
+*.log
+node_modules/
+.netlify/
+/tmp/
+*.tmp
