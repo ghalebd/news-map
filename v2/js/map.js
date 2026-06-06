@@ -16,12 +16,11 @@ const GameMap = (() => {
 
   const map = L.map('map', { zoomControl: false, attributionControl: false, fadeAnimation: true }).setView([29.5, 45], 5);
 
-  // UNDERLAY: very coarse (maxNativeZoom 4) so it's only a handful of big tiles
-  // at ANY zoom — cheap to animate. Upscales to fill the view as a placeholder.
-  // updateWhenZooming:false → it never reloads during a zoom (keeps the zoom snappy).
+  // UNDERLAY: coarse (maxNativeZoom 4) so it's few big tiles. A generous
+  // keepBuffer + loading DURING zoom means the surrounding area is already
+  // covered when you zoom OUT (no blank ring). Cheap because the tiles are coarse.
   const underlay = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, maxNativeZoom: 4, tileSize: 256, keepBuffer: 1,
-    updateWhenZooming: false, className: 'tiles-underlay',
+    maxZoom: 20, maxNativeZoom: 4, tileSize: 256, keepBuffer: 4, className: 'tiles-underlay',
   }).addTo(map);
 
   // BASE: full detail. Defer tile loading until the zoom animation ends so the
