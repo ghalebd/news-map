@@ -14,18 +14,20 @@ const GameMap = (() => {
     { id: 'ocean', ar: 'بحري' },
   ];
 
-  const map = L.map('map', { zoomControl: false, attributionControl: false, zoomSnap: 0.25, fadeAnimation: true }).setView([29.5, 45], 5);
+  const map = L.map('map', { zoomControl: false, attributionControl: false, fadeAnimation: true }).setView([29.5, 45], 5);
 
-  // UNDERLAY: same style capped to a low native zoom — a few big coarse tiles
-  // upscale to fill the view instantly (cheap: no blur, tiny buffer) so there's
-  // always something under the sharp layer while it loads.
+  // UNDERLAY: very coarse (maxNativeZoom 4) so it's only a handful of big tiles
+  // at ANY zoom — cheap to animate. Upscales to fill the view as a placeholder.
+  // updateWhenZooming:false → it never reloads during a zoom (keeps the zoom snappy).
   const underlay = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, maxNativeZoom: 5, tileSize: 256, keepBuffer: 2, className: 'tiles-underlay',
+    maxZoom: 20, maxNativeZoom: 4, tileSize: 256, keepBuffer: 1,
+    updateWhenZooming: false, className: 'tiles-underlay',
   }).addTo(map);
 
-  // BASE: full detail, default (fast) loading + a modest buffer for panning.
+  // BASE: full detail. Defer tile loading until the zoom animation ends so the
+  // zoom stays smooth; the underlay + scaled old tiles cover the gap meanwhile.
   const base = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, tileSize: 256, keepBuffer: 3, className: 'tiles-base',
+    maxZoom: 20, tileSize: 256, keepBuffer: 2, updateWhenZooming: false, className: 'tiles-base',
   }).addTo(map);
 
   L.control.attribution({ position: 'bottomright', prefix: false }).addAttribution('© MapTiler © OpenStreetMap').addTo(map);
