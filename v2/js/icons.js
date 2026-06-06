@@ -34,6 +34,10 @@ const ICONS = (() => {
     plane:   s('<path d="M21 14l-9-2-9 2v-2l9-3V4a1.5 1.5 0 0 1 3 0v5l6 2z"/>'),
     eye:     s('<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>'),
     target:  s('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/>'),
+    navL:    s('<polyline points="15 18 9 12 15 6"/>'),
+    navR:    s('<polyline points="9 18 15 12 9 6"/>'),
+    film:    s('<rect x="3" y="4" width="18" height="16" rx="1"/><line x1="8" y1="4" x2="8" y2="20"/><line x1="16" y1="4" x2="16" y2="20"/><line x1="3" y1="9" x2="8" y2="9"/><line x1="16" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="21" y2="15"/>'),
+    load:    s('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
   };
 })();
 window.ICONS = ICONS;
