@@ -6,9 +6,6 @@
   const I = window.ICONS, S = window.Store, M = window.GameMap;
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
-  /* ---------- ambient HUD overlay ---------- */
-  ['hud-grid', 'hud-scan', 'hud-frame'].forEach(c => document.body.appendChild(h('div', c)));
-
   /* ---------- brand + status ---------- */
   document.body.appendChild(h('div', 'brand', `<img src="../live_assets/aljazeera_logo.png" alt="Al Jazeera" onerror="this.style.display='none'">`));
   const status = h('div', 'status'); document.body.appendChild(status);

@@ -10,6 +10,14 @@
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+  <!-- liquid-glass refraction filter (used by panels via backdrop-filter) -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <filter id="glassDistort" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.016" numOctaves="2" seed="11" result="n"/>
+      <feGaussianBlur in="n" stdDeviation="0.5" result="nb"/>
+      <feDisplacementMap id="glassDisp" in="SourceGraphic" in2="nb" scale="46" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
   <div id="map"></div>
 
   <script src="../lib/leaflet.min.js"></script>

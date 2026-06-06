@@ -1,58 +1,63 @@
 /* ============================================================
-   DESIGN TOKENS — "TACTICAL COMMAND HUD"
-   Phosphor lines, corner brackets, monospace. No glass, no blur.
+   DESIGN TOKENS — "Liquid Glass (Dark)"  · LOCKED IDENTITY
+   Single source of truth. The Control Panel can override the
+   --accent / --glass / --blur / --glass-distort / --r vars live.
    ============================================================ */
 :root {
-  /* ---- phosphor palette ---- */
-  --bg: #04070a;
-  --amber: #ffb000;          /* primary HUD */
-  --amber-dim: rgba(255, 176, 0, 0.55);
-  --green: #36ff9e;          /* secondary / OK */
-  --cyan: #38e6ff;           /* data / info */
-  --red: #ff3b3b;            /* alert */
-  --amber-soft: rgba(255, 176, 0, 0.10);
-  --green-soft: rgba(54, 255, 158, 0.12);
+  /* ---- base ---- */
+  --bg: #070a10;
 
-  /* ---- surfaces: flat, dark, line-defined (NOT glass) ---- */
-  --surface: rgba(6, 11, 13, 0.82);
-  --surface-2: rgba(10, 16, 18, 0.7);
-  --surface-solid: #060b0d;
-  --line: rgba(255, 176, 0, 0.32);     /* default border */
-  --line-hi: rgba(255, 176, 0, 0.7);
-  --line-faint: rgba(255, 176, 0, 0.14);
-  --grid: rgba(54, 255, 158, 0.05);    /* background grid */
-  --scan: rgba(0, 0, 0, 0.22);         /* scanline */
+  /* ---- accent (default Azure; Control Panel can change) ---- */
+  --accent: #5b9dff;
+  --accent-soft: rgba(91, 157, 255, 0.16);
+  --accent-glow: 0 0 18px rgba(91, 157, 255, 0.5);
+  --accent-ink: #06122b;            /* readable text on accent fills */
+
+  /* ---- glass surfaces ---- */
+  --glass: rgba(22, 27, 38, 0.55);
+  --glass-2: rgba(32, 38, 52, 0.5);
+  --glass-hi: rgba(255, 255, 255, 0.07);
+  --stroke: rgba(255, 255, 255, 0.12);
+  --stroke-2: rgba(255, 255, 255, 0.22);
+  --sheen: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --blur: 24px;
+  --glass-distort: 46;              /* SVG feDisplacementMap scale (Control Panel adjustable) */
 
   /* ---- text ---- */
-  --text: #d6e4dc;
-  --text-dim: #7e9a8b;
-  --text-mute: #4f6a5c;
+  --text: #f4f7fc;
+  --text-2: #aab3c5;
+  --text-3: #6c7686;
 
-  /* ---- type (monospace HUD) ---- */
-  --font: "SF Mono", "JetBrains Mono", "Consolas", ui-monospace, monospace;
-  --font-ui: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+  /* ---- semantic ---- */
+  --live: #ff453a;
+  --ok: #32d583;
+  --warn: #ffb020;
+  --danger: #ff5a5f;
 
-  /* ---- geometry: sharp, technical ---- */
-  --r: 2px;                 /* almost square */
-  --r-0: 0px;
-  --btn: 40px;
+  /* ---- typography ---- */
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  /* ---- geometry ---- */
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 20px;
+  --pill: 999px;
+  --btn: 44px;
   --gap: 8px;
-  --bracket: 9px;           /* corner-bracket arm length */
 
-  /* ---- glow / elevation ---- */
-  --glow-amber: 0 0 10px rgba(255, 176, 0, 0.45);
-  --glow-green: 0 0 10px rgba(54, 255, 158, 0.5);
-  --shadow: 0 6px 26px rgba(0, 0, 0, 0.55);
+  /* ---- elevation / motion ---- */
+  --shadow: 0 14px 44px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 26px 70px rgba(0, 0, 0, 0.6);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 0.12s;
+  --t: 0.2s;
 
-  /* ---- motion ---- */
-  --ease: cubic-bezier(0.3, 0.8, 0.3, 1);
-  --t-fast: 0.1s;
-  --t: 0.16s;
-
-  /* ---- z ---- */
+  /* ---- z-index scale ---- */
   --z-map: 1;
-  --z-grid: 5;
   --z-panel: 1000;
   --z-bar: 1100;
   --z-flyout: 2000;
+  --z-modal: 3000;
 }
