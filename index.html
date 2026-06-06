@@ -7653,8 +7653,22 @@ ready(function() {
       collapse.innerHTML = el.classList.contains('upb-collapsed') ? '+' : '−';
     });
 
-    // Drag via grip
+    // Drag via grip — document-level listeners (robust)
     let dragging=false, sx, sy, ox, oy, moved=false;
+    function onMove(e){
+      if(!dragging)return;
+      const dx=e.clientX-sx, dy=e.clientY-sy;
+      if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
+      el.style.left=(ox+dx)+'px'; el.style.top=(oy+dy)+'px';
+    }
+    function onUp(e){
+      if(!dragging)return;
+      dragging=false;
+      document.removeEventListener('pointermove',onMove);
+      document.removeEventListener('pointerup',onUp);
+      el.style.transition='all 0.25s cubic-bezier(0.4,0,0.2,1)';
+      if(moved) snapToEdge(el);
+    }
     grip.addEventListener('pointerdown', function(e) {
       dragging=true; moved=false;
       const r = el.getBoundingClientRect();
@@ -7663,21 +7677,9 @@ ready(function() {
       el.style.right='auto'; el.style.bottom='auto'; el.style.transform='none';
       sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
       el.style.transition='none';
-      grip.setPointerCapture(e.pointerId);
+      document.addEventListener('pointermove',onMove);
+      document.addEventListener('pointerup',onUp);
       e.preventDefault(); e.stopPropagation();
-    });
-    grip.addEventListener('pointermove', function(e) {
-      if(!dragging)return;
-      const dx=e.clientX-sx, dy=e.clientY-sy;
-      if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
-      el.style.left=(ox+dx)+'px'; el.style.top=(oy+dy)+'px';
-    });
-    grip.addEventListener('pointerup', function(e) {
-      if(!dragging)return;
-      dragging=false;
-      try{grip.releasePointerCapture(e.pointerId);}catch(_){}
-      el.style.transition='all 0.25s cubic-bezier(0.4,0,0.2,1)';
-      if(moved) snapToEdge(el);
     });
   }
 
