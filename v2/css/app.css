@@ -216,6 +216,26 @@ body.mode-live .qtools { display: flex; }
 .mapstyle-pop__i:hover { color: var(--text); background: var(--glass-2); }
 .mapstyle-pop__i.is-on { color: var(--accent); background: var(--accent-soft); }
 
+/* ---------- live tracking ---------- */
+.livetrack { position: fixed; left: 16px; bottom: 18px; z-index: var(--z-bar); display: flex; gap: 6px; padding: 7px; border-radius: var(--r); }
+.livetrack.is-locked { opacity: .45; pointer-events: none; }
+.lt-btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 13px; border-radius: var(--r-sm); font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen); transition: all var(--t-fast) var(--ease); }
+.lt-btn svg { width: 17px; height: 17px; }
+.lt-btn:hover { color: var(--text); border-color: var(--stroke-2); }
+.lt-btn.is-on { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
+.lt-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); transition: background var(--t-fast) var(--ease); }
+.lt-btn.is-on .lt-dot[data-st=live] { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
+.lt-btn.is-on .lt-dot[data-st=wait] { background: var(--warn); }
+.lt-btn.is-on .lt-dot[data-st=err] { background: var(--danger); }
+
+/* tracking markers */
+.trk { display: flex; align-items: center; justify-content: center; }
+.trk__rot { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .6)); }
+.trk--ship .trk__rot { color: #7fd4ff; }
+.trk--plane .trk__rot { color: #ffd60a; }
+.trk__rot svg { width: 22px; height: 22px; }
+.trk-tip { font: 600 11px var(--font) !important; }
+
 /* ---------- scene inspector (PREP) ---------- */
 .sceneins { position: fixed; right: 16px; top: 70px; width: 268px; z-index: var(--z-bar); padding: 14px; display: flex; flex-direction: column; gap: 13px; }
 .sceneins__hd { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent); }

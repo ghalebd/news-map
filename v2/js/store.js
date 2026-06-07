@@ -11,10 +11,10 @@ const Store = (() => {
 
   const DEFAULT_CONFIG = {
     style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14 },
-    visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true },
+    visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true },
     permissions: {
       tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, erase: true, asset: true },
-      canDraw: true, canEditScenes: false, canNavigate: true, canChangeStyle: false, canChangeMapStyle: true,
+      canDraw: true, canEditScenes: false, canNavigate: true, canChangeStyle: false, canChangeMapStyle: true, canTrack: true,
     },
     mapStyles: [
       { id: 'satellite', name: 'Satellite', on: true },
@@ -35,17 +35,18 @@ const Store = (() => {
     rundown: { title: 'News Rundown', scenes: [], activeId: null },
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     reveal: {},                    // sceneId -> number of revealed elements (synced)
+    tracking: { ships: false, flights: false },  // live overlays (synced)
   };
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
   const subs = [];
   const on = fn => { subs.push(fn); return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); }; };
   let _t = null;
-  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal })); } catch (e) {} }, 120); }
+  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking })); } catch (e) {} }, 120); }
   const emit = (evt, opts) => { subs.forEach(fn => fn(state, evt || 'change')); if (!(opts && opts.silent)) persist(); };
 
   function deepMerge(def, ov) { const o = JSON.parse(JSON.stringify(def)); for (const k in ov) { if (ov[k] && typeof ov[k] === 'object' && !Array.isArray(ov[k])) o[k] = deepMerge(def[k] || {}, ov[k]); else o[k] = ov[k]; } return o; }
-  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; return true; } catch (e) { return false; } }
+  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; return true; } catch (e) { return false; } }
   window.addEventListener('storage', e => { if (e.key === KEY) { load(); emit('sync', { silent: true }); } });
 
   /* ---- scenes ---- */
@@ -78,6 +79,7 @@ const Store = (() => {
   function toggleMode() { setMode(state.mode === 'build' ? 'live' : 'build'); }
   function setColor(c) { state.color = c; emit('color'); }
   function setMapStyle(id) { state.mapStyle = id; emit('mapstyle'); }
+  function setTracking(kind, on) { state.tracking[kind] = on; emit('tracking'); }
 
   /* ---- elements (active scene) ---- */
   function addElement(rec) { const s = activeScene(); if (!s) return null; rec.id = uid('el'); s.__redo = []; s.elements.push(rec); emit('elements'); return rec; }
@@ -111,7 +113,7 @@ const Store = (() => {
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
-    setMode, toggleMode, setColor, setMapStyle,
+    setMode, toggleMode, setColor, setMapStyle, setTracking,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, resetConfig,
