@@ -13,7 +13,14 @@ const Draw = (() => {
      the presenter is limited by config.permissions. */
   const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
 
-  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {}, markerIcon = null;
+  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null;
+  /* translate every coordinate of an element by a lat/lng delta (move) */
+  function moveEl(el, dLat, dLng) {
+    if (el.ll) el.ll = [el.ll[0] + dLat, el.ll[1] + dLng];
+    if (el.a) el.a = [el.a[0] + dLat, el.a[1] + dLng];
+    if (el.b) el.b = [el.b[0] + dLat, el.b[1] + dLng];
+    if (el.pts) el.pts = el.pts.map(p => [p[0] + dLat, p[1] + dLng]);
+  }
 
   /* marker icon set (broadcast) — keyed; '' = plain dot */
   const mk = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -68,6 +75,7 @@ const Draw = (() => {
       L.DomEvent.stopPropagation(ev);
       if (tool === 'erase') { S.removeElement(el.id); return; }
       selectEl(el);
+      dragEl = el; dragPrev = ev.latlng; map.dragging.disable();   // begin move
     });
     if (layer.eachLayer) layer.eachLayer(wire); else wire(layer);
   }
@@ -77,8 +85,14 @@ const Draw = (() => {
   function setTool(t) { tool = t; if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t)); }
 
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = tool === 'sketch' ? [[e.latlng.lat, e.latlng.lng]] : null; });
-  map.on('mousemove', e => { if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost); });
-  map.on('mouseup', e => { if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable(); });
+  map.on('mousemove', e => {
+    if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
+    if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
+  });
+  map.on('mouseup', e => {
+    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
+    if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
+  });
   map.on('click', e => {
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
     else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
