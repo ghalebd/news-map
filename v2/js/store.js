@@ -21,8 +21,16 @@ const Store = (() => {
       { id: 'hybrid', name: 'Hybrid', on: true },
       { id: 'dataviz-dark', name: 'Dark', on: true },
       { id: 'streets-v2', name: 'Streets', on: true },
-      { id: 'topo-v2', name: 'Topo', on: false },
       { id: 'ocean', name: 'Marine', on: true },
+      { id: 'topo-v2', name: 'Topo', on: false },
+      { id: 'outdoor-v2', name: 'Outdoor', on: false },
+      { id: 'winter-v2', name: 'Winter', on: false },
+      { id: 'basic-v2', name: 'Basic', on: false },
+      { id: 'bright-v2', name: 'Bright', on: false },
+      { id: 'toner-v2', name: 'Toner', on: false },
+      { id: 'dataviz', name: 'Light', on: false },
+      { id: 'landscape', name: 'Landscape', on: false },
+      { id: 'openstreetmap', name: 'OpenStreetMap', on: false },
     ],
     assetCats: ['ground', 'air', 'naval', 'weapons', 'infra'],
     customAssets: [],   // { id, name, cat, url }
@@ -47,7 +55,11 @@ const Store = (() => {
   const emit = (evt, opts) => { subs.forEach(fn => fn(state, evt || 'change')); if (!(opts && opts.silent)) persist(); };
 
   function deepMerge(def, ov) { const o = JSON.parse(JSON.stringify(def)); for (const k in ov) { if (ov[k] && typeof ov[k] === 'object' && !Array.isArray(ov[k])) o[k] = deepMerge(def[k] || {}, ov[k]); else o[k] = ov[k]; } return o; }
-  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; if ('trackFocus' in d) state.trackFocus = d.trackFocus; return true; } catch (e) { return false; } }
+  function mergeNewMapStyles() { const have = new Set(state.config.mapStyles.map(m => m.id)); DEFAULT_CONFIG.mapStyles.forEach(m => { if (!have.has(m.id)) state.config.mapStyles.push({ ...m }); }); }
+  function applyData(d) { if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; if ('trackFocus' in d) state.trackFocus = d.trackFocus; mergeNewMapStyles(); return true; }
+  function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
+  function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }
+  function importState(d) { applyData(d); emit('sync'); }
   window.addEventListener('storage', e => { if (e.key === KEY) { load(); emit('sync', { silent: true }); } });
 
   /* ---- scenes ---- */
@@ -111,7 +123,7 @@ const Store = (() => {
   load();
 
   return {
-    state, on, emit, uid, load, DEFAULT_CONFIG,
+    state, on, emit, uid, load, exportState, importState, DEFAULT_CONFIG,
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,

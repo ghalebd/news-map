@@ -82,6 +82,12 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-chip .x { margin-left: 6px; width: 14px; height: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; color: var(--text-3); }
 .cfg-chip .x:hover { color: var(--danger); }
 
+/* project buttons */
+.cfg-btnrow { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.cfg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--text); background: var(--glass-2); border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }
+.cfg-btn svg { width: 15px; height: 15px; color: var(--accent); }
+.cfg-btn:hover { border-color: var(--accent); }
+
 /* segmented map-type picker */
 .cfg-seg { display: flex; flex-wrap: wrap; gap: 5px; }
 .cfg-seg__b { padding: 6px 11px; border-radius: 8px; font-size: 11px; font-weight: 600; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }

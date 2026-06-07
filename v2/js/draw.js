@@ -61,7 +61,7 @@ const Draw = (() => {
   map.on('mouseup', e => { if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable(); });
   map.on('click', e => {
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color });
-    else if (tool === 'text') { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll: [e.latlng.lat, e.latlng.lng], text: t, color: S.state.color }); }
+    else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
     else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
     else if (tool === 'select') deselect();
   });

@@ -99,12 +99,13 @@
 
   /* ---------- keyboard ---------- */
   window.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT') return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
     const D = window.Draw;
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? S.redo() : S.undo(); return; }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); S.redo(); return; }
     if (e.key === '/') { e.preventDefault(); D && D.toggleMenu(); return; }
     if (e.key === 'Escape') { D && D.setTool('select'); D && D.closeMenu(); return; }
+    if (e.key.toLowerCase() === 'h' && window.UI) { UI.hideUI(); return; }
     if (e.key.toLowerCase() === 'm' && S.state.mode === 'live') S.toggleMode();
     else if (e.key.toLowerCase() === 'm' && D && D.tool === 'select') S.toggleMode();
     if (S.state.mode === 'live') {

@@ -138,6 +138,21 @@
       } else bd.appendChild(h('div', 'hint', 'No images yet. Uploads are stored in the shared store and appear in the presenter\'s Image tool.'));
       body.appendChild(sec);
     }
+    // PROJECT (save / load / hide-UI / clear)
+    {
+      const { sec, bd } = section('Project', I.save);
+      const row = h('div', 'cfg-btnrow');
+      const mkBtn = (icon, label, fn) => { const b = h('button', 'cfg-btn', `${icon}<span>${label}</span>`); b.onclick = fn; return b; };
+      row.append(
+        mkBtn(I.save, 'Save file', () => window.UI && UI.saveProject(S.state.rundown.title)),
+        mkBtn(I.load || I.upload, 'Load file', () => window.UI && UI.loadProject()),
+        mkBtn(I.eyeOff || I.eye, 'Hide UI', () => window.UI && UI.hideUI(true)),
+        mkBtn(I.erase, 'Clear scene', () => { if (confirm('Clear all elements of the current scene?')) { S.clearElements(); window.UI && UI.toast('Scene cleared'); } }),
+      );
+      bd.appendChild(row);
+      bd.appendChild(h('div', 'hint', 'Saved files store the full rundown + settings as JSON. Hide-UI also toggles with the H key.'));
+      body.appendChild(sec);
+    }
     // RESET
     const reset = h('button', 'cfg-reset', 'Reset all settings to defaults');
     reset.onclick = () => { if (confirm('Reset all control settings to defaults?')) { S.resetConfig(); render(); } };
