@@ -51,6 +51,9 @@
 .cfg-body .cfg-sec__hd .i { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
 .cfg-body .cfg-sec__hd .i svg { width: 15px; height: 15px; }
 .cfg-body .cfg-sec__hd .t { flex: 1; font-size: 12px; }
+.cfg-sec__rst { width: 24px; height: 24px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); border: 1px solid transparent; flex: 0 0 auto; transition: all var(--t-fast) var(--ease); }
+.cfg-sec__rst svg { width: 13px; height: 13px; }
+.cfg-sec__rst:hover { color: var(--accent); border-color: var(--accent); }
 .cfg-body .cfg-sec__bd { padding: 4px 14px 15px; gap: 13px; }
 .cfg-panel input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: var(--stroke); }
 .cfg-panel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: var(--accent-glow); cursor: pointer; border: 2px solid #0b0f17; }

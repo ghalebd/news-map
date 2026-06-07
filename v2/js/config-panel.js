@@ -41,13 +41,16 @@
   x.onclick = () => setOpen(false);
 
   /* ---- builders ---- */
-  function section(title, icon) {
+  function section(title, icon, onReset) {
     const sec = h('div', 'cfg-sec');
-    const hd = h('div', 'cfg-sec__hd', `<span class="cfg-grip" title="Drag to reorder">${I.grip || '⋮⋮'}</span><span class="i">${icon}</span><span class="t">${title}</span><span class="chev">${I.chevron}</span>`);
+    const hd = h('div', 'cfg-sec__hd', `<span class="cfg-grip" title="Drag to reorder">${I.grip || '⋮⋮'}</span><span class="i">${icon}</span><span class="t">${title}</span>`);
+    if (onReset) { const rb = h('button', 'cfg-sec__rst', I.undo); rb.title = 'Reset this section to defaults'; rb.onclick = e => { e.stopPropagation(); onReset(); renderTab(); }; hd.appendChild(rb); }
+    hd.appendChild(h('span', 'chev', I.chevron));
     const bd = h('div', 'cfg-sec__bd');
     hd.onclick = () => sec.classList.toggle('open');
     sec.append(hd, bd); return { sec, bd };
   }
+  const D = S.DEFAULT_CONFIG, cp = o => JSON.parse(JSON.stringify(o));
   function tog(on, fn) { const t = h('div', 'tog' + (on ? ' on' : '')); t.onclick = () => { const nv = !t.classList.contains('on'); t.classList.toggle('on', nv); fn(nv); }; return t; }
   function rowTog(label, on, fn) { const r = h('div', 'cfg-row'); r.appendChild(h('div', 'lab', label)); r.appendChild(tog(on, fn)); return r; }
   function rowWith(label, el) { const r = h('div', 'cfg-row'); r.appendChild(h('div', 'lab', label)); r.appendChild(el); return r; }
@@ -80,22 +83,24 @@
   /* ---- tab builders ---- */
   function tabIdentity(C, ct) {
     const st = C.style;
-    const { sec, bd } = section('Theme', I.sliders);
+    const { sec, bd } = section('Theme', I.sliders, () => { S.setStyle(cp(D.style)); S.setTilt(D.tilt); S.setTouch(D.touch); });
     const ci = h('input', 'cfg-color'); ci.type = 'color'; ci.value = st.accent; ci.oninput = () => S.setStyle({ accent: ci.value });
     const accField = field('Accent', swatches(ACCENTS, st.accent, c => { ci.value = c; S.setStyle({ accent: c }); })); accField.appendChild(ci);
     bd.append(accField,
-      slider('Glass opacity %', st.glass, 0, 100, 1, v => S.setStyle({ glass: v })),
-      slider('Blur (px)', st.blur, 0, 60, 1, v => S.setStyle({ blur: v })),
-      slider('Glass saturation', st.sat == null ? 1.7 : st.sat, 1, 3, 0.05, v => S.setStyle({ sat: v })),
-      slider('Glass brightness %', st.brightness == null ? 105 : st.brightness, 70, 140, 1, v => S.setStyle({ brightness: v })),
-      slider('Glass distortion', st.distort, 0, 120, 1, v => S.setStyle({ distort: v })),
-      slider('Sheen %', st.sheen == null ? 16 : st.sheen, 0, 50, 1, v => S.setStyle({ sheen: v })),
-      slider('Shadow strength', st.shadow == null ? 1 : st.shadow, 0, 2.5, 0.1, v => S.setStyle({ shadow: v })),
-      slider('Corner radius (px)', st.radius, 0, 24, 1, v => S.setStyle({ radius: v })),
-      slider('3D perspective tilt °', C.tilt || 0, 0, 55, 1, v => S.setTilt(v)),
+      knobs(
+        knob('Opacity', st.glass, 0, 100, 1, v => S.setStyle({ glass: v })),
+        knob('Blur', st.blur, 0, 60, 1, v => S.setStyle({ blur: v })),
+        knob('Satur', st.sat == null ? 1.7 : st.sat, 1, 3, 0.05, v => S.setStyle({ sat: v })),
+        knob('Bright', st.brightness == null ? 105 : st.brightness, 70, 140, 1, v => S.setStyle({ brightness: v })),
+        knob('Distort', st.distort, 0, 120, 1, v => S.setStyle({ distort: v })),
+        knob('Sheen', st.sheen == null ? 16 : st.sheen, 0, 50, 1, v => S.setStyle({ sheen: v })),
+        knob('Shadow', st.shadow == null ? 1 : st.shadow, 0, 2.5, 0.1, v => S.setStyle({ shadow: v })),
+        knob('Radius', st.radius, 0, 24, 1, v => S.setStyle({ radius: v })),
+        knob('Tilt', C.tilt || 0, 0, 55, 1, v => S.setTilt(v)),
+      ),
       rowTog('Touch mode (large controls)', !!C.touch, on => S.setTouch(on)));
     ct.appendChild(sec);
-    const lg = section('Logo', I.camera); const Br = C.brand || {};
+    const lg = section('Logo', I.camera, () => S.setBrand(cp(D.brand))); const Br = C.brand || {};
     const lf = h('input'); lf.type = 'file'; lf.accept = 'image/*'; lf.hidden = true;
     const pick = h('button', 'cfg-btn', `${I.upload}<span>Upload</span>`); pick.onclick = () => lf.click();
     const clr = h('button', 'cfg-btn', `${I.close}<span>Clear</span>`); clr.onclick = () => S.setLogo(null);
@@ -107,12 +112,12 @@
     ct.appendChild(lg.sec);
   }
   function tabLayout(C, ct) {
-    const { sec, bd } = section('Presenter visibility', I.eye);
+    const { sec, bd } = section('Presenter visibility', I.eye, () => Object.keys(D.visibility).forEach(k => S.setVisibility(k, D.visibility[k])));
     VIS.forEach(([k, lab]) => bd.appendChild(rowTog(lab, C.visibility[k] !== false, on => S.setVisibility(k, on))));
     ct.appendChild(sec);
   }
   function tabPermissions(C, ct) {
-    const { sec, bd } = section('Allowed tools', I.lock);
+    const { sec, bd } = section('Allowed tools', I.lock, () => { Object.keys(D.permissions.tools).forEach(t => S.setToolPerm(t, D.permissions.tools[t])); ['canDraw', 'canNavigate', 'canEditScenes', 'canChangeMapStyle', 'canChangeStyle', 'canTrack'].forEach(k => S.setPerm(k, D.permissions[k])); });
     const grid = h('div', 'cfg-tools');
     DTOOLS.forEach(([id, lab]) => { const on = C.permissions.tools[id] !== false; const t = h('div', 'cfg-tool ' + (on ? 'on' : 'off'), `${I[id] || I.marker}<span>${lab}</span>`); t.onclick = () => { const nv = t.classList.contains('off'); t.classList.toggle('on', nv); t.classList.toggle('off', !nv); S.setToolPerm(id, nv); }; grid.appendChild(t); });
     bd.appendChild(grid); ct.appendChild(sec);
@@ -122,7 +127,7 @@
   }
   function tabTools(C, ct) {
     const D = Object.assign({ color: '#ff453a', weight: 3, markerIcon: '' }, C.drawDefaults || {});
-    const { sec, bd } = section('Drawing defaults', I.sketch);
+    const { sec, bd } = section('Drawing defaults', I.sketch, () => S.setDrawDefaults(cp(D.drawDefaults)));
     bd.append(field('Default colour', swatches(DCOLORS, D.color, c => { S.setDrawDefaults({ color: c }); S.setColor(c); })),
       slider('Stroke weight', D.weight, 1, 8, 1, v => S.setDrawDefaults({ weight: v })));
     bd.appendChild(h('div', 'hint', 'Applies to new shapes/lines. Per-element colour stays editable from the on-map context bar.'));
@@ -155,7 +160,7 @@
     t1.bd.append(rowWith('Live ships (AIS)', live.ships), rowWith('Live flights', live.flights), rowWith('Route / trail lines', live.trails));
     ct.appendChild(t1.sec);
     const T = Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, C.trackStyle || {});
-    const t2 = section('Tracking style', I.curve);
+    const t2 = section('Tracking style', I.curve, () => S.setTrackStyle(cp(D.trackStyle)));
     t2.bd.append(field('Ship colour', swatches(TC, T.shipColor, c => S.setTrackStyle({ shipColor: c }))),
       field('Flight colour', swatches(TC, T.flightColor, c => S.setTrackStyle({ flightColor: c }))),
       knobs(
@@ -185,7 +190,7 @@
     b3.bd.append(rowTog('Auto-play scenes', !!bc.tour.playing, on => S.setTour({ playing: on })), slider('Interval (s)', bc.tour.sec || 8, 2, 30, 1, v => S.setTour({ sec: v })));
     ct.appendChild(b3.sec);
     const sp = bc.spotlight || {};
-    const b4 = section('Spotlight', I.target);
+    const b4 = section('Spotlight', I.target, () => S.setSpotlight({ radiusKm: 400, feather: 40, dim: 66 }));
     b4.bd.appendChild(rowTog('Focus mask', !!sp.on, on => { const cv = window.GameMap.currentView(); S.setSpotlight(on ? { on: true, lat: cv.lat, lng: cv.lng } : { on: false }); }));
     b4.bd.appendChild(knobs(
       knob('Radius', sp.radiusKm || 400, 50, 2000, 50, v => S.setSpotlight({ radiusKm: v })),

@@ -265,7 +265,9 @@
     bFlights.querySelector('span').textContent = Flights.on ? `Flights ${Flights.flights.size}` : 'Flights';
   }
   function applyGate() {
-    bar.hidden = !isControl && S.cfg().visibility.tracking === false;
+    // control window drives tracking from the side panel's "Live layers" card,
+    // so the floating bar only shows on the presenter.
+    bar.hidden = isControl || S.cfg().visibility.tracking === false;
     const can = isControl || S.cfg().permissions.canTrack !== false;
     bar.classList.toggle('is-locked', !can);
   }

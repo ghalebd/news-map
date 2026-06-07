@@ -37,7 +37,7 @@ const Store = (() => {
     assetCats: ['ground', 'air', 'naval', 'weapons', 'infra'],
     customAssets: [],   // { id, name, cat, url }
     trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
-    brand: { logo: null, size: 38, x: 16, y: 30 },   // logo data-URL + height(px) + position(px from top-left)
+    brand: { logo: null, size: 38, x: 70, y: 30 },   // logo data-URL + height(px) + position(px from top-left; 70 clears the gear)
     touch: false,            // large touch-friendly controls
     locator: false,          // mini locator inset map
     tilt: 0,                 // 3D perspective tilt (deg)
