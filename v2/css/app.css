@@ -230,11 +230,11 @@ body.mode-live .qtools { display: flex; }
 
 /* tracking markers */
 .trk { display: flex; align-items: center; justify-content: center; }
-.trk__rot { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; transition: transform .9s linear; will-change: transform; }
-.trk--ship .trk__rot { color: #46d8ff; filter: drop-shadow(0 0 5px rgba(70, 216, 255, .55)) drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
-.trk--plane .trk__rot { color: #ffd54a; filter: drop-shadow(0 0 5px rgba(255, 213, 74, .5)) drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
-.trk__rot svg { width: 30px; height: 30px; }
-.trk.is-focus .trk__rot { color: #fff; filter: drop-shadow(0 0 8px var(--accent)) drop-shadow(0 0 3px var(--accent)); transform: scale(1.18); }
+.trk__rot { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; }
+.trk--ship .trk__rot { filter: drop-shadow(0 0 3px rgba(70, 216, 255, .5)) drop-shadow(0 1px 2px rgba(0, 0, 0, .85)); }
+.trk--plane .trk__rot { filter: drop-shadow(0 0 3px rgba(255, 213, 74, .45)) drop-shadow(0 1px 2px rgba(0, 0, 0, .85)); }
+.trk__rot svg { width: 28px; height: 28px; }
+.trk.is-focus .trk__rot { filter: drop-shadow(0 0 9px var(--accent)) drop-shadow(0 0 4px var(--accent)); transform: scale(1.22); }
 .trk-tip { font: 600 11px var(--font) !important; }
 .trk-tip .trk-sub { opacity: .8; font-size: 10px; }
 .trk-tip .trk-dest { color: #7cf3ff; font-size: 10px; }
