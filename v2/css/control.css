@@ -23,8 +23,14 @@
 .cfg-drawer.open { transform: none; }
 .cfg-drawer--wide { width: min(720px, 96vw); }
 
-/* ===== enhanced side panel ===== */
-.cfg-panel { width: min(600px, 96vw); }
+/* ===== enhanced side panel (LEFT) ===== */
+.cfg-panel { width: min(600px, 96vw); left: 0; right: auto; border-left: 0; border-right: 1px solid var(--stroke); box-shadow: 20px 0 60px rgba(0, 0, 0, 0.5); transform: translateX(-102%); }
+.cfg-panel.open { transform: none; }
+/* drag-to-reorder grip + drop indicator */
+.cfg-grip { color: var(--text-3); cursor: grab; font-size: 11px; letter-spacing: -2px; line-height: 1; padding: 0 2px; }
+.cfg-sec__hd:active .cfg-grip { cursor: grabbing; }
+.cfg-body .cfg-sec.dragging { opacity: .45; }
+.cfg-body .cfg-sec.dragover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
 .cfg-hd { gap: 8px; }
 .cfg-qa { display: flex; gap: 6px; margin-left: auto; }
 .cfg-qbtn { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid var(--stroke); background: var(--glass-2); transition: all var(--t-fast) var(--ease); }

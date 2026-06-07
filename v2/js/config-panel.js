@@ -42,7 +42,7 @@
   /* ---- builders ---- */
   function section(title, icon) {
     const sec = h('div', 'cfg-sec');
-    const hd = h('div', 'cfg-sec__hd', `<span class="i">${icon}</span><span class="t">${title}</span><span class="chev">${I.chevron}</span>`);
+    const hd = h('div', 'cfg-sec__hd', `<span class="cfg-grip" title="Drag to reorder">${I.grip || '⋮⋮'}</span><span class="i">${icon}</span><span class="t">${title}</span><span class="chev">${I.chevron}</span>`);
     const bd = h('div', 'cfg-sec__bd');
     hd.onclick = () => sec.classList.toggle('open');
     sec.append(hd, bd); return { sec, bd };
@@ -205,10 +205,10 @@
     sn.bd.appendChild(snapAdd);
     const snList = h('div', 'cfg-list');
     (window.UI ? UI.snaps() : []).forEach(s => { const li = h('div', 'cfg-li'); li.style.cursor = 'pointer'; li.innerHTML = `<div class="nm">${s.name} <small>${s.at}</small></div>`; li.onclick = () => UI.restoreSnapshot(s.id); const del = h('button', 'cfg-aset__x', I.close); del.style.position = 'static'; del.style.opacity = '1'; del.onclick = e => { e.stopPropagation(); UI.deleteSnapshot(s.id); renderTab(); }; li.appendChild(del); snList.appendChild(li); });
-    sn.bd.appendChild(snList); ct.appendChild(sn.sec);
+    sn.bd.appendChild(snList);
     const reset = h('button', 'cfg-reset', 'Reset all settings to defaults');
     reset.onclick = () => { if (confirm('Reset all control settings to defaults?')) { S.resetConfig(); renderTab(); } };
-    ct.appendChild(reset);
+    sn.bd.appendChild(reset); ct.appendChild(sn.sec);
   }
 
   const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabTracking, tabBroadcast, tabAssets, tabProject];
@@ -223,14 +223,31 @@
     });
   }
   search.oninput = applyFilter;
+  /* drag-to-reorder: persisted section order (local UI preference) */
+  const ORDER_KEY = 'newsmap.v3.panelOrder';
+  const title = sec => sec.querySelector('.cfg-sec__hd .t').textContent;
+  const getOrder = () => { try { return JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); } catch (e) { return []; } };
+  const saveOrder = a => { try { localStorage.setItem(ORDER_KEY, JSON.stringify(a)); } catch (e) {} };
+  function reorder(from, to) { let o = getOrder().filter(x => x !== from); const i = o.indexOf(to); o.splice(i < 0 ? o.length : i, 0, from); saveOrder(o); renderTab(); }
+  function setupDnD(sec) {
+    const hd = sec.querySelector('.cfg-sec__hd'); hd.setAttribute('draggable', 'true');
+    hd.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', title(sec)); e.dataTransfer.effectAllowed = 'move'; sec.classList.add('dragging'); });
+    hd.addEventListener('dragend', () => sec.classList.remove('dragging'));
+    sec.addEventListener('dragover', e => { e.preventDefault(); sec.classList.add('dragover'); });
+    sec.addEventListener('dragleave', () => sec.classList.remove('dragover'));
+    sec.addEventListener('drop', e => { e.preventDefault(); sec.classList.remove('dragover'); const from = e.dataTransfer.getData('text/plain'), to = title(sec); if (from && from !== to) reorder(from, to); });
+  }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
     bodyEl.innerHTML = '';
     const colA = h('div', 'cfg-col'), colB = h('div', 'cfg-col'); bodyEl.append(colA, colB);
     const tmp = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), tmp));
-    [...tmp.children].forEach(sec => { (colA.offsetHeight <= colB.offsetHeight ? colA : colB).appendChild(sec); });
-    const secs = [...bodyEl.querySelectorAll('.cfg-sec')];
-    if (openT.size) secs.forEach(s => { if (openT.has(s.querySelector('.cfg-sec__hd .t').textContent)) s.classList.add('open'); });
+    let secs = [...tmp.children];
+    const natural = secs.map(title);
+    let order = getOrder(); if (!order.length) { order = natural; saveOrder(order); }
+    secs.sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+    secs.forEach((sec, i) => { setupDnD(sec); (i % 2 === 0 ? colA : colB).appendChild(sec); });
+    if (openT.size) secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
     else if (secs[0]) secs[0].classList.add('open');
     applyFilter();
   }
