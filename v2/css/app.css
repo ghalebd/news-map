@@ -403,6 +403,9 @@ body.touch [data-movable][data-grip="side"] > .mvh svg { width: 18px; height: 38
 body.mv-dragging { cursor: grabbing; user-select: none; }
 body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }
+/* movable panels position via inline left/top + transform:scale — no transform
+   transition, or scaling animates against the old transform and the centre drifts */
+[data-movable] { transition: none !important; }
 
 /* ---------- locator inset ---------- */
 .locator { position: fixed; right: 16px; bottom: 84px; width: 200px; height: 130px; z-index: var(--z-bar);
