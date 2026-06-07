@@ -206,7 +206,9 @@
   const bar = h('div', 'livetrack glass');
   const mk = (key, icn, label) => { const b = h('button', 'lt-btn', `${icn}<span>${label}</span><i class="lt-dot"></i>`); b.onclick = () => { const can = isControl || S.cfg().permissions.canTrack !== false; if (can) S.setTracking(key, !S.state.tracking[key]); }; return b; };
   const bShips = mk('ships', I.ship, 'Ships'), bFlights = mk('flights', I.plane, 'Flights');
-  bar.append(bShips, bFlights); document.body.appendChild(bar);
+  const bVF = h('button', 'lt-btn', `${I.layers}<span>VF Live</span>`); bVF.title = 'VesselFinder live AIS (opens in a window)';
+  bVF.onclick = () => window.open('vesselfinder.html', 'vfLive', 'width=1320,height=860');
+  bar.append(bShips, bFlights, bVF); document.body.appendChild(bar);
 
   function setStatus(kind, st) { const b = kind === 'ships' ? bShips : bFlights; const d = b.querySelector('.lt-dot'); if (d) d.dataset.st = st; }
   function setCounts() {
