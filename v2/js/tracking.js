@@ -256,7 +256,20 @@
   const bShips = mk('ships', I.ship, 'Ships'), bFlights = mk('flights', I.plane, 'Flights');
   const bTrails = h('button', 'lt-btn', `${I.curve}<span>Trails</span>`); bTrails.title = 'Show / hide route & trail lines';
   bTrails.onclick = () => { const can = isControl || S.cfg().permissions.canTrack !== false; if (can) S.setTracking('trails', !showTrails()); };
-  bar.append(bShips, bFlights, bTrails);   // not appended to the DOM: control lives exclusively in the side-panel "Live ships & flights" card (counts still update these refs)
+  bar.append(bShips, bFlights, bTrails);   // floating bar kept off-DOM (counts still update these refs)
+
+  /* live controls live in the vertical tool bar (.qtools) */
+  let qShips = null, qFlights = null, qTrails = null;
+  (function addToToolbar() {
+    const qbar = document.querySelector('.qtools'); if (!qbar) return;
+    const canTrack = () => isControl || S.cfg().permissions.canTrack !== false;
+    const qbtn = (icn, title, fn) => { const b = h('button', 'qtool', icn); b.title = title; b.onclick = () => { if (canTrack()) fn(); }; return b; };
+    qbar.appendChild(h('div', 'qtools__sep'));
+    qShips = qbtn(I.ship, 'Live ships', () => S.setTracking('ships', !S.state.tracking.ships));
+    qFlights = qbtn(I.plane, 'Live flights', () => S.setTracking('flights', !S.state.tracking.flights));
+    qTrails = qbtn(I.curve, 'Route / trail lines', () => S.setTracking('trails', !showTrails()));
+    qbar.append(qShips, qFlights, qTrails);
+  })();
 
   function setStatus(kind, st) { const b = kind === 'ships' ? bShips : bFlights; const d = b.querySelector('.lt-dot'); if (d) d.dataset.st = st; }
   function setCounts() {
@@ -274,6 +287,9 @@
   function sync() {
     bShips.classList.toggle('is-on', S.state.tracking.ships); bFlights.classList.toggle('is-on', S.state.tracking.flights);
     bTrails.classList.toggle('is-on', showTrails());
+    if (qShips) qShips.classList.toggle('is-on', S.state.tracking.ships);
+    if (qFlights) qFlights.classList.toggle('is-on', S.state.tracking.flights);
+    if (qTrails) qTrails.classList.toggle('is-on', showTrails());
     Ships.set(S.state.tracking.ships); Flights.set(S.state.tracking.flights);
     if (Ships.on) Ships.showTrails(showTrails());
     if (Flights.on) Flights.showTrails(showTrails());
