@@ -24,14 +24,16 @@
 .cfg-drawer--wide { width: min(720px, 96vw); }
 
 /* ===== enhanced side panel ===== */
-.cfg-panel { width: 388px; }
+.cfg-panel { width: min(600px, 96vw); }
 .cfg-hd { gap: 8px; }
 .cfg-qa { display: flex; gap: 6px; margin-left: auto; }
 .cfg-qbtn { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid var(--stroke); background: var(--glass-2); transition: all var(--t-fast) var(--ease); }
 .cfg-qbtn svg { width: 16px; height: 16px; }
 .cfg-qbtn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-.cfg-body { padding: 12px 0 34px; }
-.cfg-body .cfg-sec { margin: 0 12px 10px; border: 1px solid var(--stroke); border-radius: var(--r); background: var(--glass-2); overflow: hidden; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+/* two-column masonry of section cards */
+.cfg-body { padding: 12px; columns: 2; column-gap: 10px; }
+@media (max-width: 520px) { .cfg-body { columns: 1; } }
+.cfg-body .cfg-sec { margin: 0 0 10px; break-inside: avoid; -webkit-column-break-inside: avoid; border: 1px solid var(--stroke); border-radius: var(--r); background: var(--glass-2); overflow: hidden; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
 .cfg-body .cfg-sec:hover { border-color: var(--stroke-2); }
 .cfg-body .cfg-sec.open { border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
 .cfg-body .cfg-sec__hd { padding: 11px 13px; }
