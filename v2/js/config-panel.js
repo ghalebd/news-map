@@ -78,7 +78,10 @@
       const clr = h('button', 'cfg-btn', `${I.close}<span>Default</span>`); clr.onclick = () => S.setLogo(null);
       lf.onchange = async () => { const f = lf.files[0]; if (!f) return; try { const url = await readImage(f, 512); S.setLogo(url); } catch (e) { alert('Could not read image'); } lf.value = ''; };
       lr.append(pick, clr, lf); bd.appendChild(lr);
-      bd.appendChild(slider('Logo size', (C.brand && C.brand.size) || 38, 16, 90, 2, v => S.setLogoSize(v)));
+      const Br = C.brand || {};
+      bd.appendChild(slider('Logo height', Br.size || 38, 16, 120, 2, v => S.setBrand({ size: v })));
+      bd.appendChild(slider('Logo X (from left)', Br.x == null ? 16 : Br.x, 0, 1200, 4, v => S.setBrand({ x: v })));
+      bd.appendChild(slider('Logo Y (from top)', Br.y == null ? 30 : Br.y, 10, 700, 4, v => S.setBrand({ y: v })));
       bd.appendChild(rowTog('Touch mode (large controls)', !!C.touch, on => S.setTouch(on)));
       body.appendChild(sec);
     }

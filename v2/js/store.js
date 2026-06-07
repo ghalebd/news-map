@@ -36,7 +36,7 @@ const Store = (() => {
     assetCats: ['ground', 'air', 'naval', 'weapons', 'infra'],
     customAssets: [],   // { id, name, cat, url }
     trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
-    brand: { logo: null, size: 38 },   // data-URL logo override + display height (px)
+    brand: { logo: null, size: 38, x: 16, y: 30 },   // logo data-URL + height(px) + position(px from top-left)
     touch: false,            // large touch-friendly controls
   };
 
@@ -129,6 +129,7 @@ const Store = (() => {
   function setTrackStyle(patch) { Object.assign(state.config.trackStyle, patch); emit('config'); }
   function setLogo(url) { state.config.brand.logo = url; emit('config'); }
   function setLogoSize(px) { state.config.brand.size = px; emit('config'); }
+  function setBrand(patch) { Object.assign(state.config.brand, patch); emit('config'); }
   function setTouch(on) { state.config.touch = on; emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
 
@@ -143,7 +144,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setTouch, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, resetConfig,
   };
 })();
 window.Store = Store;

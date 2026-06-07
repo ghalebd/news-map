@@ -24,9 +24,10 @@ svg { display: block; }
 }
 
 /* ---------- brand + status ---------- */
-/* logo: top-right, vertically centre-anchored so resizing keeps it in place */
-.brand { position: fixed; right: 16px; top: 32px; transform: translateY(-50%); z-index: var(--z-bar); pointer-events: none; display: flex; align-items: center; justify-content: flex-end; }
-.brand img { display: block; width: auto; max-width: 340px; object-fit: contain; object-position: right center; }
+/* logo: positioned from config (top-left default), vertically centre-anchored
+   so resizing keeps it in place; left-aligned */
+.brand { position: fixed; left: 16px; top: 30px; transform: translateY(-50%); z-index: var(--z-bar); pointer-events: none; display: flex; align-items: center; justify-content: flex-start; }
+.brand img { display: block; width: auto; max-width: 360px; object-fit: contain; object-position: left center; }
 .status {
   position: fixed; left: 16px; bottom: 18px; z-index: var(--z-bar);
   padding: 6px 12px; border-radius: var(--r-sm);
@@ -219,13 +220,13 @@ body.mode-live .qtools { display: flex; }
 .qa-asset__item.is-on { border-color: var(--accent); box-shadow: var(--accent-glow); }
 
 /* ---------- base-map switcher ---------- */
-.mapstyle { position: fixed; top: 14px; left: 16px; z-index: var(--z-bar); height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 9px;
+.mapstyle { position: fixed; top: 14px; right: 16px; z-index: var(--z-bar); height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 9px;
   border-radius: var(--r-sm); color: var(--text); font-size: 12px; font-weight: 600;
   background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
   -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); transition: all var(--t-fast) var(--ease); }
 .mapstyle svg { width: 18px; height: 18px; color: var(--accent); }
 .mapstyle:hover { border-color: var(--accent); }
-.mapstyle-pop { position: fixed; top: 64px; left: 16px; z-index: var(--z-flyout); min-width: 150px; padding: 6px;
+.mapstyle-pop { position: fixed; top: 64px; right: 16px; z-index: var(--z-flyout); min-width: 150px; padding: 6px;
   display: flex; flex-direction: column; gap: 3px; border-radius: var(--r-sm);
   background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
   -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); animation: pop var(--t) var(--ease-out); }

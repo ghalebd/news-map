@@ -9,8 +9,11 @@
 
   /* ---------- brand + status ---------- */
   const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);
-  if (window.APP_ROLE === 'control') brand.style.right = '70px';   // clear the settings gear
-  function applyBrand() { const img = brand.querySelector('img'); const br = S.cfg().brand || {}; if (br.logo) { img.src = br.logo; img.style.display = 'block'; img.style.height = (br.size || 38) + 'px'; } else { img.removeAttribute('src'); img.style.display = 'none'; } }
+  function applyBrand() {
+    const img = brand.querySelector('img'); const br = S.cfg().brand || {};
+    brand.style.left = (br.x == null ? 16 : br.x) + 'px'; brand.style.top = (br.y == null ? 30 : br.y) + 'px';
+    if (br.logo) { img.src = br.logo; img.style.display = 'block'; img.style.height = (br.size || 38) + 'px'; } else { img.removeAttribute('src'); img.style.display = 'none'; }
+  }
   const status = h('div', 'status'); document.body.appendChild(status);
   function renderStatus() { const v = M.currentView(); status.innerHTML = `<span class="status__dot"></span><span>${v.lat.toFixed(2)} , ${v.lng.toFixed(2)}</span> · <b>Z${v.zoom.toFixed(1)}</b>`; }
   M.map.on('move zoom', renderStatus); renderStatus();
