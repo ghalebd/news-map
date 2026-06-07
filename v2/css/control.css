@@ -30,10 +30,16 @@
 .cfg-qbtn { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid var(--stroke); background: var(--glass-2); transition: all var(--t-fast) var(--ease); }
 .cfg-qbtn svg { width: 16px; height: 16px; }
 .cfg-qbtn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-/* two-column masonry of section cards */
-.cfg-body { padding: 12px; columns: 2; column-gap: 10px; }
-@media (max-width: 520px) { .cfg-body { columns: 1; } }
-.cfg-body .cfg-sec { margin: 0 0 10px; break-inside: avoid; -webkit-column-break-inside: avoid; border: 1px solid var(--stroke); border-radius: var(--r); background: var(--glass-2); overflow: hidden; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+/* search */
+.cfg-search { margin: 0 14px 8px; height: 38px; padding: 0 14px; border-radius: var(--r-sm); background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font: 500 13px var(--font); }
+.cfg-search:focus { outline: none; border-color: var(--accent); }
+.cfg-search::placeholder { color: var(--text-3); }
+/* two-column masonry that scrolls vertically (flex columns, no multicol) */
+.cfg-body { flex: 1; display: flex; gap: 10px; padding: 0 12px 30px; overflow-y: auto; align-items: flex-start; }
+.cfg-body::-webkit-scrollbar { width: 7px; } .cfg-body::-webkit-scrollbar-thumb { background: var(--stroke); border-radius: 3px; }
+.cfg-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 520px) { .cfg-body { flex-direction: column; } }
+.cfg-body .cfg-sec { margin: 0; border: 1px solid var(--stroke); border-radius: var(--r); background: var(--glass-2); overflow: hidden; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
 .cfg-body .cfg-sec:hover { border-color: var(--stroke-2); }
 .cfg-body .cfg-sec.open { border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
 .cfg-body .cfg-sec__hd { padding: 11px 13px; }
@@ -45,6 +51,21 @@
 .cfg-panel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: var(--accent-glow); cursor: pointer; border: 2px solid #0b0f17; }
 .cfg-panel .cfg-sw button { width: 27px; height: 27px; border-radius: 8px; }
 .cfg-panel .cfg-field > .lab .val { background: var(--accent-soft); color: var(--accent); padding: 1px 7px; border-radius: var(--pill); font-size: 10px; }
+/* refined control shapes (kept on-style) */
+.cfg-panel .tog { width: 44px; height: 24px; border-radius: 12px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .4); }
+.cfg-panel .tog::after { width: 18px; height: 18px; top: 2px; left: 3px; box-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
+.cfg-panel .tog.on { background: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow), inset 0 1px 2px rgba(0, 0, 0, .25); }
+.cfg-panel .tog.on::after { left: 23px; background: #fff; }
+.cfg-panel .cfg-row { padding: 3px 0; }
+.cfg-panel .cfg-row .lab { font-size: 12.5px; font-weight: 500; }
+.cfg-panel .cfg-tool { border-radius: 10px; padding: 9px 10px; }
+.cfg-panel .cfg-tool.on { background: var(--accent-soft); box-shadow: var(--accent-glow), var(--sheen); }
+.cfg-panel .cfg-seg__b { padding: 7px 12px; border-radius: 9px; }
+.cfg-panel .cfg-btn { height: 40px; border-radius: 10px; font-weight: 700; }
+.cfg-panel .cfg-btn:hover { background: var(--accent-soft); transform: translateY(-1px); }
+.cfg-panel .cfg-uploadbtn { border-radius: 10px; }
+.cfg-panel .cfg-add button { border-radius: 9px; font-weight: 700; }
+.cfg-panel .cfg-chip { border-radius: var(--pill); padding: 6px 11px; }
 
 /* ===== modern dock + floating glass panels ===== */
 .cdock { position: fixed; top: 64px; right: 16px; z-index: var(--z-modal); display: flex; flex-direction: column; gap: 3px; padding: 8px;

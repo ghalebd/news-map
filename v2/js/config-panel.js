@@ -34,7 +34,8 @@
     qbtn(I.load || I.upload, 'Load file', () => window.UI && UI.loadProject()),
   );
   const x = h('button', 'x', I.close); head.append(qa, x);
-  const bodyEl = h('div', 'cfg-body'); drawer.append(head, bodyEl); document.body.append(toggle, drawer);
+  const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
+  const bodyEl = h('div', 'cfg-body'); drawer.append(head, search, bodyEl); document.body.append(toggle, drawer);
   toggle.onclick = () => { const o = !drawer.classList.contains('open'); drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); };
   x.onclick = () => { drawer.classList.remove('open'); toggle.classList.remove('is-open'); };
 
@@ -211,13 +212,27 @@
   }
 
   const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabTracking, tabBroadcast, tabAssets, tabProject];
+  function applyFilter() {
+    const q = search.value.trim().toLowerCase();
+    bodyEl.querySelectorAll('.cfg-sec').forEach(sec => {
+      let any = false;
+      sec.querySelectorAll('.cfg-sec__bd > *').forEach(row => { const hit = !q || row.textContent.toLowerCase().includes(q); row.style.display = hit ? '' : 'none'; if (hit) any = true; });
+      const titleHit = !q || sec.querySelector('.cfg-sec__hd .t').textContent.toLowerCase().includes(q);
+      sec.style.display = (titleHit || any) ? '' : 'none';
+      if (q && (any || titleHit)) sec.classList.add('open');
+    });
+  }
+  search.oninput = applyFilter;
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
     bodyEl.innerHTML = '';
-    GROUPS.forEach(b => b(S.cfg(), bodyEl));
+    const colA = h('div', 'cfg-col'), colB = h('div', 'cfg-col'); bodyEl.append(colA, colB);
+    const tmp = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), tmp));
+    [...tmp.children].forEach(sec => { (colA.offsetHeight <= colB.offsetHeight ? colA : colB).appendChild(sec); });
     const secs = [...bodyEl.querySelectorAll('.cfg-sec')];
     if (openT.size) secs.forEach(s => { if (openT.has(s.querySelector('.cfg-sec__hd .t').textContent)) s.classList.add('open'); });
     else if (secs[0]) secs[0].classList.add('open');
+    applyFilter();
   }
   renderTab();
 
