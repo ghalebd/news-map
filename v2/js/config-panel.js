@@ -36,7 +36,7 @@
 
   /* ---- builders ---- */
   function section(title, icon) {
-    const sec = h('div', 'cfg-sec open');
+    const sec = h('div', 'cfg-sec');
     const hd = h('div', 'cfg-sec__hd', `<span class="i">${icon}</span><span class="t">${title}</span><span class="chev">${I.chevron}</span>`);
     const bd = h('div', 'cfg-sec__bd');
     hd.onclick = () => sec.classList.toggle('open');
@@ -204,25 +204,28 @@
     ct.appendChild(reset);
   }
 
-  const TABS = [
-    { id: 'identity', label: 'Identity', icon: I.sliders, build: tabIdentity },
-    { id: 'layout', label: 'Layout', icon: I.eye, build: tabLayout },
-    { id: 'permissions', label: 'Permissions', icon: I.lock, build: tabPermissions },
-    { id: 'tools', label: 'Tools', icon: I.sketch, build: tabTools },
-    { id: 'map', label: 'Map', icon: I.layers, build: tabMap },
-    { id: 'tracking', label: 'Tracking', icon: I.ship, build: tabTracking },
-    { id: 'broadcast', label: 'Broadcast', icon: I.film, build: tabBroadcast },
-    { id: 'assets', label: 'Assets', icon: I.folder, build: tabAssets },
-    { id: 'project', label: 'Project', icon: I.save, build: tabProject },
-  ];
-  let active = 0;
-  const rail = h('div', 'cfg-tabs'), content = h('div', 'cfg-content');
-  const main = h('div', 'cfg-main'); main.append(rail, content); body.appendChild(main);
-  TABS.forEach((tab, i) => { const tb = h('button', 'cfg-tab', `<span class="i">${tab.icon}</span><span>${tab.label}</span>`); tb.onclick = () => { active = i; renderTab(); }; rail.appendChild(tb); });
+  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabTracking, tabBroadcast, tabAssets, tabProject];
+  const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
+  const acc = h('div', 'cfg-acc'); body.append(search, acc);
+  function applyFilter() {
+    const q = search.value.trim().toLowerCase();
+    acc.querySelectorAll('.cfg-sec').forEach(sec => {
+      let any = false;
+      sec.querySelectorAll('.cfg-sec__bd > *').forEach(row => { const hit = !q || row.textContent.toLowerCase().includes(q); row.style.display = hit ? '' : 'none'; if (hit) any = true; });
+      const titleHit = !q || sec.querySelector('.cfg-sec__hd .t').textContent.toLowerCase().includes(q);
+      sec.style.display = (titleHit || any) ? '' : 'none';
+      if (q && (any || titleHit)) sec.classList.add('open');
+    });
+  }
+  search.oninput = applyFilter;
   function renderTab() {
-    content.innerHTML = '';
-    rail.querySelectorAll('.cfg-tab').forEach((t, i) => t.classList.toggle('on', i === active));
-    TABS[active].build(S.cfg(), content);
+    const openT = new Set([...acc.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
+    acc.innerHTML = '';
+    GROUPS.forEach(b => b(S.cfg(), acc));
+    const secs = [...acc.querySelectorAll('.cfg-sec')];
+    if (openT.size) secs.forEach(s => { if (openT.has(s.querySelector('.cfg-sec__hd .t').textContent)) s.classList.add('open'); });
+    else if (secs[0]) secs[0].classList.add('open');
+    applyFilter();
   }
   renderTab();
 
