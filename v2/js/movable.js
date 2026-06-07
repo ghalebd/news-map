@@ -124,8 +124,11 @@
     posOf(sel) { return (S.cfg().layout || {})[sel] || null; },
     setScale(sel, s) {
       const el = els[sel]; const cur = (S.cfg().layout || {})[sel] || {};
+      const s0 = cur.s || 1;
       let x = cur.x, y = cur.y;
-      if (x == null && el) { const r = el.getBoundingClientRect(); x = Math.round(r.left); y = Math.round(r.top); }
+      if (x == null && el) { const r = el.getBoundingClientRect(); x = Math.round(r.left - shiftFor(sel)); y = Math.round(r.top); }
+      // grow/shrink around the panel's centre (top-left origin → compensate x/y)
+      if (el) { const w = el.offsetWidth, hh = el.offsetHeight; x = Math.round(x - w * (s - s0) / 2); y = Math.round(y - hh * (s - s0) / 2); }
       S.setLayout(sel, { x, y, s });
     },
     // snap a panel to a screen anchor — code is V+H: t/m/b  +  l/c/r
