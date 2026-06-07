@@ -110,8 +110,10 @@
     const pt = M.map.latLngToContainerPoint([s.lat, s.lng]);
     const mpp = 40075016.686 * Math.cos(s.lat * Math.PI / 180) / (256 * Math.pow(2, M.map.getZoom()));
     const rPx = Math.max(30, (s.radiusKm * 1000) / mpp);
-    spot.style.left = pt.x + 'px'; spot.style.top = pt.y + 'px';
-    spot.style.width = spot.style.height = (rPx * 2) + 'px';
+    const feather = (s.feather == null ? 40 : s.feather) / 100;
+    const inner = Math.max(0, rPx * (1 - feather));
+    const dim = (s.dim == null ? 66 : s.dim) / 100;
+    spot.style.background = `radial-gradient(circle at ${pt.x}px ${pt.y}px, rgba(4,7,12,0) ${inner}px, rgba(4,7,12,${dim}) ${rPx}px)`;
     spot.hidden = false;
   }
   M.map.on('move zoom moveend zoomend', renderSpotlight);

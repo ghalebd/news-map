@@ -152,6 +152,8 @@
     const b4 = section('Spotlight', I.target);
     b4.bd.appendChild(rowTog('Focus mask', !!sp.on, on => { const cv = window.GameMap.currentView(); S.setSpotlight(on ? { on: true, lat: cv.lat, lng: cv.lng } : { on: false }); }));
     b4.bd.appendChild(slider('Radius (km)', sp.radiusKm || 400, 50, 2000, 50, v => S.setSpotlight({ radiusKm: v })));
+    b4.bd.appendChild(slider('Edge feather %', sp.feather == null ? 40 : sp.feather, 0, 100, 5, v => S.setSpotlight({ feather: v })));
+    b4.bd.appendChild(slider('Dim outside %', sp.dim == null ? 66 : sp.dim, 0, 95, 5, v => S.setSpotlight({ dim: v })));
     const rc = h('button', 'cfg-btn', `${I.target}<span>Centre on view</span>`); rc.onclick = () => { const cv = window.GameMap.currentView(); S.setSpotlight({ lat: cv.lat, lng: cv.lng }); }; b4.bd.appendChild(rc);
     ct.appendChild(b4.sec);
   }

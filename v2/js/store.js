@@ -60,7 +60,7 @@ const Store = (() => {
     reveal: {},                    // sceneId -> number of revealed elements (synced)
     tracking: { ships: false, flights: false, trails: true },  // live overlays (synced)
     trackFocus: null,             // focused ship MMSI (route shown) — synced
-    broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 }, spotlight: { on: false, lat: 25, lng: 45, radiusKm: 400 } },
+    broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 }, spotlight: { on: false, lat: 25, lng: 45, radiusKm: 400, feather: 40, dim: 66 } },
   };
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
