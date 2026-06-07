@@ -350,7 +350,19 @@
     ct.appendChild(sec);
   }
 
-  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabTracking, tabBroadcast, tabAssets, tabProject];
+  function tabThreeD(C, ct) {
+    const t = Object.assign({ exaggeration: 2.6, pitch: 62 }, C.threeD || {});
+    const { sec, bd } = section('3D terrain', I.layers, () => S.setThreeD(cp(S.DEFAULT_CONFIG.threeD)));
+    const enter = h('button', 'cfg-btn', `${I.target}<span>Enter / exit 3D</span>`);
+    enter.onclick = () => window.Map3D && Map3D.toggle();
+    bd.append(enter,
+      slider('Terrain height', Math.round(t.exaggeration * 10) / 10, 0.3, 8, 0.1, v => S.setThreeD({ exaggeration: v })),
+      slider('Camera pitch', Math.round(t.pitch), 0, 80, 1, v => S.setThreeD({ pitch: v })),
+      h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen ⟲ ⟳.'));
+    ct.appendChild(sec);
+  }
+
+  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabTracking, tabBroadcast, tabAssets, tabProject];
   function applyFilter() {
     const q = search.value.trim().toLowerCase();
     bodyEl.querySelectorAll('.cfg-sec').forEach(sec => {
@@ -385,9 +397,11 @@
     const natural = secs.map(title);
     let order = getOrder(); if (!order.length) { order = natural; saveOrder(order); }
     secs.sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-    secs.forEach((sec, i) => { setupDnD(sec); (i % 2 === 0 ? colA : colB).appendChild(sec); });
+    // mark open state first so card heights are accurate, then auto-balance the two
+    // columns by always dropping the next card into the currently-shorter one (masonry).
     if (openT.size) secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
     else if (secs[0]) secs[0].classList.add('open');
+    secs.forEach(sec => { setupDnD(sec); (colA.offsetHeight <= colB.offsetHeight ? colA : colB).appendChild(sec); });
     applyFilter();
   }
   renderTab();

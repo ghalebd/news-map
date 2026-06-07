@@ -14,7 +14,8 @@
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
 
   const cont = h('div'); cont.id = 'map3d'; document.body.appendChild(cont);
-  let map = null, on = false, exaggeration = 2.6;   // clearly-3D default; tune with the terrain ▲/▽ buttons
+  const cfg3 = () => (S.cfg().threeD) || { exaggeration: 2.6, pitch: 62 };
+  let map = null, on = false, exaggeration = cfg3().exaggeration;   // clearly-3D default; tune in Settings or with ▲/▽
 
   /* ---- build the MapLibre map lazily on first use ---- */
   function ensure() {
@@ -22,7 +23,7 @@
     const c = L2.getCenter();
     map = new maplibregl.Map({
       container: cont, style: styleUrl(S.state.mapStyle || 'satellite'),
-      center: [c.lng, c.lat], zoom: Math.max(1, L2.getZoom() - 1), pitch: 62, bearing: 0,
+      center: [c.lng, c.lat], zoom: Math.max(1, L2.getZoom() - 1), pitch: cfg3().pitch, bearing: 0,
       maxPitch: 80, attributionControl: false, antialias: true, dragRotate: true,
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
@@ -108,6 +109,7 @@
 
   /* ---- react to store: keep 3D base in step with the 2D app ---- */
   S.on((st, evt) => {
+    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); } return; }
     if (!on || !map) return;
     if (evt === 'mapstyle' || evt === 'sync') { map.setStyle(styleUrl(S.state.mapStyle)); }   // style.load re-adds terrain/sky/layers
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }

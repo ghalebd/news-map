@@ -87,6 +87,37 @@ Example checks that must stay green:
 ## Existing tools/features (do NOT duplicate)
 Tools: pan, asset, animate, sketch, arrow, circle, polygon, country, marker, erase, measure (Ruler, key R), textlabel (auto-expanding box, the native one — do not re-add a second text tool). Save/Load via JSON (Ctrl+S). Storyboard. Presenter mode. Scenario presets. Live tracking (ships/flights). Country highlight.
 
+## v2 REBUILD (`v2/`) — current active work + PERMANENT conventions
+
+The active product is the **`v2/`** rebuild (modular, store-driven, two synced windows):
+`v2/control.html` (operator console) + `v2/index.html` (presenter). They share one
+state via `Store` (`js/store.js`, persisted to localStorage `newsmap.v3`, synced across
+windows by the `storage` event). Base map = Leaflet (`js/map.js`); real 3D = MapLibre GL
+(`js/map3d.js`). Modules: draw, tracking, overlays, movable, qbar, lbar, map-style,
+locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
+
+### PERMANENT RULES (apply to ALL future work — قواعد ثابتة)
+1. **Every new tool/feature gets a settings control automatically.** When you add any
+   tool, mode, or feature, you MUST also add a matching control inside the Control Panel
+   (`js/config-panel.js`): a `section(title, icon[, onReset])` card whose inputs read/write
+   through `Store` setters (so it persists + syncs). Register the section function in the
+   `GROUPS` array. No feature ships without its settings control.
+2. **Every new on-screen panel follows the exact same panel conventions/style as the
+   existing ones.** That means: liquid-glass styling (use `glass`/tokens, never ad-hoc
+   colors); registered in `js/movable.js` `PANELS` so it is draggable (grip auto-placed on
+   the shorter edge, orange dots) and scalable; it therefore appears automatically in the
+   Settings ▸ Layout “Panel size & position” list (size + 9-anchor snap + centre); hidden
+   under `body.ui-hidden`; correct z-index tier (tokens `--z-*`); and any popup it spawns
+   from the left tool bar uses the shared `.lbar-pop` style via `window.LBar`.
+3. **Settings sections auto-balance across the two columns** (masonry: each card drops into
+   the currently-shorter column) **and stay drag-reorderable** (`setupDnD`, order saved to
+   `newsmap.v3.panelOrder`). Never hard-alternate columns by index.
+4. **Before every commit run the smoke test** `tmp/v3smoke.js` (puppeteer): it must report
+   `0 pageerrors / 0 codeErrors / 0 overlaps` for control+presenter × build+live. 3D tests
+   need WebGL flags (`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`).
+5. Git: never push to `main`; work on branch `v2-rebuild`; commit messages end with the
+   Co-Authored-By trailer.
+
 ## Known gotchas
 - Many layout rules use `!important`. To move a panel via JS you must use `el.style.setProperty(prop, val, 'important')` or it won't budge.
 - ID selectors beat class selectors: a media-query rule on `.right-panels-stack` loses to `#rightPanelsStack`. Match ID specificity.
