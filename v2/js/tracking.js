@@ -15,8 +15,8 @@
   const AIS_KEY = '3da0a878476db856ac5cf273d312875598270404';
   const SHIP_COLOR = '#46d8ff', PLANE_COLOR = '#ffd54a';
   const TRAIL_MAX = 60;   // points kept per ship trail (longer visible history)
-  const RT_FAINT = { interactive: false, color: '#5fd8ff', weight: 2, opacity: .55, dashArray: '6 6', lineCap: 'round' };
-  const RT_FOCUS = { interactive: false, color: '#8af0ff', weight: 3, opacity: .95, dashArray: '9 7', lineCap: 'round' };
+  const RT_FAINT = { interactive: false, color: '#5fd8ff', weight: 1, opacity: .32, dashArray: '3 7', lineCap: 'round' };
+  const RT_FOCUS = { interactive: false, color: '#8af0ff', weight: 1.8, opacity: .8, dashArray: '7 6', lineCap: 'round' };
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
   const showTrails = () => S.state.tracking.trails !== false;   // route/trail line visibility
 
@@ -31,7 +31,7 @@
     if (!layer) return;
     if (speedMs > 0.3) {
       const end = project(obj.lat, obj.lng, headingDeg, speedMs * secs);
-      if (!obj.vector) obj.vector = L.polyline([[obj.lat, obj.lng], end], { color, weight: 2, opacity: .7, dashArray: '5 6', lineCap: 'round', interactive: false }).addTo(layer);
+      if (!obj.vector) obj.vector = L.polyline([[obj.lat, obj.lng], end], { color, weight: 1, opacity: .4, dashArray: '3 6', lineCap: 'round', interactive: false }).addTo(layer);
       else obj.vector.setLatLngs([[obj.lat, obj.lng], end]);
     } else if (obj.vector) { layer.removeLayer(obj.vector); obj.vector = null; }
   }
@@ -166,12 +166,12 @@
       if (!last || Math.abs(last[0] - s.lat) > 1e-4 || Math.abs(last[1] - s.lng) > 1e-4) s.trail.push([s.lat, s.lng]);
       if (s.trail.length > TRAIL_MAX) s.trail.shift();
       if (!this.trails) return;
-      drawVector(s, this.trails, SHIP_COLOR, s.course, (typeof s.speed === 'number' ? s.speed : 0) * 0.5144, 360);
+      drawVector(s, this.trails, SHIP_COLOR, s.course, (typeof s.speed === 'number' ? s.speed : 0) * 0.5144, 180);
       if (s.trail.length < 2) return;
       const recent = s.trail.slice(-10);
-      if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 2.2, opacity: .55, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
+      if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 1.2, opacity: .35, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
       else s.line.setLatLngs(s.trail);
-      if (!s.head) { s.head = L.polyline(recent, { color: '#bdeeff', weight: 3.2, opacity: .95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
+      if (!s.head) { s.head = L.polyline(recent, { color: '#bdeeff', weight: 1.8, opacity: .7, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
       else s.head.setLatLngs(recent);
     },
     prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); if (s.vector) this.trails.removeLayer(s.vector); } if (s.routeLine && this.route) this.route.removeLayer(s.routeLine); if (k === this.focus && this.pins) this.pins.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
@@ -194,12 +194,12 @@
       if (!last || Math.abs(last[0] - f.lat) > 1e-4 || Math.abs(last[1] - f.lng) > 1e-4) f.trail.push([f.lat, f.lng]);
       if (f.trail.length > TRAIL_MAX) f.trail.shift();
       if (!this.ftrails) return;
-      drawVector(f, this.ftrails, PLANE_COLOR, f.heading, f.velocity || 0, 120);
+      drawVector(f, this.ftrails, PLANE_COLOR, f.heading, f.velocity || 0, 75);
       if (f.trail.length < 2) return;
       const recent = f.trail.slice(-10);
-      if (!f.line) { f.line = L.polyline(f.trail, { color: PLANE_COLOR, weight: 2, opacity: .5, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
+      if (!f.line) { f.line = L.polyline(f.trail, { color: PLANE_COLOR, weight: 1.2, opacity: .35, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
       else f.line.setLatLngs(f.trail);
-      if (!f.head) { f.head = L.polyline(recent, { color: '#fff0b8', weight: 3, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
+      if (!f.head) { f.head = L.polyline(recent, { color: '#fff0b8', weight: 1.8, opacity: .65, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
       else f.head.setLatLngs(recent);
     },
     async fetch() {

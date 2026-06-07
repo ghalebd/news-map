@@ -44,6 +44,8 @@
   }
   function tog(on, fn) { const t = h('div', 'tog' + (on ? ' on' : '')); t.onclick = () => { const nv = !t.classList.contains('on'); t.classList.toggle('on', nv); fn(nv); }; return t; }
   function rowTog(label, on, fn) { const r = h('div', 'cfg-row'); r.appendChild(h('div', 'lab', label)); r.appendChild(tog(on, fn)); return r; }
+  function rowWith(label, el) { const r = h('div', 'cfg-row'); r.appendChild(h('div', 'lab', label)); r.appendChild(el); return r; }
+  const live = {};   // refs to live-tracking controls (updated without full re-render)
   function slider(label, val, min, max, step, fn) {
     const f = h('div', 'cfg-field'); const lab = h('div', 'lab', `<span>${label}</span><span class="val">${val}</span>`);
     const inp = h('input'); inp.type = 'range'; inp.min = min; inp.max = max; inp.step = step || 1; inp.value = val;
@@ -83,6 +85,19 @@
       TOOLS.forEach(([id, lab]) => { const on = C.permissions.tools[id] !== false; const t = h('div', 'cfg-tool ' + (on ? 'on' : 'off'), `${I[id] || I.marker}<span>${lab}</span>`); t.onclick = () => { const nv = t.classList.contains('off'); t.classList.toggle('on', nv); t.classList.toggle('off', !nv); S.setToolPerm(id, nv); }; grid.appendChild(t); });
       bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>ALLOWED TOOLS</span></div>')); bd.lastChild.appendChild(grid);
       PERMS.forEach(([k, lab]) => bd.appendChild(rowTog(lab, C.permissions[k] !== false, on => S.setPerm(k, on))));
+      body.appendChild(sec);
+    }
+    // LIVE TRACKING (ships / flights / lines + active map type)
+    {
+      const { sec, bd } = section('Live tracking', I.ship, true);
+      live.ships = tog(!!S.state.tracking.ships, on => S.setTracking('ships', on));
+      live.flights = tog(!!S.state.tracking.flights, on => S.setTracking('flights', on));
+      live.trails = tog(S.state.tracking.trails !== false, on => S.setTracking('trails', on));
+      bd.append(rowWith('Live ships (AIS)', live.ships), rowWith('Live flights', live.flights), rowWith('Route / trail lines', live.trails));
+      bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>ACTIVE MAP TYPE</span></div>'));
+      const seg = h('div', 'cfg-seg'); live.seg = seg;
+      C.mapStyles.filter(m => m.on !== false).forEach(m => { const x = h('button', 'cfg-seg__b' + (m.id === S.state.mapStyle ? ' on' : ''), m.name); x.dataset.id = m.id; x.onclick = () => { S.setMapStyle(m.id); seg.querySelectorAll('.cfg-seg__b').forEach(y => y.classList.toggle('on', y === x)); }; seg.appendChild(x); });
+      bd.appendChild(seg);
       body.appendChild(sec);
     }
     // MAP STYLES
@@ -130,5 +145,16 @@
   }
 
   render();
-  S.on((st, evt) => { if (evt === 'sync') render(); });   // reflect remote changes
+  S.on((st, evt) => {
+    if (evt === 'sync') render();   // reflect remote config changes
+    // live-tracking + map type reflect without collapsing open sections
+    if (evt === 'tracking' || evt === 'sync') {
+      if (live.ships) live.ships.classList.toggle('on', !!S.state.tracking.ships);
+      if (live.flights) live.flights.classList.toggle('on', !!S.state.tracking.flights);
+      if (live.trails) live.trails.classList.toggle('on', S.state.tracking.trails !== false);
+    }
+    if (evt === 'mapstyle' || evt === 'sync') {
+      if (live.seg) live.seg.querySelectorAll('.cfg-seg__b').forEach(x => x.classList.toggle('on', x.dataset.id === S.state.mapStyle));
+    }
+  });
 })();
