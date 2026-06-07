@@ -375,19 +375,31 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
-/* ---------- movable panels: a slim dot-grip rail inside the top of each panel ---------- */
-/* no extra button — just the dots, sitting in reserved empty space at the panel top */
-[data-movable] { padding-top: 15px; }
-[data-movable] > .mvh { position: absolute; top: 0; left: 0; right: 0; height: 14px; z-index: 4; padding: 0;
+/* ---------- movable panels: dot-grip on the panel's SHORTER edge ---------- */
+/* no extra button — just orange dots in a reserved strip on the narrow side    */
+[data-movable] > .mvh { position: absolute; z-index: 4; padding: 0;
   display: flex; align-items: center; justify-content: center; cursor: grab; pointer-events: auto;
-  border: 0; background: transparent; color: var(--text-3); opacity: .5;
-  transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
-[data-movable] > .mvh svg { width: 26px; height: 11px; display: block; }
-[data-movable] > .mvh:hover { opacity: 1; color: var(--accent); }
-[data-movable] > .mvh.is-drag { opacity: 1; color: var(--accent); cursor: grabbing; }
-body.touch [data-movable] { padding-top: 22px; }
-body.touch [data-movable] > .mvh { height: 20px; }
-body.touch [data-movable] > .mvh svg { width: 34px; height: 15px; }
+  border: 0; background: transparent; color: #ff9f0a; opacity: .8;
+  transition: opacity var(--t-fast) var(--ease), filter var(--t-fast) var(--ease); }
+[data-movable] > .mvh:hover { opacity: 1; filter: drop-shadow(0 0 4px rgba(255, 159, 10, .7)); }
+[data-movable] > .mvh.is-drag { opacity: 1; cursor: grabbing; filter: drop-shadow(0 0 5px rgba(255, 159, 10, .9)); }
+
+/* portrait panel → grip on top edge (horizontal dots) */
+[data-movable][data-grip="top"] { padding-top: 17px; }
+[data-movable][data-grip="top"] > .mvh { top: 0; left: 0; right: 0; height: 16px; }
+[data-movable][data-grip="top"] > .mvh svg { width: 30px; height: 14px; display: block; }
+/* landscape panel → grip on left edge (vertical dots) */
+[data-movable][data-grip="side"] { padding-left: 17px; }
+[data-movable][data-grip="side"] > .mvh { left: 0; top: 0; bottom: 0; width: 16px; }
+[data-movable][data-grip="side"] > .mvh svg { width: 14px; height: 30px; display: block; }
+
+body.touch [data-movable][data-grip="top"] { padding-top: 24px; }
+body.touch [data-movable][data-grip="top"] > .mvh { height: 22px; }
+body.touch [data-movable][data-grip="top"] > .mvh svg { width: 38px; height: 18px; }
+body.touch [data-movable][data-grip="side"] { padding-left: 24px; }
+body.touch [data-movable][data-grip="side"] > .mvh { width: 22px; }
+body.touch [data-movable][data-grip="side"] > .mvh svg { width: 18px; height: 38px; }
+
 body.mv-dragging { cursor: grabbing; user-select: none; }
 body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }

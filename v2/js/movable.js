@@ -29,7 +29,15 @@
   let pending = null;
   let cfgOffset = 0;   // how far the open settings panel pushes left-side chrome right
 
-  function reflow() {}   // grips are in-panel children now — nothing to reposition
+  /* the dot-grip sits on the panel's SHORTER edge: top for portrait panels,
+     left for landscape panels — re-evaluated whenever layout might change */
+  function orient(el, hd) {
+    if (!el || !hd) return;
+    const w = el.offsetWidth, hh = el.offsetHeight; if (!w && !hh) return;
+    const want = w > hh * 1.15 ? 'side' : 'top';
+    if (el.dataset.grip !== want) { el.dataset.grip = want; hd.innerHTML = want === 'side' ? I.grip : I.gripH; }
+  }
+  function reflow() { for (const sel in handles) orient(els[sel], handles[sel]); }
 
   function styleAt(el, x, y, s) {
     el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
