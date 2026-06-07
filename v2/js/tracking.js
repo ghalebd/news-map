@@ -283,9 +283,10 @@
     if (Ships.on) { for (const [, s] of Ships.ships) { Ships.trail(s); Ships.ensureRoute(s); } Ships.applyFocus(Ships.focus); }
     if (Flights.on) { for (const [, f] of Flights.flights) Flights.trail(f); }
   }
+  let reT = null; const restyleDebounced = () => { clearTimeout(reT); reT = setTimeout(restyle, 140); };
   S.on((st, evt) => {
     if (evt === 'tracking' || evt === 'sync' || evt === 'config') sync();
-    if (evt === 'config' || evt === 'sync') restyle();
+    if (evt === 'config' || evt === 'sync') restyleDebounced();
     if (evt === 'trackfocus' || evt === 'sync') { if (Ships.on) Ships.applyFocus(S.state.trackFocus); }
   });
   map.on('moveend', () => { if (Ships.on) { Ships.onView(); for (const [, s] of Ships.ships) Ships.ensureRoute(s); } if (Flights.on) Flights.fetch(); });

@@ -13,7 +13,7 @@ const Draw = (() => {
      the presenter is limited by config.permissions. */
   const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
 
-  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null;
+  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null, skipClick = false;
   /* translate every coordinate of an element by a lat/lng delta (move) */
   function moveEl(el, dLat, dLng) {
     if (el.ll) el.ll = [el.ll[0] + dLat, el.ll[1] + dLng];
@@ -108,6 +108,7 @@ const Draw = (() => {
     const wire = lyr => lyr && lyr.on && lyr.on('mousedown', ev => {
       if (tool !== 'select' && tool !== 'erase') return;
       L.DomEvent.stopPropagation(ev);
+      skipClick = true;   // swallow the map 'click' that follows so we don't deselect
       if (tool === 'erase') { S.removeElement(el.id); return; }
       selectEl(el);
       dragEl = el; dragPrev = ev.latlng; map.dragging.disable();   // begin move
@@ -125,10 +126,11 @@ const Draw = (() => {
     if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
   });
   map.on('mouseup', e => {
-    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
+    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
     if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
   });
   map.on('click', e => {
+    if (skipClick) { skipClick = false; return; }   // came from selecting/erasing an element
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
     else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
     else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
