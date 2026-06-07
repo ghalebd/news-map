@@ -20,6 +20,22 @@
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
   const showTrails = () => S.state.tracking.trails !== false;   // route/trail line visibility
 
+  /* project a point distM metres along a heading (deg) from lat/lng */
+  function project(lat, lng, headingDeg, distM) {
+    const r = (headingDeg || 0) * Math.PI / 180;
+    return [lat + (distM * Math.cos(r)) / 111320, lng + (distM * Math.sin(r)) / (111320 * Math.cos(lat * Math.PI / 180) || 1e-6)];
+  }
+  /* immediate course/speed vector — visible from the FIRST position, before any
+     travelled history accumulates. obj keeps obj.vector on the given layer. */
+  function drawVector(obj, layer, color, headingDeg, speedMs, secs) {
+    if (!layer) return;
+    if (speedMs > 0.3) {
+      const end = project(obj.lat, obj.lng, headingDeg, speedMs * secs);
+      if (!obj.vector) obj.vector = L.polyline([[obj.lat, obj.lng], end], { color, weight: 2, opacity: .7, dashArray: '5 6', lineCap: 'round', interactive: false }).addTo(layer);
+      else obj.vector.setLatLngs([[obj.lat, obj.lng], end]);
+    } else if (obj.vector) { layer.removeLayer(obj.vector); obj.vector = null; }
+  }
+
   /* -------------------- ships (AIS) -------------------- */
   const Ships = {
     on: false, socket: null, ships: new Map(), layer: null, focus: null,
@@ -149,14 +165,16 @@
       const last = s.trail[s.trail.length - 1];
       if (!last || Math.abs(last[0] - s.lat) > 1e-4 || Math.abs(last[1] - s.lng) > 1e-4) s.trail.push([s.lat, s.lng]);
       if (s.trail.length > TRAIL_MAX) s.trail.shift();
-      if (s.trail.length < 2 || !this.trails) return;
+      if (!this.trails) return;
+      drawVector(s, this.trails, SHIP_COLOR, s.course, (typeof s.speed === 'number' ? s.speed : 0) * 0.5144, 360);
+      if (s.trail.length < 2) return;
       const recent = s.trail.slice(-10);
       if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 2.2, opacity: .55, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
       else s.line.setLatLngs(s.trail);
       if (!s.head) { s.head = L.polyline(recent, { color: '#bdeeff', weight: 3.2, opacity: .95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
       else s.head.setLatLngs(recent);
     },
-    prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); } if (s.routeLine && this.route) this.route.removeLayer(s.routeLine); if (k === this.focus && this.pins) this.pins.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
+    prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); if (s.vector) this.trails.removeLayer(s.vector); } if (s.routeLine && this.route) this.route.removeLayer(s.routeLine); if (k === this.focus && this.pins) this.pins.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
   };
 
   /* -------------------- flights (airplanes.live) -------------------- */
@@ -175,7 +193,9 @@
       const last = f.trail[f.trail.length - 1];
       if (!last || Math.abs(last[0] - f.lat) > 1e-4 || Math.abs(last[1] - f.lng) > 1e-4) f.trail.push([f.lat, f.lng]);
       if (f.trail.length > TRAIL_MAX) f.trail.shift();
-      if (f.trail.length < 2 || !this.ftrails) return;
+      if (!this.ftrails) return;
+      drawVector(f, this.ftrails, PLANE_COLOR, f.heading, f.velocity || 0, 120);
+      if (f.trail.length < 2) return;
       const recent = f.trail.slice(-10);
       if (!f.line) { f.line = L.polyline(f.trail, { color: PLANE_COLOR, weight: 2, opacity: .5, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
       else f.line.setLatLngs(f.trail);
@@ -195,7 +215,7 @@
       if (!ac) return;
       const seen = new Set(), bounds = map.getBounds();
       ac.forEach(a => { if (!bounds.contains([a.lat, a.lng])) return; seen.add(a.icao); this.upsert(a.icao, a); });
-      this.flights.forEach((f, k) => { if (!seen.has(k)) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); if (this.ftrails) { if (f.line) this.ftrails.removeLayer(f.line); if (f.head) this.ftrails.removeLayer(f.head); } this.flights.delete(k); } });
+      this.flights.forEach((f, k) => { if (!seen.has(k)) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); if (this.ftrails) { if (f.line) this.ftrails.removeLayer(f.line); if (f.head) this.ftrails.removeLayer(f.head); if (f.vector) this.ftrails.removeLayer(f.vector); } this.flights.delete(k); } });
       setCounts();
     },
     upsert(icao, info) {
