@@ -46,8 +46,9 @@ const Draw = (() => {
     sc.elements.slice(0, n).forEach(el => { const l = buildLayer(el); if (l) { l.__id = el.id; drawn.addLayer(l); bindSelect(l, el); } });
     refreshCtx();
   }
+  const dw = () => (S.cfg().drawDefaults && S.cfg().drawDefaults.weight) || 3;
   function buildLayer(el) {
-    const o = { color: el.color, weight: 3, opacity: 1 };
+    const o = { color: el.color, weight: el.weight || dw(), opacity: 1 };
     switch (el.type) {
       case 'marker':  {
         if (el.icon && MICONS[el.icon]) { const html = `<span class="map-mk" style="color:${el.color}">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [30, 30], iconAnchor: [15, 15] }) }); }
@@ -114,7 +115,7 @@ const Draw = (() => {
     else if (tool === 'select') deselect();
   });
   function preview(t, a, b) {
-    const o = { color: S.state.color, weight: 3, opacity: 0.6 };
+    const o = { color: S.state.color, weight: dw(), opacity: 0.6 };
     if (t === 'circle') return L.circle(a, { radius: map.distance(a, b), ...o, fillOpacity: 0.08 });
     if (t === 'ring') { const g = L.layerGroup(); g.addLayer(L.circle(a, { radius: map.distance(a, b), ...o, fill: false, dashArray: '6 5' })); g.addLayer(L.marker(a, { icon: labelIcon((map.distance(a, b) / 1000).toFixed(0) + ' KM', S.state.color) })); return g; }
     if (t === 'arrow') return arrowLine(a, b, o);
