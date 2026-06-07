@@ -422,7 +422,9 @@ body.ui-hidden .mvh { display: none !important; }
 .maplibregl-ctrl-attrib { font-size: 9px; }
 .view3d { font-weight: 800; font-size: 12px; letter-spacing: .5px; }
 .view3d--float { position: fixed; right: 16px; bottom: 150px; z-index: var(--z-bar); width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--sheen); }
-.d3ctrl { position: fixed; left: 50%; transform: translateX(-50%); top: 60px; z-index: var(--z-flyout); display: flex; gap: 5px; padding: 6px; border-radius: var(--r); }
+.d3ctrl { position: fixed; right: 70px; top: 14px; z-index: var(--z-flyout); display: flex; gap: 5px; padding: 6px; border-radius: var(--r); }
+/* in 3D, suppress the 2D CSS-tilt atmosphere so it can't bleed over the GL view */
+body.mode-3d .skyhaze, body.mode-3d.is-tilted::after { display: none !important; }
 .d3ctrl__b { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); font-size: 14px; transition: all var(--t-fast) var(--ease); }
 .d3ctrl__b svg { width: 16px; height: 16px; }
 .d3ctrl__b:hover { color: var(--accent); border-color: var(--accent); }

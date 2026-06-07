@@ -23,12 +23,13 @@
     const c = L2.getCenter();
     map = new maplibregl.Map({
       container: cont, style: styleUrl(S.state.mapStyle || 'satellite'),
-      center: [c.lng, c.lat], zoom: Math.max(1, L2.getZoom() - 1), pitch: cfg3().pitch, bearing: 0,
-      maxPitch: 80, attributionControl: false, antialias: true, dragRotate: true,
+      center: [c.lng, c.lat], zoom: Math.max(2.6, L2.getZoom() - 1), pitch: cfg3().pitch, bearing: 0,
+      minZoom: 2.4, maxPitch: 78, attributionControl: false, antialias: true, dragRotate: true, renderWorldCopies: true,
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
     window.__m3 = map;   // debug/inspection hook
     map.on('style.load', onStyle);
+    bridgeDrawing();
   }
   function onStyle() {
     try {
@@ -74,6 +75,24 @@
     map.addLayer({ id: 'sc-lbl', type: 'symbol', source: SRC, filter: ['in', ['get', 'kind'], ['literal', ['pt', 'txt']]], layout: { 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.1], 'text-anchor': 'top' }, paint: { 'text-color': '#fff', 'text-halo-color': '#0a0e16', 'text-halo-width': 1.4 } });
   }
   function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); }
+
+  /* ---- draw in 3D: forward terrain clicks/drags to the 2D tools (full reuse) ----
+     The Leaflet map is hidden behind, so we unproject the cursor to lng/lat and
+     re-fire the same Leaflet events the drawing engine already listens for. The
+     finished element is mirrored back into 3D. Navigation (pan/rotate/zoom) is
+     active only with the Select tool; any drawing tool turns the drag into drawing. */
+  const DRAG3 = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure', 'frontline'];
+  const CLICK3 = ['marker', 'text', 'asset', 'country'];
+  const tool = () => (window.Draw && window.Draw.tool) || 'select';
+  const toLL = ll => L.latLng(ll.lat, ll.lng);
+  let drawing = false;
+  function bridgeDrawing() {
+    map.on('mousedown', e => { if (!on) return; const t = tool(); if (DRAG3.includes(t)) { e.preventDefault(); drawing = true; L2.fire('mousedown', { latlng: toLL(e.lngLat) }); } });
+    map.on('mousemove', e => { if (!on) return; if (drawing || tool() === 'tarrow') L2.fire('mousemove', { latlng: toLL(e.lngLat) }); });
+    map.on('mouseup', e => { if (!on) return; if (drawing) { drawing = false; L2.fire('mouseup', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 30); } });
+    map.on('click', e => { if (!on) return; const t = tool(); if (CLICK3.includes(t) || t === 'tarrow') { L2.fire('click', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 60); } });
+    map.on('dblclick', e => { if (!on || tool() !== 'tarrow') return; e.preventDefault(); L2.fire('dblclick', { latlng: toLL(e.lngLat), originalEvent: e.originalEvent }); setTimeout(mirror, 30); });
+  }
 
   /* ---- camera sync ---- */
   function syncTo3D(fly) { const c = L2.getCenter(), z = Math.max(1, L2.getZoom() - 1); const opt = { center: [c.lng, c.lat], zoom: z }; fly ? map.easeTo({ ...opt, duration: 800 }) : map.jumpTo(opt); }
