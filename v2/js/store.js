@@ -34,6 +34,8 @@ const Store = (() => {
     ],
     assetCats: ['ground', 'air', 'naval', 'weapons', 'infra'],
     customAssets: [],   // { id, name, cat, url }
+    trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
+    brand: { logo: null },   // data-URL logo override
   };
 
   const state = {
@@ -117,6 +119,8 @@ const Store = (() => {
   function removeAssetCat(name) { state.config.assetCats = state.config.assetCats.filter(c => c !== name); emit('config'); }
   function addCustomAsset(a) { a.id = uid('img'); state.config.customAssets.push(a); emit('config'); return a; }
   function removeCustomAsset(id) { state.config.customAssets = state.config.customAssets.filter(a => a.id !== id); emit('config'); }
+  function setTrackStyle(patch) { Object.assign(state.config.trackStyle, patch); emit('config'); }
+  function setLogo(url) { state.config.brand.logo = url; emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
 
   /* ---- init ---- */
@@ -130,7 +134,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, resetConfig,
   };
 })();
 window.Store = Store;

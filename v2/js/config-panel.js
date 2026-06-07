@@ -70,6 +70,14 @@
         slider('Glass distortion', C.style.distort, 0, 120, 1, v => S.setStyle({ distort: v })),
         slider('Corner radius', C.style.radius, 0, 22, 1, v => S.setStyle({ radius: v })),
       );
+      // logo upload
+      bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>LOGO</span></div>'));
+      const lr = h('div', 'cfg-btnrow');
+      const lf = h('input'); lf.type = 'file'; lf.accept = 'image/*'; lf.hidden = true;
+      const pick = h('button', 'cfg-btn', `${I.upload}<span>Upload logo</span>`); pick.onclick = () => lf.click();
+      const clr = h('button', 'cfg-btn', `${I.close}<span>Default</span>`); clr.onclick = () => S.setLogo(null);
+      lf.onchange = async () => { const f = lf.files[0]; if (!f) return; try { const url = await readImage(f, 512); S.setLogo(url); } catch (e) { alert('Could not read image'); } lf.value = ''; };
+      lr.append(pick, clr, lf); bd.appendChild(lr);
       body.appendChild(sec);
     }
     // VISIBILITY
@@ -98,6 +106,28 @@
       const seg = h('div', 'cfg-seg'); live.seg = seg;
       C.mapStyles.filter(m => m.on !== false).forEach(m => { const x = h('button', 'cfg-seg__b' + (m.id === S.state.mapStyle ? ' on' : ''), m.name); x.dataset.id = m.id; x.onclick = () => { S.setMapStyle(m.id); seg.querySelectorAll('.cfg-seg__b').forEach(y => y.classList.toggle('on', y === x)); }; seg.appendChild(x); });
       bd.appendChild(seg);
+      body.appendChild(sec);
+    }
+    // TRACKING STYLE (lines: colors / weight / lengths / limits)
+    {
+      const T = Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, C.trackStyle || {});
+      const { sec, bd } = section('Tracking style', I.curve);
+      const TC = ['#46d8ff', '#7cf3ff', '#34d399', '#ffd54a', '#ff9f0a', '#fb7185', '#bf5af2', '#ffffff'];
+      const swatches = (cur, key) => { const sw = h('div', 'cfg-sw'); TC.forEach(c => { const b = h('button'); b.style.background = c; if (c === cur) b.classList.add('on'); b.onclick = () => { sw.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); S.setTrackStyle({ [key]: c }); }; sw.appendChild(b); }); return sw; };
+      bd.append(
+        h('div', 'cfg-field', '<div class="lab"><span>SHIP COLOR</span></div>'),
+      ); bd.lastChild.appendChild(swatches(T.shipColor, 'shipColor'));
+      bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>FLIGHT COLOR</span></div>')); bd.lastChild.appendChild(swatches(T.flightColor, 'flightColor'));
+      bd.append(
+        slider('Line thickness', T.lineWeight, 0.5, 4, 0.5, v => S.setTrackStyle({ lineWeight: v })),
+        slider('Line opacity %', Math.round(T.lineOpacity * 100), 10, 100, 5, v => S.setTrackStyle({ lineOpacity: v / 100 })),
+        slider('Vector length (min)', T.vectorMins, 0, 15, 1, v => S.setTrackStyle({ vectorMins: v })),
+        slider('Trail length (pts)', T.trailPoints, 5, 200, 5, v => S.setTrackStyle({ trailPoints: v })),
+        slider('Max ships', T.maxShips, 50, 1000, 50, v => S.setTrackStyle({ maxShips: v })),
+        rowTog('Course vectors', T.showVectors !== false, on => S.setTrackStyle({ showVectors: on })),
+        rowTog('Travelled trails', T.showHistory !== false, on => S.setTrackStyle({ showHistory: on })),
+        rowTog('Destination routes', T.showRoutes !== false, on => S.setTrackStyle({ showRoutes: on })),
+      );
       body.appendChild(sec);
     }
     // MAP STYLES

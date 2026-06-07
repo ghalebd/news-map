@@ -8,7 +8,8 @@
   const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 
   /* ---------- brand + status ---------- */
-  document.body.appendChild(h('div', 'brand', `<img src="../live_assets/aljazeera_logo.png" alt="Al Jazeera" onerror="this.style.display='none'">`));
+  const brand = h('div', 'brand', `<img alt="Al Jazeera" onerror="this.style.display='none'">`); document.body.appendChild(brand);
+  function applyBrand() { const img = brand.querySelector('img'); const logo = S.cfg().brand && S.cfg().brand.logo; img.src = logo || '../live_assets/aljazeera_logo.png'; img.style.display = ''; }
   const status = h('div', 'status'); document.body.appendChild(status);
   function renderStatus() { const v = M.currentView(); status.innerHTML = `<span class="status__dot"></span><span>${v.lat.toFixed(2)} , ${v.lng.toFixed(2)}</span> · <b>Z${v.zoom.toFixed(1)}</b>`; }
   M.map.on('move zoom', renderStatus); renderStatus();
@@ -89,7 +90,7 @@
   /* ---------- react to store ---------- */
   S.on((st, evt) => {
     if (evt === 'mode') applyMode();
-    if (evt === 'config' || evt === 'sync') window.Theme && window.Theme.apply(S.cfg().style);
+    if (evt === 'config' || evt === 'sync') { window.Theme && window.Theme.apply(S.cfg().style); applyBrand(); }
     if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
     if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
@@ -117,6 +118,7 @@
 
   /* ---------- boot ---------- */
   applyMode();
+  applyBrand();
   window.Theme && window.Theme.apply(S.cfg().style);
   M.setStyle(S.state.mapStyle);
   if (!S.scenes().length) S.addScene(M.currentView(), { title: 'Opening Scene' });

@@ -13,12 +13,12 @@
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   const isControl = window.APP_ROLE === 'control';
   const AIS_KEY = '3da0a878476db856ac5cf273d312875598270404';
-  const SHIP_COLOR = '#46d8ff', PLANE_COLOR = '#ffd54a';
-  const TRAIL_MAX = 60;   // points kept per ship trail (longer visible history)
-  const RT_FAINT = { interactive: false, color: '#5fd8ff', weight: 1, opacity: .32, dashArray: '3 7', lineCap: 'round' };
-  const RT_FOCUS = { interactive: false, color: '#8af0ff', weight: 1.8, opacity: .8, dashArray: '7 6', lineCap: 'round' };
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
-  const showTrails = () => S.state.tracking.trails !== false;   // route/trail line visibility
+  /* all tunables come from config.trackStyle (control panel) */
+  const TS = () => Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, S.cfg().trackStyle || {});
+  const rtFaint = () => { const w = TS().lineWeight; return { interactive: false, color: '#5fd8ff', weight: Math.max(.8, w), opacity: Math.min(.6, TS().lineOpacity * .8), dashArray: '3 7', lineCap: 'round' }; };
+  const rtFocus = () => { const w = TS().lineWeight; return { interactive: false, color: '#8af0ff', weight: Math.max(1.6, w * 1.8), opacity: .85, dashArray: '7 6', lineCap: 'round' }; };
+  const showTrails = () => S.state.tracking.trails !== false;   // master route/trail line visibility
 
   /* project a point distM metres along a heading (deg) from lat/lng */
   function project(lat, lng, headingDeg, distM) {
@@ -29,10 +29,12 @@
      travelled history accumulates. obj keeps obj.vector on the given layer. */
   function drawVector(obj, layer, color, headingDeg, speedMs, secs) {
     if (!layer) return;
-    if (speedMs > 0.3) {
+    const t = TS();
+    if (t.showVectors && speedMs > 0.3) {
       const end = project(obj.lat, obj.lng, headingDeg, speedMs * secs);
-      if (!obj.vector) obj.vector = L.polyline([[obj.lat, obj.lng], end], { color, weight: 1, opacity: .4, dashArray: '3 6', lineCap: 'round', interactive: false }).addTo(layer);
-      else obj.vector.setLatLngs([[obj.lat, obj.lng], end]);
+      const st = { color, weight: Math.max(.8, t.lineWeight), opacity: Math.min(.7, t.lineOpacity), dashArray: '3 6', lineCap: 'round', interactive: false };
+      if (!obj.vector) obj.vector = L.polyline([[obj.lat, obj.lng], end], st).addTo(layer);
+      else { obj.vector.setLatLngs([[obj.lat, obj.lng], end]); obj.vector.setStyle(st); }
     } else if (obj.vector) { layer.removeLayer(obj.vector); obj.vector = null; }
   }
 
@@ -115,6 +117,7 @@
     },
     upsert(mmsi, info) {
       let s = this.ships.get(mmsi);
+      if (!s && this.ships.size >= TS().maxShips) return;   // soft cap (control panel)
       if (!s) {
         s = { mmsi, trail: [[info.lat, info.lng]], ...info };
         s.marker = L.marker([s.lat, s.lng], { icon: icon('ship', s.course, this.focus === mmsi), zIndexOffset: 100, keyboard: false });
@@ -131,7 +134,7 @@
     ensureRoute(s) {
       if (!this.on || !this.route || !window.searoute) return;
       const inView = map.getBounds().pad(0.25).contains([s.lat, s.lng]);
-      if (!s.destPort || !inView) { if (s.routeLine) { this.route.removeLayer(s.routeLine); s.routeLine = null; } return; }
+      if (!s.destPort || !inView || !TS().showRoutes) { if (s.routeLine) { this.route.removeLayer(s.routeLine); s.routeLine = null; } return; }
       const now = Date.now();
       const moved = !s._rp || Math.abs(s._rp[0] - s.lat) > 0.25 || Math.abs(s._rp[1] - s.lng) > 0.25;
       if (s.routeLine && !s._destChanged && !moved) return;
@@ -140,7 +143,7 @@
       s._rt = now; s._rp = [s.lat, s.lng]; s._destChanged = false;
       let line = null; try { line = window.searoute([s.lng, s.lat], [s.destPort.lng, s.destPort.lat]); } catch (e) {}
       if (s.routeLine) { this.route.removeLayer(s.routeLine); s.routeLine = null; }
-      const st = this.focus === s.mmsi ? RT_FOCUS : RT_FAINT;
+      const st = this.focus === s.mmsi ? rtFocus() : rtFaint();
       s.routeLine = line ? L.geoJSON(line, { interactive: false, style: st }) : L.polyline([[s.lat, s.lng], [s.destPort.lat, s.destPort.lng]], st);
       s.routeLine.addTo(this.route);
     },
@@ -150,29 +153,30 @@
       if (this.pins) this.pins.clearLayers();
       for (const [k, s] of this.ships) {
         if (s.marker) s.marker.setIcon(icon('ship', s.course, k === mmsi));
-        if (s.routeLine && s.routeLine.setStyle) s.routeLine.setStyle(k === mmsi ? RT_FOCUS : RT_FAINT);
+        if (s.routeLine && s.routeLine.setStyle) s.routeLine.setStyle(k === mmsi ? rtFocus() : rtFaint());
       }
       if (mmsi == null) return;
       const s = this.ships.get(mmsi); if (!s) return;
       this.resolveDest(s); s._destChanged = true; this.ensureRoute(s);
-      if (s.routeLine && s.routeLine.setStyle) s.routeLine.setStyle(RT_FOCUS);
+      if (s.routeLine && s.routeLine.setStyle) s.routeLine.setStyle(rtFocus());
       if (s.destPort && this.pins) {
         const lbl = `<span class="port-pin__lbl">${s.destPort.name}${this.etaText(s.eta) ? ' · ETA ' + this.etaText(s.eta) : ''}</span>`;
         L.marker([s.destPort.lat, s.destPort.lng], { interactive: false, icon: L.divIcon({ className: 'port-pin', html: `<i></i>${lbl}`, iconSize: [14, 14], iconAnchor: [7, 7] }) }).addTo(this.pins);
       }
     },
     trail(s) {
+      const t = TS();
       const last = s.trail[s.trail.length - 1];
       if (!last || Math.abs(last[0] - s.lat) > 1e-4 || Math.abs(last[1] - s.lng) > 1e-4) s.trail.push([s.lat, s.lng]);
-      if (s.trail.length > TRAIL_MAX) s.trail.shift();
+      while (s.trail.length > t.trailPoints) s.trail.shift();
       if (!this.trails) return;
-      drawVector(s, this.trails, SHIP_COLOR, s.course, (typeof s.speed === 'number' ? s.speed : 0) * 0.5144, 180);
-      if (s.trail.length < 2) return;
-      const recent = s.trail.slice(-10);
-      if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 1.2, opacity: .35, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
-      else s.line.setLatLngs(s.trail);
-      if (!s.head) { s.head = L.polyline(recent, { color: '#bdeeff', weight: 1.8, opacity: .7, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
-      else s.head.setLatLngs(recent);
+      drawVector(s, this.trails, t.shipColor, s.course, (typeof s.speed === 'number' ? s.speed : 0) * 0.5144, t.vectorMins * 60);
+      if (!t.showHistory || s.trail.length < 2) { if (s.line) { this.trails.removeLayer(s.line); s.line = null; } if (s.head) { this.trails.removeLayer(s.head); s.head = null; } return; }
+      const recent = s.trail.slice(-10), lw = t.lineWeight, lo = t.lineOpacity;
+      const ls = { color: t.shipColor, weight: Math.max(.8, lw), opacity: Math.min(.5, lo * .9), lineCap: 'round', lineJoin: 'round', interactive: false };
+      const hs = { color: '#bdeeff', weight: Math.max(1, lw * 1.6), opacity: Math.min(.85, lo * 1.8), lineCap: 'round', lineJoin: 'round', interactive: false };
+      if (!s.line) s.line = L.polyline(s.trail, ls).addTo(this.trails); else { s.line.setLatLngs(s.trail); s.line.setStyle(ls); }
+      if (!s.head) s.head = L.polyline(recent, hs).addTo(this.trails); else { s.head.setLatLngs(recent); s.head.setStyle(hs); }
     },
     prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); if (s.vector) this.trails.removeLayer(s.vector); } if (s.routeLine && this.route) this.route.removeLayer(s.routeLine); if (k === this.focus && this.pins) this.pins.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
   };
@@ -192,15 +196,16 @@
       f.trail = f.trail || [[f.lat, f.lng]];
       const last = f.trail[f.trail.length - 1];
       if (!last || Math.abs(last[0] - f.lat) > 1e-4 || Math.abs(last[1] - f.lng) > 1e-4) f.trail.push([f.lat, f.lng]);
-      if (f.trail.length > TRAIL_MAX) f.trail.shift();
+      while (f.trail.length > TS().trailPoints) f.trail.shift();
       if (!this.ftrails) return;
-      drawVector(f, this.ftrails, PLANE_COLOR, f.heading, f.velocity || 0, 75);
-      if (f.trail.length < 2) return;
-      const recent = f.trail.slice(-10);
-      if (!f.line) { f.line = L.polyline(f.trail, { color: PLANE_COLOR, weight: 1.2, opacity: .35, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
-      else f.line.setLatLngs(f.trail);
-      if (!f.head) { f.head = L.polyline(recent, { color: '#fff0b8', weight: 1.8, opacity: .65, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
-      else f.head.setLatLngs(recent);
+      const t = TS();
+      drawVector(f, this.ftrails, t.flightColor, f.heading, f.velocity || 0, t.vectorMins * 25);
+      if (!t.showHistory || f.trail.length < 2) { if (f.line) { this.ftrails.removeLayer(f.line); f.line = null; } if (f.head) { this.ftrails.removeLayer(f.head); f.head = null; } return; }
+      const recent = f.trail.slice(-10), lw = t.lineWeight, lo = t.lineOpacity;
+      const ls = { color: t.flightColor, weight: Math.max(.8, lw), opacity: Math.min(.5, lo * .9), lineCap: 'round', lineJoin: 'round', interactive: false };
+      const hs = { color: '#fff0b8', weight: Math.max(1, lw * 1.6), opacity: Math.min(.8, lo * 1.7), lineCap: 'round', lineJoin: 'round', interactive: false };
+      if (!f.line) f.line = L.polyline(f.trail, ls).addTo(this.ftrails); else { f.line.setLatLngs(f.trail); f.line.setStyle(ls); }
+      if (!f.head) f.head = L.polyline(recent, hs).addTo(this.ftrails); else { f.head.setLatLngs(recent); f.head.setStyle(hs); }
     },
     async fetch() {
       if (!this.on) return;
@@ -274,8 +279,13 @@
     if (Ships.on && Ships.focus !== S.state.trackFocus) Ships.applyFocus(S.state.trackFocus);
   }
 
+  function restyle() {
+    if (Ships.on) { for (const [, s] of Ships.ships) { Ships.trail(s); Ships.ensureRoute(s); } Ships.applyFocus(Ships.focus); }
+    if (Flights.on) { for (const [, f] of Flights.flights) Flights.trail(f); }
+  }
   S.on((st, evt) => {
     if (evt === 'tracking' || evt === 'sync' || evt === 'config') sync();
+    if (evt === 'config' || evt === 'sync') restyle();
     if (evt === 'trackfocus' || evt === 'sync') { if (Ships.on) Ships.applyFocus(S.state.trackFocus); }
   });
   map.on('moveend', () => { if (Ships.on) { Ships.onView(); for (const [, s] of Ships.ships) Ships.ensureRoute(s); } if (Flights.on) Flights.fetch(); });
