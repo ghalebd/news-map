@@ -1,0 +1,83 @@
+/* ============================================================
+   CONTROL PANEL — config drawer (control.html only)
+   ============================================================ */
+.cfg-toggle {
+  position: fixed; top: 14px; right: 16px; z-index: var(--z-modal);
+  width: 44px; height: 44px; border-radius: var(--r-sm);
+  display: inline-flex; align-items: center; justify-content: center; color: var(--text);
+  background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
+  -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
+  transition: all var(--t-fast) var(--ease);
+}
+.cfg-toggle svg { width: 21px; height: 21px; }
+.cfg-toggle:hover, .cfg-toggle.is-open { color: var(--accent); border-color: var(--accent); }
+
+.cfg-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 336px; z-index: var(--z-modal);
+  display: flex; flex-direction: column;
+  background: rgba(10, 13, 20, 0.82);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6); backdrop-filter: blur(28px) saturate(1.6);
+  border-left: 1px solid var(--stroke); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5);
+  transform: translateX(102%); transition: transform var(--t) var(--ease-out);
+}
+.cfg-drawer.open { transform: none; }
+.cfg-hd { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--stroke); }
+.cfg-hd .t { flex: 1; font-size: 13px; font-weight: 800; letter-spacing: .3px; }
+.cfg-hd .t small { display: block; font-size: 9px; font-weight: 600; letter-spacing: 2px; color: var(--text-3); margin-top: 3px; }
+.cfg-hd .x { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid var(--stroke); }
+.cfg-hd .x:hover { color: var(--accent); border-color: var(--accent); }
+.cfg-hd .x svg { width: 15px; height: 15px; }
+.cfg-body { flex: 1; overflow-y: auto; padding: 6px 0 30px; }
+.cfg-body::-webkit-scrollbar { width: 6px; }
+.cfg-body::-webkit-scrollbar-thumb { background: var(--stroke); border-radius: 3px; }
+
+.cfg-sec { border-bottom: 1px solid var(--stroke); }
+.cfg-sec__hd { display: flex; align-items: center; gap: 10px; padding: 13px 18px; cursor: pointer; }
+.cfg-sec__hd svg.i { width: 16px; height: 16px; color: var(--accent); }
+.cfg-sec__hd .t { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.cfg-sec__hd .chev { color: var(--text-3); transition: transform var(--t) var(--ease); }
+.cfg-sec__hd .chev svg { width: 13px; height: 13px; }
+.cfg-sec.open .cfg-sec__hd .chev { transform: rotate(180deg); }
+.cfg-sec__bd { display: none; padding: 4px 18px 16px; flex-direction: column; gap: 12px; }
+.cfg-sec.open .cfg-sec__bd { display: flex; }
+
+.cfg-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cfg-row .lab { font-size: 12px; color: var(--text); }
+.cfg-row .lab small { display: block; font-size: 10px; color: var(--text-3); margin-top: 1px; }
+.cfg-row .val { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+.cfg-field { display: flex; flex-direction: column; gap: 7px; }
+.cfg-field > .lab { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--text-3); text-transform: uppercase; display: flex; justify-content: space-between; }
+.cfg-field > .lab .val { font-family: var(--mono); color: var(--accent); }
+input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
+
+/* toggle */
+.tog { width: 40px; height: 23px; border-radius: var(--pill); background: var(--glass-2); border: 1px solid var(--stroke); position: relative; cursor: pointer; flex: 0 0 auto; transition: background var(--t-fast) var(--ease); }
+.tog::after { content: ''; position: absolute; width: 17px; height: 17px; border-radius: 50%; background: var(--text-2); top: 2px; left: 2px; transition: all var(--t-fast) var(--ease); }
+.tog.on { background: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow); }
+.tog.on::after { left: 19px; background: #fff; }
+
+/* swatches */
+.cfg-sw { display: flex; gap: 8px; flex-wrap: wrap; }
+.cfg-sw button { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; box-shadow: var(--sheen); }
+.cfg-sw button.on { border-color: #fff; }
+
+/* tool grid */
+.cfg-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.cfg-tool { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 8px; font-size: 11px; font-weight: 600; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; transition: all var(--t-fast) var(--ease); }
+.cfg-tool svg { width: 14px; height: 14px; flex: 0 0 auto; }
+.cfg-tool.on { color: var(--accent); border-color: var(--accent); }
+.cfg-tool.off { opacity: .45; }
+
+/* map style / asset rows */
+.cfg-list { display: flex; flex-direction: column; gap: 6px; }
+.cfg-li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--stroke); }
+.cfg-li .nm { flex: 1; font-size: 12px; }
+.cfg-li .nm small { color: var(--text-3); font-family: var(--mono); font-size: 10px; }
+.cfg-add { display: flex; gap: 6px; margin-top: 4px; }
+.cfg-add input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font: 500 12px var(--font); }
+.cfg-add input::placeholder { color: var(--text-3); }
+.cfg-add button { padding: 0 12px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
+.cfg-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.cfg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--pill); font-size: 11px; font-weight: 600; background: var(--glass-2); border: 1px solid var(--stroke); }
+.cfg-reset { margin: 4px 18px; padding: 9px; border-radius: 8px; border: 1px solid var(--stroke); color: var(--text-2); font-size: 11px; font-weight: 600; width: calc(100% - 36px); }
+.cfg-reset:hover { border-color: var(--danger); color: var(--danger); }
