@@ -14,9 +14,9 @@
   const isControl = window.APP_ROLE === 'control';
   const AIS_KEY = '3da0a878476db856ac5cf273d312875598270404';
   const SHIP_COLOR = '#46d8ff', PLANE_COLOR = '#ffd54a';
-  const TRAIL_MAX = 30;   // points kept per ship trail
-  const RT_FAINT = { interactive: false, color: '#5fd8ff', weight: 1.3, opacity: .3, dashArray: '1 7', lineCap: 'round' };
-  const RT_FOCUS = { interactive: false, color: '#8af0ff', weight: 2.6, opacity: .92, dashArray: '8 7', lineCap: 'round' };
+  const TRAIL_MAX = 60;   // points kept per ship trail (longer visible history)
+  const RT_FAINT = { interactive: false, color: '#5fd8ff', weight: 2, opacity: .55, dashArray: '6 6', lineCap: 'round' };
+  const RT_FOCUS = { interactive: false, color: '#8af0ff', weight: 3, opacity: .95, dashArray: '9 7', lineCap: 'round' };
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
 
   /* -------------------- ships (AIS) -------------------- */
@@ -145,10 +145,10 @@
       if (!last || Math.abs(last[0] - s.lat) > 1e-4 || Math.abs(last[1] - s.lng) > 1e-4) s.trail.push([s.lat, s.lng]);
       if (s.trail.length > TRAIL_MAX) s.trail.shift();
       if (s.trail.length < 2 || !this.trails) return;
-      const recent = s.trail.slice(-8);
-      if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 1.6, opacity: .28, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
+      const recent = s.trail.slice(-10);
+      if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 2.2, opacity: .55, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
       else s.line.setLatLngs(s.trail);
-      if (!s.head) { s.head = L.polyline(recent, { color: SHIP_COLOR, weight: 2.6, opacity: .8, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
+      if (!s.head) { s.head = L.polyline(recent, { color: '#bdeeff', weight: 3.2, opacity: .95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
       else s.head.setLatLngs(recent);
     },
     prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); } if (s.routeLine && this.route) this.route.removeLayer(s.routeLine); if (k === this.focus && this.pins) this.pins.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
@@ -206,9 +206,7 @@
   const bar = h('div', 'livetrack glass');
   const mk = (key, icn, label) => { const b = h('button', 'lt-btn', `${icn}<span>${label}</span><i class="lt-dot"></i>`); b.onclick = () => { const can = isControl || S.cfg().permissions.canTrack !== false; if (can) S.setTracking(key, !S.state.tracking[key]); }; return b; };
   const bShips = mk('ships', I.ship, 'Ships'), bFlights = mk('flights', I.plane, 'Flights');
-  const bVF = h('button', 'lt-btn', `${I.layers}<span>VF Live</span>`); bVF.title = 'VesselFinder live AIS (opens in a window)';
-  bVF.onclick = () => window.open('vesselfinder.html', 'vfLive', 'width=1320,height=860');
-  bar.append(bShips, bFlights, bVF); document.body.appendChild(bar);
+  bar.append(bShips, bFlights); document.body.appendChild(bar);
 
   function setStatus(kind, st) { const b = kind === 'ships' ? bShips : bFlights; const d = b.querySelector('.lt-dot'); if (d) d.dataset.st = st; }
   function setCounts() {
