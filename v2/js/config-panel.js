@@ -135,6 +135,24 @@
       );
       body.appendChild(sec);
     }
+    // PLACES (quick-jump bookmarks) + locator
+    {
+      const { sec, bd } = section('Places & locator', I.target);
+      bd.appendChild(rowTog('Locator inset map', !!C.locator, on => S.setLocator(on)));
+      const list = h('div', 'cfg-list');
+      (C.places || []).forEach(pl => {
+        const li = h('div', 'cfg-li'); li.style.cursor = 'pointer';
+        li.innerHTML = `<div class="nm">${pl.name} <small>${(+pl.lat).toFixed(1)}, ${(+pl.lng).toFixed(1)}</small></div>`;
+        li.onclick = () => window.GameMap.flyToView({ lat: pl.lat, lng: pl.lng, zoom: pl.zoom }, { type: 'flyTo', duration: 1.0 });
+        const del = h('button', 'cfg-aset__x', I.close); del.title = 'Delete'; del.style.position = 'static'; del.style.opacity = '1';
+        del.onclick = e => { e.stopPropagation(); S.removePlace(pl.id); render(); };
+        li.appendChild(del); list.appendChild(li);
+      });
+      const add = h('div', 'cfg-add', '<input placeholder="Name this view">'); const ab = h('button', null, 'Add'); add.appendChild(ab);
+      ab.onclick = () => { const v = add.querySelector('input').value.trim(); if (v) { const cv = window.GameMap.currentView(); S.addPlace({ name: v, lat: cv.lat, lng: cv.lng, zoom: cv.zoom }); render(); } };
+      bd.append(list, add, h('div', 'hint', 'Click a place to fly there. Add saves the current view.'));
+      body.appendChild(sec);
+    }
     // MAP STYLES
     {
       const { sec, bd } = section('Map styles', I.layers);

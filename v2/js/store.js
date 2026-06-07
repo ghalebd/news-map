@@ -38,6 +38,15 @@ const Store = (() => {
     trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
     brand: { logo: null, size: 38, x: 16, y: 30 },   // logo data-URL + height(px) + position(px from top-left)
     touch: false,            // large touch-friendly controls
+    locator: false,          // mini locator inset map
+    places: [
+      { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
+      { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
+      { id: 'pl3', name: 'Jerusalem', lat: 31.78, lng: 35.22, zoom: 11 },
+      { id: 'pl4', name: 'Beirut', lat: 33.89, lng: 35.5, zoom: 11 },
+      { id: 'pl5', name: 'Tehran', lat: 35.69, lng: 51.39, zoom: 10 },
+      { id: 'pl6', name: 'Baghdad', lat: 33.31, lng: 44.36, zoom: 10 },
+    ],
   };
 
   const state = {
@@ -131,6 +140,9 @@ const Store = (() => {
   function setLogoSize(px) { state.config.brand.size = px; emit('config'); }
   function setBrand(patch) { Object.assign(state.config.brand, patch); emit('config'); }
   function setTouch(on) { state.config.touch = on; emit('config'); }
+  function setLocator(on) { state.config.locator = on; emit('config'); }
+  function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
+  function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
 
   /* ---- init ---- */
@@ -144,7 +156,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, addPlace, removePlace, resetConfig,
   };
 })();
 window.Store = Store;

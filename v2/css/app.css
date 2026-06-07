@@ -314,6 +314,11 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
+/* ---------- locator inset ---------- */
+.locator { position: fixed; right: 16px; bottom: 84px; width: 200px; height: 130px; z-index: var(--z-bar);
+  border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen); background: #0e1622; }
+.locator .leaflet-container { background: #0e1622; }
+
 /* ---------- spotlight (focus mask) ---------- */
 .spotlight { position: fixed; z-index: var(--z-flyout); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
   box-shadow: 0 0 0 99999px rgba(4, 7, 12, 0.66); border: 1.5px solid rgba(255, 255, 255, .35); }
