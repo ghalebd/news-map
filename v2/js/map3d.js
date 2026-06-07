@@ -24,7 +24,7 @@
     map = new maplibregl.Map({
       container: cont, style: styleUrl(S.state.mapStyle || 'satellite'),
       center: [c.lng, c.lat], zoom: Math.max(2.6, L2.getZoom() - 1), pitch: cfg3().pitch, bearing: 0,
-      minZoom: 2.4, maxPitch: 78, attributionControl: false, antialias: true, dragRotate: true, renderWorldCopies: true,
+      minZoom: 3, maxPitch: 75, attributionControl: false, antialias: true, dragRotate: true, renderWorldCopies: true,
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
     window.__m3 = map;   // debug/inspection hook
@@ -103,6 +103,7 @@
     map.resize(); syncTo3D(false);
     if (map.isStyleLoaded()) { addSceneLayers(); mirror(); }
     btn.classList.add('is-on'); ctrls.hidden = false;
+    if (window.Movable) Movable.reflow();   // place/orient the unified drag grip now it's visible
   }
   function exit() { if (!on) return; on = false; syncFrom3D(); document.body.classList.remove('mode-3d'); cont.classList.remove('on'); btn.classList.remove('is-on'); ctrls.hidden = true; }
   function toggle() { on ? exit() : enter(); }

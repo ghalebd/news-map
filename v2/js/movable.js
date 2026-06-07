@@ -23,6 +23,7 @@
     ['.lthird', 'Lower third', 'both'],
     ['.bcast-banner', 'Banner', 'both'],
     ['.bcast-ticker', 'Ticker', 'both'],
+    ['.d3ctrl', '3D controls', 'both'],
   ];
   const meta = {}; PANELS.forEach(([sel, label, axis]) => meta[sel] = { label, axis });
   const els = {}; const handles = {};
