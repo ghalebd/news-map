@@ -11,8 +11,7 @@
 
   const btn = h('button', 'mapstyle', `${I.layers}<span class="mapstyle__cur"></span>`); btn.title = 'Base map';
   const pop = h('div', 'mapstyle-pop'); pop.hidden = true;
-  document.body.append(btn, pop);
-  if (isControl) btn.style.right = '70px';   // clear the control gear
+  document.body.append(btn, pop);   // top-left (CSS); brand/gear sit on the right
 
   const styleName = () => { const m = S.cfg().mapStyles.find(x => x.id === S.state.mapStyle); return m ? m.name : S.state.mapStyle; };
 

@@ -8,8 +8,9 @@
   const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 
   /* ---------- brand + status ---------- */
-  const brand = h('div', 'brand', `<img alt="Al Jazeera" onerror="this.style.display='none'">`); document.body.appendChild(brand);
-  function applyBrand() { const img = brand.querySelector('img'); const br = S.cfg().brand || {}; if (br.logo) { img.src = br.logo; img.style.display = 'block'; img.style.maxHeight = (br.size || 38) + 'px'; } else { img.removeAttribute('src'); img.style.display = 'none'; } }
+  const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);
+  if (window.APP_ROLE === 'control') brand.style.right = '70px';   // clear the settings gear
+  function applyBrand() { const img = brand.querySelector('img'); const br = S.cfg().brand || {}; if (br.logo) { img.src = br.logo; img.style.display = 'block'; img.style.height = (br.size || 38) + 'px'; } else { img.removeAttribute('src'); img.style.display = 'none'; } }
   const status = h('div', 'status'); document.body.appendChild(status);
   function renderStatus() { const v = M.currentView(); status.innerHTML = `<span class="status__dot"></span><span>${v.lat.toFixed(2)} , ${v.lng.toFixed(2)}</span> · <b>Z${v.zoom.toFixed(1)}</b>`; }
   M.map.on('move zoom', renderStatus); renderStatus();
