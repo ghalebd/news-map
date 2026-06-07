@@ -14,7 +14,7 @@
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
 
   const cont = h('div'); cont.id = 'map3d'; document.body.appendChild(cont);
-  let map = null, on = false, exaggeration = 1.6;
+  let map = null, on = false, exaggeration = 2.6;   // clearly-3D default; tune with the terrain ▲/▽ buttons
 
   /* ---- build the MapLibre map lazily on first use ---- */
   function ensure() {
@@ -26,6 +26,7 @@
       maxPitch: 80, attributionControl: false, antialias: true, dragRotate: true,
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
+    window.__m3 = map;   // debug/inspection hook
     map.on('style.load', onStyle);
   }
   function onStyle() {
@@ -98,8 +99,8 @@
     cb(I.minus, 'Pitch down', () => map.easeTo({ pitch: Math.max(0, map.getPitch() - 8), duration: 200 })),
     cb('⟲', 'Rotate left', () => map.easeTo({ bearing: map.getBearing() - 20, duration: 200 })),
     cb('⟳', 'Rotate right', () => map.easeTo({ bearing: map.getBearing() + 20, duration: 200 })),
-    cb('▲', 'More terrain', () => { exaggeration = Math.min(3, exaggeration + 0.3); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
-    cb('▽', 'Less terrain', () => { exaggeration = Math.max(0.2, exaggeration - 0.3); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
+    cb('▲', 'More terrain height', () => { exaggeration = Math.min(8, exaggeration + 0.5); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
+    cb('▽', 'Less terrain height', () => { exaggeration = Math.max(0.3, exaggeration - 0.5); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
     cb('N', 'Reset north & flatten pitch', () => map.easeTo({ bearing: 0, duration: 300 })),
     cb(I.close, 'Exit 3D', exit),
   );
