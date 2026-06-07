@@ -160,11 +160,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-qrow { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--stroke); }
 .cfg-qrow.is-off { opacity: .5; }
 .cfg-qrow__n { flex: 1; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cfg-qbtn { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); background: transparent; border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }
-.cfg-qbtn svg { width: 13px; height: 13px; }
-.cfg-qbtn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
-.cfg-qbtn:disabled { opacity: .3; cursor: default; }
-.cfg-qbtn.is-on { color: var(--accent); }
+.cfg-ordb { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); background: transparent; border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }
+.cfg-ordb svg { width: 13px; height: 13px; }
+.cfg-ordb:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.cfg-ordb:disabled { opacity: .3; cursor: default; }
+.cfg-ordb.is-on { color: var(--accent); }
 
 /* per-panel size & position cards */
 .cfg-pan { padding: 8px 9px; border-radius: 10px; background: var(--glass-2); border: 1px solid var(--stroke); display: flex; flex-direction: column; gap: 7px; }

@@ -91,6 +91,8 @@
     const hd = document.createElement('div'); hd.className = 'mvh'; hd.title = 'Drag to move' + (meta[sel].axis === 'y' ? ' (up / down)' : ''); hd.innerHTML = I.gripH;
     hd.addEventListener('pointerdown', e => startDrag(el, sel, hd, e));
     el.insertBefore(hd, el.firstChild); handles[sel] = hd;
+    // some panels rebuild via innerHTML='' (scene inspector etc.) — keep the grip alive
+    try { new MutationObserver(() => { if (hd.parentElement !== el) { el.insertBefore(hd, el.firstChild); orient(el, hd); } }).observe(el, { childList: true }); } catch (e) {}
   }
 
   function applyLayout() {

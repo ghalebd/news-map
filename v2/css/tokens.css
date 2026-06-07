@@ -59,5 +59,7 @@
   --z-panel: 1000;
   --z-bar: 1100;
   --z-flyout: 2000;
-  --z-modal: 3000;
+  --z-modal: 3000;    /* config drawer / gear */
+  --z-dialog: 3300;   /* text-input + help modals — above the drawer */
+  --z-toast: 4000;    /* toasts — always on top */
 }

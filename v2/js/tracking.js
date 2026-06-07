@@ -58,7 +58,7 @@
     stop() {
       clearTimeout(this.reconnectT); clearInterval(this.pruneT); clearTimeout(this.resubT);
       if (this.socket) { try { this.socket.close(); } catch (e) {} this.socket = null; }
-      if (this.layer) map.removeLayer(this.layer);
+      if (this.layer) { map.removeLayer(this.layer); this.layer.clearLayers(); }   // clear markers too (avoid ghosts on restart)
       if (this.trails) { map.removeLayer(this.trails); this.trails.clearLayers(); }
       if (this.route) { map.removeLayer(this.route); this.route.clearLayers(); }
       if (this.pins) { map.removeLayer(this.pins); this.pins.clearLayers(); }
@@ -73,7 +73,7 @@
       this.socket.onmessage = ev => {
         try {
           let txt = typeof ev.data === 'string' ? ev.data : (ev.data instanceof ArrayBuffer ? new TextDecoder().decode(ev.data) : null);
-          if (txt == null && ev.data && ev.data.text) { ev.data.text().then(t => { try { this.handle(JSON.parse(t)); } catch (e) {} }); return; }
+          if (txt == null && ev.data && ev.data.text) { ev.data.text().then(t => { if (!this.on) return; try { this.handle(JSON.parse(t)); } catch (e) {} }); return; }
           if (txt != null) this.handle(JSON.parse(txt));
         } catch (e) {}
       };
@@ -217,7 +217,7 @@
       ];
       let ac = null;
       for (const src of sources) { try { const r = await fetch(src.url, { signal: AbortSignal.timeout(8000) }); if (!r.ok) continue; ac = src.parse(await r.json()); break; } catch (e) {} }
-      if (!ac) return;
+      if (!ac || !this.on) return;   // bail if tracking was switched off while awaiting
       const seen = new Set(), bounds = map.getBounds();
       ac.forEach(a => { if (!bounds.contains([a.lat, a.lng])) return; seen.add(a.icao); this.upsert(a.icao, a); });
       this.flights.forEach((f, k) => { if (!seen.has(k)) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); if (this.ftrails) { if (f.line) this.ftrails.removeLayer(f.line); if (f.head) this.ftrails.removeLayer(f.head); if (f.vector) this.ftrails.removeLayer(f.vector); } this.flights.delete(k); } });

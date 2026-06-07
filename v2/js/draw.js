@@ -6,7 +6,7 @@
 const Draw = (() => {
   const map = GameMap.map, drawn = GameMap.drawn, S = Store, I = ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
   const fmtDist = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
   const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${color}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
   /* permission gate — the control console (full console) always permits;
@@ -96,7 +96,7 @@ const Draw = (() => {
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
-      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${el.src}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
       case 'frontline': return frontLine(L.latLng(el.a), L.latLng(el.b), { color: el.color });
       case 'country': { const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: el.color, weight: 2, fillColor: el.color, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(el.name, { sticky: true, className: 'trk-tip' }); return lyr; }
     }
@@ -229,7 +229,7 @@ const Draw = (() => {
   }
   function ctxBtn(icon, title, fn) { const b = h('button', 'ctxbar__btn', icon); b.title = title; b.onclick = fn; return b; }
   function positionCtx(el) { const a = elAnchor(el); if (!a) return; const p = map.latLngToContainerPoint(L.latLng(a[0], a[1])); ctx.style.left = Math.max(10, Math.min(p.x - ctx.offsetWidth / 2, innerWidth - ctx.offsetWidth - 10)) + 'px'; ctx.style.top = Math.max(60, p.y - ctx.offsetHeight - 14) + 'px'; }
-  function refreshCtx() { if (selected && !S.activeScene().elements.find(e => e.id === selected.id)) deselect(); else if (selected) { selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); } }
+  function refreshCtx() { if (!selected) return; const fresh = S.activeScene().elements.find(e => e.id === selected.id); if (!fresh) { deselect(); return; } selected = fresh; selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); }
   map.on('move zoom', () => { if (selected) positionCtx(selected); });
 
   /* ---------------- asset library (image placement) ---------------- */

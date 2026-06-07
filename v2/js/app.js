@@ -106,7 +106,7 @@
   const spot = h('div', 'spotlight'); spot.hidden = true; document.body.appendChild(spot);
   function renderSpotlight() {
     const s = (S.state.broadcast && S.state.broadcast.spotlight) || {};
-    if (!s.on) { spot.hidden = true; return; }
+    if (!s.on || s.lat == null || s.lng == null) { spot.hidden = true; return; }
     const pt = M.map.latLngToContainerPoint([s.lat, s.lng]);
     const mpp = 40075016.686 * Math.cos(s.lat * Math.PI / 180) / (256 * Math.pow(2, M.map.getZoom()));
     const rPx = Math.max(30, (s.radiusKm * 1000) / mpp);
@@ -119,17 +119,23 @@
   M.map.on('move zoom moveend zoomend', renderSpotlight);
 
   /* ---------- auto-tour (control window drives; presenter follows via sync) ---------- */
-  let tourT = null;
+  let tourT = null, tourSig = '';
   function applyTour() {
     const t = (S.state.broadcast && S.state.broadcast.tour) || {};
+    const sig = (t.playing ? 1 : 0) + '|' + (t.sec || 8);
+    if (sig === tourSig) return;   // only (re)start when tour fields actually change — not on every broadcast keystroke
+    tourSig = sig;
     clearInterval(tourT); tourT = null;
     if (t.playing && window.APP_ROLE === 'control') tourT = setInterval(() => S.advance(), Math.max(2, t.sec || 8) * 1000);
   }
 
   /* ---------- animation: auto-build the active scene (reveal step-by-step) ---------- */
-  let animT = null, animPlaying = false;
+  let animT = null, animPlaying = false, animSig = '';
   function applyAnim() {
     const a = (S.state.broadcast && S.state.broadcast.anim) || {};
+    const sig = (a.playing ? 1 : 0) + '|' + (a.ms || 700) + '|' + (a.loop ? 1 : 0);
+    if (sig === animSig) return;   // ignore unrelated broadcast changes so the cadence isn't reset mid-play
+    animSig = sig;
     if (a.playing && window.APP_ROLE === 'control') {
       if (!animPlaying) {   // fresh start: rewind the scene to reveal from zero
         animPlaying = true; const sc = S.activeScene(); if (!sc) { S.setAnim({ playing: false }); return; }

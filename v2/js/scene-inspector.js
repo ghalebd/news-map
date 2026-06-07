@@ -55,7 +55,7 @@
 
   S.on((st, evt) => {
     if (evt === 'mode' || evt === 'active' || evt === 'config' || evt === 'sync') render();
-    if (evt === 'sync' && builtFor) { const s = S.activeScene(); if (s && s.id === builtFor) build(s); }  // mirror remote edits
+    if (evt === 'sync' && builtFor) { const s = S.activeScene(); const f = document.activeElement; if (s && s.id === builtFor && !(f && panel.contains(f))) build(s); }  // mirror remote edits unless typing
   });
   render();
 })();

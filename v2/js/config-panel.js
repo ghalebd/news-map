@@ -6,6 +6,7 @@
 (() => {
   const S = window.Store, I = window.ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
   function readImage(file, max = 256) {
     return new Promise((res, rej) => {
       const fr = new FileReader();
@@ -123,9 +124,9 @@
     items.forEach((it, idx) => {
       const row = h('div', 'cfg-qrow' + (it.hidden ? ' is-off' : ''));
       row.appendChild(h('span', 'cfg-qrow__n', it.label));
-      const up = h('button', 'cfg-qbtn', I.chevron); up.style.transform = 'rotate(180deg)'; up.title = 'Move up'; up.disabled = idx === 0; up.onclick = () => { QBar.move(it.id, -1); renderTab(); };
-      const dn = h('button', 'cfg-qbtn', I.chevron); dn.title = 'Move down'; dn.disabled = idx === items.length - 1; dn.onclick = () => { QBar.move(it.id, 1); renderTab(); };
-      const vis = h('button', 'cfg-qbtn' + (it.hidden ? '' : ' is-on'), it.hidden ? I.eyeOff : I.eye); vis.title = it.hidden ? 'Show in bar' : 'Hide from bar'; vis.onclick = () => { QBar.toggle(it.id); renderTab(); };
+      const up = h('button', 'cfg-ordb', I.chevron); up.style.transform = 'rotate(180deg)'; up.title = 'Move up'; up.disabled = idx === 0; up.onclick = () => { QBar.move(it.id, -1); renderTab(); };
+      const dn = h('button', 'cfg-ordb', I.chevron); dn.title = 'Move down'; dn.disabled = idx === items.length - 1; dn.onclick = () => { QBar.move(it.id, 1); renderTab(); };
+      const vis = h('button', 'cfg-ordb' + (it.hidden ? '' : ' is-on'), it.hidden ? I.eyeOff : I.eye); vis.title = it.hidden ? 'Show in bar' : 'Hide from bar'; vis.onclick = () => { QBar.toggle(it.id); renderTab(); };
       row.append(up, dn, vis); lst.appendChild(row);
     });
     q.bd.appendChild(lst);
@@ -168,7 +169,7 @@
   }
   function tabTools(C, ct) {
     const D = Object.assign({ color: '#ff453a', weight: 3, markerIcon: '' }, C.drawDefaults || {});
-    const { sec, bd } = section('Drawing defaults', I.sketch, () => S.setDrawDefaults(cp(D.drawDefaults)));
+    const { sec, bd } = section('Drawing defaults', I.sketch, () => S.setDrawDefaults(cp(S.DEFAULT_CONFIG.drawDefaults)));
     bd.append(field('Default colour', swatches(DCOLORS, D.color, c => { S.setDrawDefaults({ color: c }); S.setColor(c); })),
       slider('Stroke weight', D.weight, 1, 8, 1, v => S.setDrawDefaults({ weight: v })));
     bd.appendChild(h('div', 'hint', 'Applies to new shapes/lines. Per-element colour stays editable from the on-map context bar.'));
@@ -181,14 +182,14 @@
     m1.bd.appendChild(seg); ct.appendChild(m1.sec);
     const m2 = section('Enabled styles', I.layers);
     const list = h('div', 'cfg-list');
-    C.mapStyles.forEach(m => { const li = h('div', 'cfg-li', `<div class="nm">${m.name} <small>${m.id}</small></div>`); li.appendChild(tog(m.on !== false, on => S.setMapStyleOn(m.id, on))); list.appendChild(li); });
+    C.mapStyles.forEach(m => { const li = h('div', 'cfg-li', `<div class="nm">${esc(m.name)} <small>${esc(m.id)}</small></div>`); li.appendChild(tog(m.on !== false, on => S.setMapStyleOn(m.id, on))); list.appendChild(li); });
     const add = h('div', 'cfg-add', '<input placeholder="MapTiler id (e.g. winter-v2)">'); const ab = h('button', null, 'Add'); add.appendChild(ab);
     ab.onclick = () => { const v = add.querySelector('input').value.trim(); if (v) { S.addMapStyle(v, v.replace(/-v?\d+$/, '').replace(/-/g, ' ')); renderTab(); } };
     m2.bd.append(list, add); ct.appendChild(m2.sec);
     const m3 = section('Places & locator', I.target);
     m3.bd.appendChild(rowTog('Locator inset map', !!C.locator, on => S.setLocator(on)));
     const pl = h('div', 'cfg-list');
-    (C.places || []).forEach(p => { const li = h('div', 'cfg-li'); li.style.cursor = 'pointer'; li.innerHTML = `<div class="nm">${p.name} <small>${(+p.lat).toFixed(1)}, ${(+p.lng).toFixed(1)}</small></div>`; li.onclick = () => window.GameMap.flyToView({ lat: p.lat, lng: p.lng, zoom: p.zoom }, { type: 'flyTo', duration: 1 }); const del = h('button', 'cfg-aset__x', I.close); del.style.position = 'static'; del.style.opacity = '1'; del.onclick = e => { e.stopPropagation(); S.removePlace(p.id); renderTab(); }; li.appendChild(del); pl.appendChild(li); });
+    (C.places || []).forEach(p => { const li = h('div', 'cfg-li'); li.style.cursor = 'pointer'; li.innerHTML = `<div class="nm">${esc(p.name)} <small>${(+p.lat).toFixed(1)}, ${(+p.lng).toFixed(1)}</small></div>`; li.onclick = () => window.GameMap.flyToView({ lat: p.lat, lng: p.lng, zoom: p.zoom }, { type: 'flyTo', duration: 1 }); const del = h('button', 'cfg-aset__x', I.close); del.style.position = 'static'; del.style.opacity = '1'; del.onclick = e => { e.stopPropagation(); S.removePlace(p.id); renderTab(); }; li.appendChild(del); pl.appendChild(li); });
     const pa = h('div', 'cfg-add', '<input placeholder="Name this view">'); const pab = h('button', null, 'Add'); pa.appendChild(pab);
     pab.onclick = () => { const v = pa.querySelector('input').value.trim(); if (v) { const cv = window.GameMap.currentView(); S.addPlace({ name: v, lat: cv.lat, lng: cv.lng, zoom: cv.zoom }); renderTab(); } };
     m3.bd.append(pl, pa); ct.appendChild(m3.sec);
@@ -269,7 +270,7 @@
     const up = h('div', 'cfg-up'); up.append(pick, cat, name, file); u.bd.appendChild(up); ct.appendChild(u.sec);
     const lib = section('Library', I.folder);
     const assets = C.customAssets || [];
-    if (assets.length) { const grid = h('div', 'cfg-aset'); assets.forEach(a => { const it = h('div', 'cfg-aset__i', `<img src="${a.url}" alt=""><div class="m"><b>${a.name || ''}</b><small>${a.cat || ''}</small></div>`); const del = h('button', 'cfg-aset__x', I.close); del.onclick = () => { S.removeCustomAsset(a.id); renderTab(); }; it.appendChild(del); grid.appendChild(it); }); lib.bd.appendChild(grid); }
+    if (assets.length) { const grid = h('div', 'cfg-aset'); assets.forEach(a => { const it = h('div', 'cfg-aset__i', `<img src="${esc(a.url)}" alt=""><div class="m"><b>${esc(a.name || '')}</b><small>${esc(a.cat || '')}</small></div>`); const del = h('button', 'cfg-aset__x', I.close); del.onclick = () => { S.removeCustomAsset(a.id); renderTab(); }; it.appendChild(del); grid.appendChild(it); }); lib.bd.appendChild(grid); }
     else lib.bd.appendChild(h('div', 'hint', 'No images yet. Uploads appear in the presenter Image tool.'));
     ct.appendChild(lib.sec);
   }
@@ -290,7 +291,7 @@
     sab.onclick = () => { window.UI && UI.saveSnapshot(snapAdd.querySelector('input').value.trim()); renderTab(); };
     sn.bd.appendChild(snapAdd);
     const snList = h('div', 'cfg-list');
-    (window.UI ? UI.snaps() : []).forEach(s => { const li = h('div', 'cfg-li'); li.style.cursor = 'pointer'; li.innerHTML = `<div class="nm">${s.name} <small>${s.at}</small></div>`; li.onclick = () => UI.restoreSnapshot(s.id); const del = h('button', 'cfg-aset__x', I.close); del.style.position = 'static'; del.style.opacity = '1'; del.onclick = e => { e.stopPropagation(); UI.deleteSnapshot(s.id); renderTab(); }; li.appendChild(del); snList.appendChild(li); });
+    (window.UI ? UI.snaps() : []).forEach(s => { const li = h('div', 'cfg-li'); li.style.cursor = 'pointer'; li.innerHTML = `<div class="nm">${esc(s.name)} <small>${esc(s.at)}</small></div>`; li.onclick = () => UI.restoreSnapshot(s.id); const del = h('button', 'cfg-aset__x', I.close); del.style.position = 'static'; del.style.opacity = '1'; del.onclick = e => { e.stopPropagation(); UI.deleteSnapshot(s.id); renderTab(); }; li.appendChild(del); snList.appendChild(li); });
     sn.bd.appendChild(snList);
     const reset = h('button', 'cfg-reset', 'Reset all settings to defaults');
     reset.onclick = () => { if (confirm('Reset all control settings to defaults?')) { S.resetConfig(); renderTab(); } };
@@ -340,7 +341,8 @@
   renderTab();
 
   S.on((st, evt) => {
-    if (evt === 'sync') renderTab();
+    // don't rebuild the panel out from under an input the operator is typing in
+    if (evt === 'sync') { const f = document.activeElement; if (!(f && drawer.contains(f) && /INPUT|TEXTAREA|SELECT/.test(f.tagName))) renderTab(); }
     if (evt === 'tracking' || evt === 'sync') {
       if (live.ships) live.ships.classList.toggle('on', !!S.state.tracking.ships);
       if (live.flights) live.flights.classList.toggle('on', !!S.state.tracking.flights);
