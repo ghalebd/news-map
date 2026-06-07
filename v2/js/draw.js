@@ -125,8 +125,8 @@ const Draw = (() => {
   function flowOpts(o) { return { color: o.color, weight: o.weight || dw(), opacity: o.opacity != null ? o.opacity : 1, dashArray: '2 12', lineCap: 'round', className: 'el-flow' }; }
   function arrowLine(a, b, o) { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], o)); g.addLayer(L.polyline([a, b], flowOpts(o))); g.addLayer(pxHead(a, b, o)); return g; }
   function curvePts(a, b) { const mid = L.latLng((a.lat + b.lat) / 2 + (b.lng - a.lng) * 0.2, (a.lng + b.lng) / 2 - (b.lat - a.lat) * 0.2); const p = []; for (let t = 0; t <= 1.0001; t += 0.05) p.push([(1 - t) ** 2 * a.lat + 2 * (1 - t) * t * mid.lat + t * t * b.lat, (1 - t) ** 2 * a.lng + 2 * (1 - t) * t * mid.lng + t * t * b.lng]); return p; }
-  function curveLine(a, b, o) { const p = curvePts(a, b), g = L.layerGroup(); g.addLayer(L.polyline(p, o)); g.addLayer(L.polyline(p, flowOpts(o))); const n = p.length; g.addLayer(pxHead(L.latLng(p[n - 2][0], p[n - 2][1]), L.latLng(p[n - 1][0], p[n - 1][1]), o)); return g; }
-  function tarrowLine(pts, o) { if (!pts || pts.length < 2) return L.layerGroup(); const g = L.layerGroup(); g.addLayer(L.polyline(pts, o)); g.addLayer(L.polyline(pts, flowOpts(o))); const n = pts.length; g.addLayer(pxHead(L.latLng(pts[n - 2][0], pts[n - 2][1]), L.latLng(pts[n - 1][0], pts[n - 1][1]), o)); return g; }
+  function curveLine(a, b, o) { const p = curvePts(a, b), g = L.layerGroup(); g.addLayer(L.polyline(p, o)); g.addLayer(L.polyline(p, flowOpts(o))); const n = p.length; g.addLayer(pxHead(headRef(p), L.latLng(p[n - 1][0], p[n - 1][1]), o)); return g; }
+  function tarrowLine(pts, o) { if (!pts || pts.length < 2) return L.layerGroup(); const g = L.layerGroup(); g.addLayer(L.polyline(pts, o)); g.addLayer(L.polyline(pts, flowOpts(o))); const n = pts.length; g.addLayer(pxHead(headRef(pts), L.latLng(pts[n - 1][0], pts[n - 1][1]), o)); return g; }
 
   function bindSelect(layer, el) {
     const wire = lyr => lyr && lyr.on && lyr.on('mousedown', ev => {
@@ -143,33 +143,30 @@ const Draw = (() => {
   function highlight(layer, on) { if (!layer) return; const f = lyr => { if (lyr._path) lyr._path.classList.toggle('el-sel', on); if (lyr._icon) lyr._icon.classList.toggle('mk-sel', on); }; if (layer.eachLayer) layer.eachLayer(f); else f(layer); }
 
   /* ---------------- tools ---------------- */
-  const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure', 'frontline'];
+  const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'tarrow', 'measure', 'frontline'];
+  const FREE = ['sketch', 'tarrow'];   // freehand: collect points while dragging
   function setTool(t) {
-    const prev = tool; tool = t;
-    if (prev === 'tarrow' && t !== 'tarrow') cancelPoly();
-    if (t === 'tarrow') { polyPts = []; if (map.doubleClickZoom) map.doubleClickZoom.disable(); }
-    else if (map.doubleClickZoom) map.doubleClickZoom.enable();
+    tool = t;
     if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));
   }
-  /* multi-point zigzag-arrow drawing */
-  function drawPolyGhost(cur) { if (ghost) { drawn.removeLayer(ghost); ghost = null; } const pts = (polyPts || []).concat(cur ? [[cur.lat, cur.lng]] : []); if (pts.length >= 2) { ghost = tarrowLine(pts, { color: S.state.color, weight: dw(), opacity: 0.7 }); drawn.addLayer(ghost); } }
-  function finishPoly() { if (ghost) { drawn.removeLayer(ghost); ghost = null; } const pts = (polyPts || []).filter((p, i, a) => i === 0 || map.distance(L.latLng(p[0], p[1]), L.latLng(a[i - 1][0], a[i - 1][1])) > 2); if (pts.length >= 2) S.addElement({ type: 'tarrow', pts, color: S.state.color }); polyPts = []; }
-  function cancelPoly() { if (ghost) { drawn.removeLayer(ghost); ghost = null; } polyPts = []; }
+  /* smoothing for freehand strokes — drop near-duplicate points then Chaikin-round corners */
+  function decimate(pts, minM) { if (pts.length < 3) return pts; const out = [pts[0]]; for (let i = 1; i < pts.length; i++) { if (map.distance(L.latLng(out[out.length - 1][0], out[out.length - 1][1]), L.latLng(pts[i][0], pts[i][1])) >= minM) out.push(pts[i]); } if (out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]); return out; }
+  function chaikin(pts, iter) { let p = pts; for (let k = 0; k < (iter || 2); k++) { if (p.length < 3) break; const out = [p[0]]; for (let i = 0; i < p.length - 1; i++) { const a = p[i], b = p[i + 1]; out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); } out.push(p[p.length - 1]); p = out; } return p; }
+  function smoothPts(pts) { return chaikin(decimate(pts, 8), 2); }
+  // stable arrowhead reference: walk back from the tip until ~16px away on screen
+  function headRef(pts) { const n = pts.length, tip = map.latLngToContainerPoint(L.latLng(pts[n - 1][0], pts[n - 1][1])); for (let i = n - 2; i >= 0; i--) { const pt = map.latLngToContainerPoint(L.latLng(pts[i][0], pts[i][1])); if (tip.distanceTo(pt) >= 16) return L.latLng(pts[i][0], pts[i][1]); } return L.latLng(pts[0][0], pts[0][1]); }
 
-  map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = tool === 'sketch' ? [[e.latlng.lat, e.latlng.lng]] : null; });
+  map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = FREE.includes(tool) ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => {
     if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
-    if (tool === 'tarrow' && polyPts && polyPts.length) { drawPolyGhost(e.latlng); return; }
-    if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
+    if (!dragStart) return; if (FREE.includes(tool)) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
   });
-  map.on('dblclick', e => { if (tool === 'tarrow') { if (e.originalEvent) L.DomEvent.stop(e.originalEvent); finishPoly(); } });
   map.on('mouseup', e => {
     if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
     if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
   });
   map.on('click', e => {
     if (skipClick) { skipClick = false; return; }   // came from selecting/erasing an element
-    if (tool === 'tarrow') { polyPts.push([e.latlng.lat, e.latlng.lng]); drawPolyGhost(e.latlng); return; }
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
     else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
     else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
@@ -186,6 +183,7 @@ const Draw = (() => {
     if (t === 'polygon') return L.polygon([a, b, [a.lat, b.lng]], { ...o, fillOpacity: 0.08 });
     if (t === 'measure') { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(b, { icon: labelIcon(fmtDist(map.distance(a, b)), S.state.color) })); return g; }
     if (t === 'sketch') return L.polyline(sketchPts, o);
+    if (t === 'tarrow') return tarrowLine(sketchPts || [[a.lat, a.lng], [b.lat, b.lng]], o);
     return null;
   }
   function commit(t, a, b) {
@@ -198,7 +196,8 @@ const Draw = (() => {
     else if (t === 'curve') S.addElement({ type: 'curve', a: A, b: B, color: c });
     else if (t === 'polygon') S.addElement({ type: 'polygon', pts: [A, B, [a.lat, b.lng]], color: c });
     else if (t === 'measure') S.addElement({ type: 'measure', a: A, b: B, color: c });
-    else if (t === 'sketch' && sketchPts && sketchPts.length > 1) S.addElement({ type: 'sketch', pts: sketchPts.slice(), color: c });
+    else if (t === 'sketch' && sketchPts && sketchPts.length > 1) S.addElement({ type: 'sketch', pts: smoothPts(sketchPts), color: c });
+    else if (t === 'tarrow' && sketchPts && sketchPts.length > 1) S.addElement({ type: 'tarrow', pts: smoothPts(sketchPts), color: c });
   }
 
   /* ---------------- selection + context bar ---------------- */
@@ -257,7 +256,7 @@ const Draw = (() => {
 
   /* ---------------- quick-add launcher (+ FAB) + menu + arm chip ---------------- */
   const TOOLS = [
-    ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['tarrow', I.arrowZig, 'Zigzag arrow'], ['curve', I.curve, 'Curved arrow'],
+    ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['tarrow', I.arrowZig, 'Freehand arrow'], ['curve', I.curve, 'Curved arrow'],
     ['ring', I.target, 'Range ring'], ['circle', I.circle, 'Circle'], ['polygon', I.polygon, 'Area'], ['sketch', I.sketch, 'Freehand'],
     ['frontline', I.frontline, 'Front line'], ['country', I.country, 'Highlight country'],
     ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['erase', I.erase, 'Erase'],
@@ -300,7 +299,7 @@ const Draw = (() => {
   const QTOOLS = [
     ['select', I.pan, 'Select / Pan'],
     ['arrow', I.arrow, 'Arrow'],
-    ['tarrow', I.arrowZig, 'Zigzag arrow'],
+    ['tarrow', I.arrowZig, 'Freehand arrow'],
     ['curve', I.curve, 'Curved arrow'],
     ['marker', I.marker, 'Marker'],
     ['ring', I.target, 'Range ring'],

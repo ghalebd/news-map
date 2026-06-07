@@ -8,7 +8,7 @@
 (() => {
   const S = window.Store;
   const LABELS = {
-    select: 'Select / Pan', arrow: 'Arrow', tarrow: 'Zigzag arrow', curve: 'Curved arrow',
+    select: 'Select / Pan', arrow: 'Arrow', tarrow: 'Freehand arrow', curve: 'Curved arrow',
     marker: 'Marker', ring: 'Range ring', circle: 'Circle', polygon: 'Area', sketch: 'Freehand',
     frontline: 'Front line', country: 'Highlight country', text: 'Label', measure: 'Measure',
     asset: 'Image', erase: 'Erase', color: 'Colour', undo: 'Undo',
