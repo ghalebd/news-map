@@ -218,11 +218,27 @@
       row.append(
         mkBtn(I.save, 'Save file', () => window.UI && UI.saveProject(S.state.rundown.title)),
         mkBtn(I.load || I.upload, 'Load file', () => window.UI && UI.loadProject()),
+        mkBtn(I.camera || I.eye, 'Export PNG', () => window.UI && UI.exportPNG()),
         mkBtn(I.eyeOff || I.eye, 'Hide UI', () => window.UI && UI.hideUI(true)),
         mkBtn(I.erase, 'Clear scene', () => { if (confirm('Clear all elements of the current scene?')) { S.clearElements(); window.UI && UI.toast('Scene cleared'); } }),
       );
       bd.appendChild(row);
-      bd.appendChild(h('div', 'hint', 'Saved files store the full rundown + settings as JSON. Hide-UI also toggles with the H key.'));
+      // snapshots
+      bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>SNAPSHOTS (RESTORE POINTS)</span></div>'));
+      const snapAdd = h('div', 'cfg-add', '<input placeholder="Snapshot name">'); const sab = h('button', null, 'Save'); snapAdd.appendChild(sab);
+      sab.onclick = () => { window.UI && UI.saveSnapshot(snapAdd.querySelector('input').value.trim()); render(); };
+      bd.appendChild(snapAdd);
+      const snList = h('div', 'cfg-list');
+      (window.UI ? UI.snaps() : []).forEach(sn => {
+        const li = h('div', 'cfg-li'); li.style.cursor = 'pointer';
+        li.innerHTML = `<div class="nm">${sn.name} <small>${sn.at}</small></div>`;
+        li.onclick = () => UI.restoreSnapshot(sn.id);
+        const del = h('button', 'cfg-aset__x', I.close); del.title = 'Delete'; del.style.position = 'static'; del.style.opacity = '1';
+        del.onclick = e => { e.stopPropagation(); UI.deleteSnapshot(sn.id); render(); };
+        li.appendChild(del); snList.appendChild(li);
+      });
+      bd.appendChild(snList);
+      bd.appendChild(h('div', 'hint', 'PNG captures the current frame (use Hide-UI first for a clean image). Snapshots are local restore points; click to restore.'));
       body.appendChild(sec);
     }
     // RESET

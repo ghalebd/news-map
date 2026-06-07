@@ -28,13 +28,13 @@ const GameMap = (() => {
   // layer, so if anything is missing (still loading, network drop, far jump,
   // zoom-out) there is never a blank — a light version is always there.
   const underlay = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, maxNativeZoom: 3, tileSize: 256, keepBuffer: 4, noWrap: true, bounds: WORLD, className: 'tiles-underlay',
+    maxZoom: 20, maxNativeZoom: 3, tileSize: 256, keepBuffer: 4, noWrap: true, bounds: WORLD, crossOrigin: 'anonymous', className: 'tiles-underlay',
   }).addTo(map);
 
   // BASE: full detail. Defer tile loading until the zoom animation ends so the
   // zoom stays smooth; the underlay + scaled old tiles cover the gap meanwhile.
   const base = L.tileLayer(tile('satellite'), {
-    maxZoom: 20, tileSize: 256, keepBuffer: 2, updateWhenZooming: false, noWrap: true, bounds: WORLD, className: 'tiles-base',
+    maxZoom: 20, tileSize: 256, keepBuffer: 2, updateWhenZooming: false, noWrap: true, bounds: WORLD, crossOrigin: 'anonymous', className: 'tiles-base',
   }).addTo(map);
 
   L.control.attribution({ position: 'bottomright', prefix: false }).addAttribution('© MapTiler © OpenStreetMap').addTo(map);

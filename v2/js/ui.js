@@ -72,5 +72,32 @@
     inp.click();
   }
 
-  window.UI = { toast, input, hideUI, saveProject, loadProject };
+  /* ---------- export current frame to PNG ---------- */
+  function exportPNG() {
+    if (!window.html2canvas) { toast('Export library not loaded'); return; }
+    const t = toast('Rendering image…', 8000);
+    html2canvas(document.body, { useCORS: true, allowTaint: false, backgroundColor: '#0e1622', logging: false, scale: 2 })
+      .then(canvas => {
+        canvas.toBlob(blob => {
+          if (!blob) { toast('Export failed (tainted canvas)'); return; }
+          const a = h('a'); a.href = URL.createObjectURL(blob);
+          a.download = 'news-map-' + ((S.state.rundown.title || 'frame').replace(/[^\w-]+/g, '_')) + '.png';
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          t.remove(); toast('Image exported');
+        }, 'image/png');
+      }).catch(() => { t.remove(); toast('Export failed'); });
+  }
+
+  /* ---------- snapshots (named restore points, local) ---------- */
+  const SNAP_KEY = 'newsmap.v3.snapshots';
+  const snaps = () => { try { return JSON.parse(localStorage.getItem(SNAP_KEY) || '[]'); } catch (e) { return []; } };
+  function saveSnapshot(name) {
+    const list = snaps();
+    list.unshift({ id: 's' + Date.now(), name: name || ('Snapshot ' + (list.length + 1)), at: new Date().toISOString().slice(0, 16).replace('T', ' '), data: S.exportState() });
+    try { localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0, 30))); toast('Snapshot saved'); } catch (e) { toast('Snapshot failed (storage full)'); }
+  }
+  function restoreSnapshot(id) { const s = snaps().find(x => x.id === id); if (s) { S.importState(s.data); toast('Snapshot restored'); } }
+  function deleteSnapshot(id) { try { localStorage.setItem(SNAP_KEY, JSON.stringify(snaps().filter(x => x.id !== id))); } catch (e) {} }
+
+  window.UI = { toast, input, hideUI, saveProject, loadProject, exportPNG, snaps, saveSnapshot, restoreSnapshot, deleteSnapshot };
 })();
