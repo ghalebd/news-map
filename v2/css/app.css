@@ -201,6 +201,21 @@ body.mode-live .qtools { display: flex; }
 .qa-asset__item:hover { border-color: var(--accent); }
 .qa-asset__item.is-on { border-color: var(--accent); box-shadow: var(--accent-glow); }
 
+/* ---------- base-map switcher ---------- */
+.mapstyle { position: fixed; top: 14px; right: 16px; z-index: var(--z-bar); height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 9px;
+  border-radius: var(--r-sm); color: var(--text); font-size: 12px; font-weight: 600;
+  background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
+  -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); transition: all var(--t-fast) var(--ease); }
+.mapstyle svg { width: 18px; height: 18px; color: var(--accent); }
+.mapstyle:hover { border-color: var(--accent); }
+.mapstyle-pop { position: fixed; top: 64px; right: 16px; z-index: var(--z-flyout); min-width: 150px; padding: 6px;
+  display: flex; flex-direction: column; gap: 3px; border-radius: var(--r-sm);
+  background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
+  -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); animation: pop var(--t) var(--ease-out); }
+.mapstyle-pop__i { text-align: left; padding: 8px 11px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--text-2); transition: all var(--t-fast) var(--ease); }
+.mapstyle-pop__i:hover { color: var(--text); background: var(--glass-2); }
+.mapstyle-pop__i.is-on { color: var(--accent); background: var(--accent-soft); }
+
 /* ---------- mode visibility ---------- */
 body.mode-build .nownext { display: none; }
 body.mode-live .deck { display: none; }
