@@ -1,0 +1,117 @@
+/* ============================================================
+   MAP3D — real 3D terrain view (MapLibre GL) layered over the
+   Leaflet map. A cinematic establishing/fly-over mode with true
+   elevation, sky and a free camera (pitch / bearing / zoom).
+   Leaflet stays the 2D working map; entering 3D syncs the camera
+   and mirrors the active scene's geometry as GeoJSON so the shot
+   isn't empty. Exiting syncs the centre/zoom back to Leaflet.
+   ============================================================ */
+(() => {
+  const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
+  const KEY = 'tnFJbEP9ELhQqkA6rPY2';
+  const styleUrl = id => `https://api.maptiler.com/maps/${id}/style.json?key=${KEY}`;
+  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
+
+  const cont = h('div'); cont.id = 'map3d'; document.body.appendChild(cont);
+  let map = null, on = false, exaggeration = 1.6;
+
+  /* ---- build the MapLibre map lazily on first use ---- */
+  function ensure() {
+    if (map) return;
+    const c = L2.getCenter();
+    map = new maplibregl.Map({
+      container: cont, style: styleUrl(S.state.mapStyle || 'satellite'),
+      center: [c.lng, c.lat], zoom: Math.max(1, L2.getZoom() - 1), pitch: 62, bearing: 0,
+      maxPitch: 80, attributionControl: false, antialias: true, dragRotate: true,
+    });
+    map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
+    map.on('style.load', onStyle);
+  }
+  function onStyle() {
+    try {
+      if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', url: `https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=${KEY}`, tileSize: 256 });
+      map.setTerrain({ source: 'dem', exaggeration });
+    } catch (e) {}
+    try { map.setSky({ 'sky-color': '#0a1830', 'sky-horizon-blend': 0.6, 'horizon-color': '#16335c', 'horizon-fog-blend': 0.5, 'fog-color': '#0a1322', 'fog-ground-blend': 0.4 }); } catch (e) {}
+    addSceneLayers(); mirror();
+  }
+
+  /* ---- mirror the active scene geometry into GeoJSON ---- */
+  const SRC = 'scene';
+  function ringFor(lat, lng, radiusM, n = 64) { const pts = []; const dLat = radiusM / 111320; for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; pts.push([lng + (dLat / Math.cos(lat * Math.PI / 180)) * Math.cos(a), lat + dLat * Math.sin(a)]); } return pts; }
+  function toFeatures() {
+    const sc = S.activeScene(); if (!sc) return [];
+    const live = S.state.mode === 'live';
+    const n = live ? S.revealedCount(sc) : sc.elements.length;
+    const F = []; const add = (geom, props) => F.push({ type: 'Feature', geometry: geom, properties: props });
+    sc.elements.slice(0, n).forEach(el => {
+      const col = el.color || '#ff453a';
+      switch (el.type) {
+        case 'marker': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'pt', color: col, label: el.label || '' }); break;
+        case 'text': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'txt', color: col, label: el.text || '' }); break;
+        case 'asset': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'pt', color: col, label: el.name || '' }); break;
+        case 'arrow': case 'curve': add({ type: 'LineString', coordinates: [[el.a[1], el.a[0]], [el.b[1], el.b[0]]] }, { kind: 'line', color: col }); break;
+        case 'tarrow': case 'sketch': add({ type: 'LineString', coordinates: (el.pts || []).map(p => [p[1], p[0]]) }, { kind: 'line', color: col }); break;
+        case 'frontline': add({ type: 'LineString', coordinates: [[el.a[1], el.a[0]], [el.b[1], el.b[0]]] }, { kind: 'line', color: col }); break;
+        case 'measure': add({ type: 'LineString', coordinates: [[el.a[1], el.a[0]], [el.b[1], el.b[0]]] }, { kind: 'line', color: col }); break;
+        case 'circle': case 'ring': add({ type: 'Polygon', coordinates: [ringFor(el.ll[0], el.ll[1], el.radius)] }, { kind: 'area', color: col }); break;
+        case 'polygon': add({ type: 'Polygon', coordinates: [(el.pts || []).map(p => [p[1], p[0]])] }, { kind: 'area', color: col }); break;
+        case 'country': if (el.geom) add(el.geom, { kind: 'area', color: col }); break;
+      }
+    });
+    return F;
+  }
+  function addSceneLayers() {
+    if (map.getSource(SRC)) return;
+    map.addSource(SRC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addLayer({ id: 'sc-area', type: 'fill', source: SRC, filter: ['==', ['get', 'kind'], 'area'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.18 } });
+    map.addLayer({ id: 'sc-area-l', type: 'line', source: SRC, filter: ['==', ['get', 'kind'], 'area'], paint: { 'line-color': ['get', 'color'], 'line-width': 2 } });
+    map.addLayer({ id: 'sc-line', type: 'line', source: SRC, filter: ['==', ['get', 'kind'], 'line'], paint: { 'line-color': ['get', 'color'], 'line-width': 3 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    map.addLayer({ id: 'sc-pt', type: 'circle', source: SRC, filter: ['==', ['get', 'kind'], 'pt'], paint: { 'circle-radius': 6, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+    map.addLayer({ id: 'sc-lbl', type: 'symbol', source: SRC, filter: ['in', ['get', 'kind'], ['literal', ['pt', 'txt']]], layout: { 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.1], 'text-anchor': 'top' }, paint: { 'text-color': '#fff', 'text-halo-color': '#0a0e16', 'text-halo-width': 1.4 } });
+  }
+  function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); }
+
+  /* ---- camera sync ---- */
+  function syncTo3D(fly) { const c = L2.getCenter(), z = Math.max(1, L2.getZoom() - 1); const opt = { center: [c.lng, c.lat], zoom: z }; fly ? map.easeTo({ ...opt, duration: 800 }) : map.jumpTo(opt); }
+  function syncFrom3D() { const c = map.getCenter(); L2.setView([c.lat, c.lng], Math.round(map.getZoom() + 1), { animate: false }); }
+
+  function enter() {
+    ensure(); on = true; document.body.classList.add('mode-3d'); cont.classList.add('on');
+    map.resize(); syncTo3D(false);
+    if (map.isStyleLoaded()) { addSceneLayers(); mirror(); }
+    btn.classList.add('is-on'); ctrls.hidden = false;
+  }
+  function exit() { if (!on) return; on = false; syncFrom3D(); document.body.classList.remove('mode-3d'); cont.classList.remove('on'); btn.classList.remove('is-on'); ctrls.hidden = true; }
+  function toggle() { on ? exit() : enter(); }
+
+  /* ---- on-screen controls (visible only in 3D) ---- */
+  const btn = h('button', 'zoomctl__b view3d', '3D'); btn.title = 'Toggle 3D terrain view';
+  btn.onclick = toggle;
+  (function place() { const zc = document.querySelector('.zoomctl'); if (zc) zc.appendChild(btn); else { btn.classList.add('view3d--float'); document.body.appendChild(btn); } })();
+
+  const ctrls = h('div', 'd3ctrl glass'); ctrls.hidden = true;
+  const cb = (label, title, fn) => { const b = h('button', 'd3ctrl__b', label); b.title = title; b.onclick = fn; return b; };
+  ctrls.append(
+    cb(I.plus, 'Pitch up', () => map.easeTo({ pitch: Math.min(80, map.getPitch() + 8), duration: 200 })),
+    cb(I.minus, 'Pitch down', () => map.easeTo({ pitch: Math.max(0, map.getPitch() - 8), duration: 200 })),
+    cb('⟲', 'Rotate left', () => map.easeTo({ bearing: map.getBearing() - 20, duration: 200 })),
+    cb('⟳', 'Rotate right', () => map.easeTo({ bearing: map.getBearing() + 20, duration: 200 })),
+    cb('▲', 'More terrain', () => { exaggeration = Math.min(3, exaggeration + 0.3); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
+    cb('▽', 'Less terrain', () => { exaggeration = Math.max(0.2, exaggeration - 0.3); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
+    cb('N', 'Reset north & flatten pitch', () => map.easeTo({ bearing: 0, duration: 300 })),
+    cb(I.close, 'Exit 3D', exit),
+  );
+  document.body.appendChild(ctrls);
+
+  /* ---- react to store: keep 3D base in step with the 2D app ---- */
+  S.on((st, evt) => {
+    if (!on || !map) return;
+    if (evt === 'mapstyle' || evt === 'sync') { map.setStyle(styleUrl(S.state.mapStyle)); }   // style.load re-adds terrain/sky/layers
+    if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
+    if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();
+  });
+
+  window.Map3D = { enter, exit, toggle, get on() { return on; } };
+})();
