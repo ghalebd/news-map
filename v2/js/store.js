@@ -93,6 +93,7 @@ const Store = (() => {
   function nextScene() { const i = sceneIndex(state.rundown.activeId); if (i < scenes().length - 1) setActive(scenes()[i + 1].id); }
   function prevScene() { const i = sceneIndex(state.rundown.activeId); if (i > 0) setActive(scenes()[i - 1].id); }
   function renameScene(id, title) { const s = scenes().find(x => x.id === id); if (s) { s.title = title; emit('scenes'); } }
+  function setSceneView(id, view) { const s = scenes().find(x => x.id === id); if (s && view) { s.view = view; emit('scenes'); } }
 
   /* ---- storyboard reveal + scene settings ---- */
   function revealReset(id) { const s = scenes().find(x => x.id === id); if (!s) return; state.reveal[id] = s.reveal ? 0 : s.elements.length; }
@@ -156,7 +157,7 @@ const Store = (() => {
   return {
     state, on, emit, uid, load, exportState, importState, DEFAULT_CONFIG,
     scenes, activeScene, sceneIndex,
-    addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene,
+    addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene, setSceneView,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight,
     addElement, removeElement, updateElement, clearElements, undo, redo,

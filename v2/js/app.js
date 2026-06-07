@@ -126,6 +126,29 @@
     if (t.playing && window.APP_ROLE === 'control') tourT = setInterval(() => S.advance(), Math.max(2, t.sec || 8) * 1000);
   }
 
+  /* ---------- zoom / reset cluster + help ---------- */
+  const zc = h('div', 'zoomctl glass');
+  const zb = (icon, title, fn) => { const b = h('button', 'zoomctl__b', icon); b.title = title; b.onclick = fn; return b; };
+  zc.append(
+    zb(I.zoomIn || I.plus, 'Zoom in', () => M.map.zoomIn()),
+    zb(I.zoomOut || I.minus, 'Zoom out', () => M.map.zoomOut()),
+    zb(I.center || I.target, 'Reset to scene view', () => { const s = S.activeScene(); M.flyToView(s ? s.view : { lat: 29.5, lng: 45, zoom: 5 }, { type: 'flyTo', duration: 1 }); }),
+    zb('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg>', 'Help (?)', () => showHelp()),
+  );
+  document.body.appendChild(zc);
+  function showHelp() {
+    const back = h('div', 'modal-back'); const box = h('div', 'modal glass');
+    box.innerHTML = `<div class="modal__t">Keyboard & tips</div><div class="help">
+      <div><b>/</b> Add-element menu</div><div><b>M</b> Prep / Presenter</div><div><b>H</b> Hide / show UI</div>
+      <div><b>← →</b> / Space — reveal &amp; next scene</div><div><b>1–9</b> Jump to scene</div><div><b>Esc</b> Deselect / Select tool</div>
+      <div><b>⌘/Ctrl Z</b> Undo · <b>⇧Z / Y</b> Redo</div><div><b>?</b> This help</div>
+      <div class="help__tip">Click a ship for its route · drag elements to move · the gear (top-left) opens the control panel.</div></div>`;
+    const row = h('div', 'modal__row'); const ok = h('button', 'modal__btn modal__btn--ok', 'Got it'); row.appendChild(ok); box.appendChild(row);
+    back.appendChild(box); document.body.appendChild(back); requestAnimationFrame(() => back.classList.add('in'));
+    const close = () => back.remove(); ok.onclick = close; back.onclick = e => { if (e.target === back) close(); };
+  }
+  window.__help = showHelp;
+
   /* ---------- mode application ---------- */
   function applyMode() {
     document.body.classList.toggle('mode-build', S.state.mode === 'build');
@@ -152,6 +175,7 @@
     const D = window.Draw;
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? S.redo() : S.undo(); return; }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); S.redo(); return; }
+    if (e.key === '?') { e.preventDefault(); window.__help && window.__help(); return; }
     if (e.key === '/') { e.preventDefault(); D && D.toggleMenu(); return; }
     if (e.key === 'Escape') { D && D.setTool('select'); D && D.closeMenu(); return; }
     if (e.key.toLowerCase() === 'h' && window.UI) { UI.hideUI(); return; }

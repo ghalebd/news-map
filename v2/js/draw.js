@@ -43,7 +43,7 @@ const Draw = (() => {
     drawn.clearLayers();
     const sc = S.activeScene(); if (!sc) return;
     const n = S.state.mode === 'live' ? S.revealedCount(sc) : sc.elements.length;
-    sc.elements.slice(0, n).forEach(el => { const l = buildLayer(el); if (l) { l.__id = el.id; drawn.addLayer(l); bindSelect(l, el); } });
+    sc.elements.slice(0, n).forEach(el => { const l = buildLayer(el); if (l) { l.__id = el.id; drawn.addLayer(l); if (el.desc && l.bindTooltip) l.bindTooltip(esc(el.desc), { direction: 'top', offset: [0, -10], className: 'trk-tip' }); bindSelect(l, el); } });
     refreshCtx();
   }
   const dw = () => (S.cfg().drawDefaults && S.cfg().drawDefaults.weight) || 3;
@@ -151,7 +151,10 @@ const Draw = (() => {
     COLORS.forEach(c => { const s = h('button', 'ctxbar__sw' + (c === el.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.updateElement(el.id, { color: c }); el.color = c; buildCtx(el); }; colors.appendChild(s); });
     ctx.appendChild(colors);
     if (el.type === 'arrow' || el.type === 'curve') ctx.appendChild(ctxBtn(I.curve, 'Straight ↔ Curved', () => { S.updateElement(el.id, { type: el.type === 'arrow' ? 'curve' : 'arrow' }); el.type = el.type === 'arrow' ? 'curve' : 'arrow'; }));
-    if (el.type === 'marker') ctx.appendChild(ctxBtn(I.text, 'Edit label', () => { window.UI && UI.input({ title: 'Marker label', value: el.label || '', placeholder: 'Label (optional)' }).then(v => { if (v != null) { const lab = v.trim() || undefined; S.updateElement(el.id, { label: lab }); el.label = lab; } }); }));
+    if (el.type === 'marker') {
+      ctx.appendChild(ctxBtn(I.text, 'Edit label', () => { window.UI && UI.input({ title: 'Marker label', value: el.label || '', placeholder: 'Label (optional)' }).then(v => { if (v != null) { const lab = v.trim() || undefined; S.updateElement(el.id, { label: lab }); el.label = lab; } }); }));
+      ctx.appendChild(ctxBtn(I.layers, 'Description', () => { window.UI && UI.input({ title: 'Marker description', value: el.desc || '', placeholder: 'Tooltip text', multiline: true }).then(v => { if (v != null) { const d = v.trim() || undefined; S.updateElement(el.id, { desc: d }); el.desc = d; } }); }));
+    }
     if (el.type === 'asset') {
       ctx.appendChild(ctxBtn(I.minus, 'Smaller', () => { const w = Math.max(24, (el.w || 54) - 10); S.updateElement(el.id, { w }); el.w = w; }));
       ctx.appendChild(ctxBtn(I.plus, 'Larger', () => { const w = Math.min(220, (el.w || 54) + 10); S.updateElement(el.id, { w }); el.w = w; }));

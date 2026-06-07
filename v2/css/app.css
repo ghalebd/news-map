@@ -263,6 +263,23 @@ body.mode-live .qtools { display: flex; }
 .port-pin i { display: block; width: 12px; height: 12px; border-radius: 50%; background: #7cf3ff; border: 2px solid #06121f; box-shadow: 0 0 8px rgba(124, 243, 255, .8); }
 .port-pin__lbl { position: absolute; left: 16px; top: -3px; white-space: nowrap; background: rgba(8, 11, 18, .86); color: #cfefff; font: 700 10px var(--font); letter-spacing: .4px; padding: 3px 8px; border-radius: 5px; border: 1px solid rgba(124, 243, 255, .5); text-transform: uppercase; }
 
+/* ---------- zoom / reset cluster ---------- */
+.zoomctl { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: var(--r); }
+.zoomctl__b { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }
+.zoomctl__b svg { width: 18px; height: 18px; }
+.zoomctl__b:hover { color: var(--accent); border-color: var(--accent); }
+.zoomctl__b:active { transform: scale(.92); }
+
+/* help grid */
+.modal .help { display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; color: var(--text); }
+.modal .help b { display: inline-block; min-width: 64px; color: var(--accent); font-family: var(--mono); }
+.modal .help__tip { font-size: 11px; color: var(--text-3); line-height: 1.5; }
+
+/* scene-inspector action button */
+.sceneins__btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; border-radius: var(--r-sm); font-size: 12px; font-weight: 600; color: var(--text); background: var(--glass-2); border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }
+.sceneins__btn svg { width: 14px; height: 14px; color: var(--accent); }
+.sceneins__btn:hover { border-color: var(--accent); color: var(--accent); }
+
 /* ---------- scene inspector (PREP) ---------- */
 .sceneins { position: fixed; right: 16px; top: 70px; width: 268px; z-index: var(--z-bar); padding: 14px; display: flex; flex-direction: column; gap: 13px; }
 .sceneins__hd { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent); }

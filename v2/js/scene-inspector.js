@@ -23,6 +23,10 @@
     t.oninput = () => S.renameScene(s.id, t.value);
     panel.appendChild(field('Title', t));
 
+    const upd = h('button', 'sceneins__btn', `${I.target || ''}<span>Update view to current</span>`);
+    upd.onclick = () => { S.setSceneView(s.id, window.GameMap.currentView()); window.UI && UI.toast('Scene view updated'); };
+    panel.appendChild(upd);
+
     // reveal toggle (self-updating, no rebuild)
     const rev = h('div', 'tog' + (s.reveal ? ' on' : ''));
     rev.onclick = () => { rev.classList.toggle('on'); S.toggleSceneReveal(s.id); };
