@@ -25,8 +25,20 @@
     ['.bcast-ticker', 'Ticker', 'both'],
   ];
   const meta = {}; PANELS.forEach(([sel, label, axis]) => meta[sel] = { label, axis });
-  const els = {};
+  const els = {}; const handles = {};
   let pending = null;
+
+  /* the grab tabs live on <body> (fixed) so panel overflow can never clip them */
+  function positionHandle(el, hd) {
+    if (!el || !hd) return;
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    if (cs.display === 'none' || cs.visibility === 'hidden' || el.hidden || (r.width === 0 && r.height === 0)) { hd.style.display = 'none'; return; }
+    hd.style.display = '';
+    hd.style.left = Math.round(r.left + r.width / 2) + 'px';
+    hd.style.top = Math.round(r.top + 6) + 'px';   // CSS lifts it up via translate(-50%,-100%)
+  }
+  function reflow() { for (const sel in handles) positionHandle(els[sel], handles[sel]); }
 
   function styleAt(el, x, y, s) {
     el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
@@ -53,7 +65,7 @@
       let ny = axis === 'x' ? rect.top : ev.clientY - oy;
       nx = Math.max(0, Math.min(nx, window.innerWidth - rect.width));
       ny = Math.max(0, Math.min(ny, window.innerHeight - rect.height));
-      styleAt(el, nx, ny, s); pending = { sel, x: nx, y: ny, h: rect.height, s };
+      styleAt(el, nx, ny, s); positionHandle(el, hd); pending = { sel, x: nx, y: ny, h: rect.height, s };
     }
     function up() {
       document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
@@ -68,7 +80,8 @@
     els[sel] = el; el.dataset.movable = '';
     const hd = document.createElement('button'); hd.className = 'mvh'; hd.title = 'Drag to move' + (meta[sel].axis === 'y' ? ' (up / down)' : ''); hd.innerHTML = I.gripH;
     hd.addEventListener('pointerdown', e => startDrag(el, sel, hd, e));
-    el.appendChild(hd);
+    document.body.appendChild(hd); handles[sel] = hd;
+    el.addEventListener('transitionend', () => positionHandle(el, hd));
   }
 
   function applyLayout() {
@@ -84,22 +97,38 @@
         styleAt(el, x, y, p.s || 1);
       } else clearStyle(el);
     }
+    reflow();
   }
 
   PANELS.forEach(([sel]) => attach(sel));
   applyLayout();
-  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') applyLayout(); });
+  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') applyLayout(); else if (evt === 'mode') reflow(); });
   window.addEventListener('resize', applyLayout);
+  setTimeout(reflow, 300);   // settle after fonts/layout
 
   window.Movable = {
-    panels: PANELS.filter(([sel]) => sel !== '.brand').map(([sel, label]) => ({ sel, label })),
+    panels: PANELS.filter(([sel]) => sel !== '.brand').map(([sel, label]) => ({ sel, label, axis: meta[sel].axis })),
     scaleOf(sel) { return ((S.cfg().layout || {})[sel] || {}).s || 1; },
+    posOf(sel) { return (S.cfg().layout || {})[sel] || null; },
     setScale(sel, s) {
       const el = els[sel]; const cur = (S.cfg().layout || {})[sel] || {};
       let x = cur.x, y = cur.y;
       if (x == null && el) { const r = el.getBoundingClientRect(); x = Math.round(r.left); y = Math.round(r.top); }
       S.setLayout(sel, { x, y, s });
     },
+    // snap a panel to a screen anchor — code is V+H: t/m/b  +  l/c/r
+    snap(sel, anchor) {
+      const el = els[sel]; if (!el) return;
+      const cur = (S.cfg().layout || {})[sel] || {}; const s = cur.s || 1, m = 18;
+      const w = el.offsetWidth * s, hh = el.offsetHeight * s, vw = window.innerWidth, vh = window.innerHeight;
+      const v = anchor[0], hz = meta[sel].axis === 'y' ? 'l' : anchor[1];   // vertical-only bars keep their left
+      let x = hz === 'l' ? m : hz === 'r' ? vw - w - m : (vw - w) / 2;
+      let y = v === 't' ? m : v === 'b' ? vh - hh - m : (vh - hh) / 2;
+      if (meta[sel].axis === 'y') x = (cur.x != null ? cur.x : el.getBoundingClientRect().left);
+      S.setLayout(sel, { x: Math.round(x), y: Math.round(y), s });
+    },
+    center(sel) { this.snap(sel, 'mc'); },
     resetPanel(sel) { S.setLayout(sel, null); },
+    reflow,
   };
 })();

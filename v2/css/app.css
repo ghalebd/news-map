@@ -375,17 +375,19 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
-/* ---------- movable panels: elegant in-panel grip (hover-reveal) ---------- */
-.mvh { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 13px; padding: 0; z-index: 6;
-  display: inline-flex; align-items: center; justify-content: center; cursor: grab; opacity: 0; pointer-events: none;
-  border: 0; background: transparent; color: var(--text-3); border-radius: 6px;
-  transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
-.mvh svg { width: 24px; height: 12px; display: block; }
-[data-movable]:hover > .mvh { opacity: .55; pointer-events: auto; }
-.mvh:hover { opacity: 1; color: var(--accent); }
-.mvh.is-drag { opacity: 1; pointer-events: auto; color: var(--accent); cursor: grabbing; }
-.brand > .mvh { opacity: .3; pointer-events: auto; }   /* logo lets pointer-events through, so keep its grip live */
-.brand:hover > .mvh { opacity: 1; }
+/* ---------- movable panels: visible grab tab above each panel (touch-friendly) ---------- */
+/* tabs are fixed on <body>; JS sets left/top to each panel's top-centre, the
+   translate lifts the tab just above the panel edge so nothing is clipped */
+.mvh { position: fixed; transform: translate(-50%, -100%); height: 18px; min-width: 38px; padding: 0 9px; z-index: var(--z-flyout);
+  display: inline-flex; align-items: center; justify-content: center; cursor: grab; opacity: .92; pointer-events: auto;
+  border: 1px solid var(--stroke); background: var(--glass-2); color: var(--text-3); border-radius: 9px; box-shadow: var(--sheen);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.mvh svg { width: 22px; height: 11px; display: block; }
+.mvh:hover { opacity: 1; color: var(--accent); border-color: var(--accent); }
+.mvh.is-drag { opacity: 1; color: var(--accent); border-color: var(--accent); cursor: grabbing; }
+body.touch .mvh { height: 26px; min-width: 54px; border-radius: 13px; }
+body.touch .mvh svg { width: 30px; height: 15px; }
 body.mv-dragging { cursor: grabbing; user-select: none; }
 body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }

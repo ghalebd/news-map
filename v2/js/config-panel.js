@@ -36,7 +36,7 @@
   const x = h('button', 'x', I.close); head.append(qa, x);
   const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
   const bodyEl = h('div', 'cfg-body'); drawer.append(head, search, bodyEl); document.body.append(toggle, drawer);
-  const setOpen = o => { drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); document.body.style.setProperty('--cfg-w', drawer.getBoundingClientRect().width + 'px'); document.body.classList.toggle('cfg-open', o); };
+  const setOpen = o => { drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); document.body.style.setProperty('--cfg-w', drawer.getBoundingClientRect().width + 'px'); document.body.classList.toggle('cfg-open', o); if (window.Movable) { Movable.reflow(); setTimeout(Movable.reflow, 330); } };
   toggle.onclick = () => setOpen(!drawer.classList.contains('open'));
   x.onclick = () => setOpen(false);
 
@@ -132,17 +132,25 @@
     q.bd.appendChild(h('div', 'hint', 'Reorder, show or hide the buttons in the left vertical bar (live mode).'));
     ct.appendChild(q.sec);
 
-    // ---- free panel size & position ----
+    // ---- per-panel size & position ----
     const p = section('Panel size & position', I.pan, () => { S.clearLayout(); S.setBrand({ x: D.brand.x, y: D.brand.y }); });
-    p.bd.appendChild(h('div', 'hint', 'Drag any panel by the small grip that appears on hover. Resize each panel below; the tool bar moves up / down only.'));
-    (window.Movable ? Movable.panels : []).forEach(({ sel, label }) => {
-      const pct = Math.round((Movable.scaleOf(sel)) * 100);
-      const row = h('div', 'cfg-scl');
-      row.appendChild(h('span', 'cfg-scl__n', label));
+    p.bd.appendChild(h('div', 'hint', 'Grab any panel by the tab on its top edge to drag it. Per panel: set the size, snap it to any edge / corner, or centre it.'));
+    const ANCH = [['tl', '⌜'], ['tc', '↑'], ['tr', '⌝'], ['ml', '←'], ['mc', '◉'], ['mr', '→'], ['bl', '⌞'], ['bc', '↓'], ['br', '⌟']];
+    (window.Movable ? Movable.panels : []).forEach(({ sel, label, axis }) => {
+      const card = h('div', 'cfg-pan');
+      const head = h('div', 'cfg-pan__h'); head.appendChild(h('span', 'cfg-pan__n', label));
+      const rst = h('button', 'cfg-pan__x', I.undo); rst.title = 'Reset this panel'; rst.onclick = () => { Movable.resetPanel(sel); renderTab(); };
+      head.appendChild(rst); card.appendChild(head);
+      const pct = Math.round(Movable.scaleOf(sel) * 100);
+      const srow = h('div', 'cfg-scl'); srow.appendChild(h('span', 'cfg-scl__n', 'Size'));
       const rng = h('input'); rng.type = 'range'; rng.min = '50'; rng.max = '170'; rng.step = '5'; rng.value = pct;
       const val = h('span', 'cfg-scl__v', pct + '%');
       rng.oninput = () => { val.textContent = rng.value + '%'; Movable.setScale(sel, (+rng.value) / 100); };
-      row.append(rng, val); p.bd.appendChild(row);
+      srow.append(rng, val); card.appendChild(srow);
+      const grid = h('div', 'cfg-anch');
+      ANCH.forEach(([code, glyph]) => { const b = h('button', 'cfg-anch__b' + (axis === 'y' && code[1] !== 'c' ? ' is-dim' : '') + (code === 'mc' ? ' is-mid' : ''), glyph); b.title = code === 'mc' ? 'Centre' : 'Snap ' + code.toUpperCase(); b.onclick = () => Movable.snap(sel, code); grid.appendChild(b); });
+      card.appendChild(grid);
+      p.bd.appendChild(card);
     });
     const rb = h('button', 'cfg-btn', 'Reset all sizes & positions');
     rb.onclick = () => { S.clearLayout(); S.setBrand({ x: D.brand.x, y: D.brand.y }); renderTab(); };
