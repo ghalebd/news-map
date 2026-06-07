@@ -267,7 +267,7 @@
     qbar.appendChild(h('div', 'qtools__sep'));
     qShips = qbtn(I.ship, 'Live ships', () => S.setTracking('ships', !S.state.tracking.ships));
     qFlights = qbtn(I.plane, 'Live flights', () => S.setTracking('flights', !S.state.tracking.flights));
-    qTrails = qbtn(I.curve, 'Route / trail lines', () => S.setTracking('trails', !showTrails()));
+    qTrails = qbtn(I.trail, 'Route / trail lines', () => S.setTracking('trails', !showTrails()));
     qbar.append(qShips, qFlights, qTrails);
   })();
 
