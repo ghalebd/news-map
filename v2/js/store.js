@@ -43,7 +43,7 @@ const Store = (() => {
     tilt: 0,                 // 3D perspective tilt (deg)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
-    qbar: { order: [], hidden: [] },   // vertical tool-bar: button order (by id) + hidden ids
+    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
@@ -81,6 +81,8 @@ const Store = (() => {
     const c = state.config; if (!c._mig) c._mig = {};
     // legacy logos sat under the gear (x16–60): nudge clear of it once
     if (!c._mig.logoX) { if (c.brand && c.brand.x != null && c.brand.x < 64) c.brand.x = 70; c._mig.logoX = true; }
+    // the expanded tool-bar library: keep the new extra buttons hidden by default once
+    if (!c._mig.qbar2) { c.qbar = c.qbar || { order: [], hidden: [] }; const def = ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure']; const set = new Set(c.qbar.hidden || []); def.forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar2 = true; }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }

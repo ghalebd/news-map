@@ -8,8 +8,10 @@
 (() => {
   const S = window.Store;
   const LABELS = {
-    select: 'Select / Pan', arrow: 'Arrow', marker: 'Marker', ring: 'Range ring',
-    text: 'Label', asset: 'Image', erase: 'Erase', color: 'Colour', undo: 'Undo',
+    select: 'Select / Pan', arrow: 'Arrow', tarrow: 'Zigzag arrow', curve: 'Curved arrow',
+    marker: 'Marker', ring: 'Range ring', circle: 'Circle', polygon: 'Area', sketch: 'Freehand',
+    frontline: 'Front line', country: 'Highlight country', text: 'Label', measure: 'Measure',
+    asset: 'Image', erase: 'Erase', color: 'Colour', undo: 'Undo',
     mapstyle: 'Base map', ships: 'Live ships', flights: 'Live flights', trails: 'Trails',
   };
   const bar = () => document.querySelector('.qtools');

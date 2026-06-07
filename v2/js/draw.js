@@ -13,7 +13,7 @@ const Draw = (() => {
      the presenter is limited by config.permissions. */
   const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
 
-  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null, skipClick = false;
+  let tool = 'select', selected = null, selLayer = null, dragStart = null, ghost = null, sketchPts = null, polyPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null, skipClick = false;
   /* translate every coordinate of an element by a lat/lng delta (move) */
   function moveEl(el, dLat, dLng) {
     if (el.ll) el.ll = [el.ll[0] + dLat, el.ll[1] + dLng];
@@ -35,8 +35,15 @@ const Draw = (() => {
     airport: mk('<path d="M12 3c.7 0 1 .8 1 2v4.5l7 4v2l-7-2v4l2 1.5v1.5L12 19l-3 1.5V19l2-1.5v-4l-7 2v-2l7-4V5c0-1.2.3-2 1-2Z" fill="currentColor" stroke="none"/>'),
     port: mk('<path d="M12 5v14M12 5a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 12 5ZM6 11h12M6 11a6 6 0 0 0 12 0"/>'),
     target: mk('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>'),
+    // --- animated targeting / live markers ---
+    pulse:  mk('<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><circle class="mkfx-ping" cx="12" cy="12" r="5"/><circle class="mkfx-ping mkfx-ping-b" cx="12" cy="12" r="5"/>'),
+    radar:  mk('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><g class="mkfx-spin"><path d="M12 12 12 3"/><path d="M12 3a9 9 0 0 1 7.8 4.5L12 12Z" fill="currentColor" stroke="none" opacity=".22"/></g>'),
+    reticle: mk('<g class="mkfx-spin-slow"><circle cx="12" cy="12" r="9" stroke-dasharray="4 4"/></g><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
+    blink:  mk('<circle class="mkfx-blink" cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9" opacity=".4"/>'),
+    locked: mk('<g class="mkfx-pulse"><path d="M4 8V4h4"/><path d="M20 8V4h-4"/><path d="M4 16v4h4"/><path d="M20 16v4h-4"/></g><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>'),
+    spinner: mk('<g class="mkfx-spin"><circle cx="12" cy="12" r="8" stroke-dasharray="3 5"/></g><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
   };
-  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target'];
+  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target', 'pulse', 'radar', 'reticle', 'blink', 'locked', 'spinner'];
 
   /* ---------------- render the active scene ---------------- */
   let lastScene = null, lastN = 0;
@@ -61,10 +68,14 @@ const Draw = (() => {
   /* draw-on / fade-in animation for a revealed element */
   function animateIn(layer, el) {
     const ms = (S.state.broadcast && S.state.broadcast.anim && S.state.broadcast.anim.ms) || 700;
-    const paths = []; const marks = [];
-    const collect = lyr => { if (lyr._path) paths.push(lyr._path); if (lyr._icon) marks.push(lyr._icon); };
+    const paths = []; const fades = []; const marks = [];
+    const collect = lyr => {
+      if (lyr._path) { const cl = lyr._path.getAttribute('class') || ''; const dashed = lyr._path.getAttribute('stroke-dasharray'); if (/el-flow|el-ring|el-head/.test(cl) || dashed) fades.push(lyr._path); else paths.push(lyr._path); }
+      if (lyr._icon) marks.push(lyr._icon);
+    };
     if (layer.eachLayer) layer.eachLayer(collect); else collect(layer);
     paths.forEach(p => { try { const len = p.getTotalLength ? p.getTotalLength() : 0; if (len) { p.style.transition = 'none'; p.style.strokeDasharray = len; p.style.strokeDashoffset = len; p.getBoundingClientRect(); p.style.transition = `stroke-dashoffset ${ms}ms ease`; p.style.strokeDashoffset = 0; } } catch (e) {} });
+    fades.forEach(p => { p.style.animation = `mkIn ${Math.min(500, ms)}ms var(--ease-out)`; });
     marks.forEach(m => { m.style.animation = `mkIn ${Math.min(500, ms)}ms var(--ease-out)`; });
   }
   const dw = () => (S.cfg().drawDefaults && S.cfg().drawDefaults.weight) || 3;
@@ -76,10 +87,11 @@ const Draw = (() => {
         if (el.label) return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html: `<span class="map-mk__dot" style="background:${el.color}"></span><span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>`, iconSize: [14, 14], iconAnchor: [7, 7] }) });
         return L.circleMarker(el.ll, { radius: 7, color: '#fff', weight: 2, fillColor: el.color, fillOpacity: 1 });
       }
-      case 'circle':  return L.circle(el.ll, { radius: el.radius, ...o, fillColor: el.color, fillOpacity: 0.12 });
-      case 'ring':    { const g = L.layerGroup(); g.addLayer(L.circle(el.ll, { radius: el.radius, ...o, fill: false, dashArray: '6 5' })); g.addLayer(L.marker(el.ll, { icon: labelIcon((el.radius / 1000).toFixed(0) + ' KM', el.color) })); return g; }
+      case 'circle':  return L.circle(el.ll, { radius: el.radius, ...o, fillColor: el.color, fillOpacity: 0.12, className: 'el-pulse' });
+      case 'ring':    { const g = L.layerGroup(); g.addLayer(L.circle(el.ll, { radius: el.radius, ...o, fill: false, dashArray: '6 5', className: 'el-ring' })); g.addLayer(L.marker(el.ll, { icon: labelIcon((el.radius / 1000).toFixed(0) + ' KM', el.color) })); return g; }
       case 'arrow':   return arrowLine(L.latLng(el.a), L.latLng(el.b), o);
       case 'curve':   return curveLine(L.latLng(el.a), L.latLng(el.b), o);
+      case 'tarrow':  return tarrowLine(el.pts, o);
       case 'polygon': return L.polygon(el.pts, { ...o, fillColor: el.color, fillOpacity: 0.12 });
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
@@ -101,8 +113,20 @@ const Draw = (() => {
   function pir(p, ring) { let x = p[0], y = p[1], inside = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1]; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside; } return inside; }
   function pip(p, poly) { if (!pir(p, poly[0])) return false; for (let i = 1; i < poly.length; i++) if (pir(p, poly[i])) return false; return true; }
   function countryAt(lng, lat) { for (const c of (window.COUNTRIES || [])) { const g = c.g; if (g.type === 'Polygon') { if (pip([lng, lat], g.coordinates)) return c; } else if (g.type === 'MultiPolygon') { for (const poly of g.coordinates) if (pip([lng, lat], poly)) return c; } } return null; }
-  function arrowLine(a, b, o) { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], o)); const ang = Math.atan2(b.lat - a.lat, b.lng - a.lng); const d = map.distance(a, b) * 0.18; const head = w => L.latLng(b.lat + Math.sin(w) * d / 111000, b.lng + Math.cos(w) * d / 111000); g.addLayer(L.polyline([head(ang + 2.6), b, head(ang - 2.6)], o)); return g; }
-  function curveLine(a, b, o) { const mid = L.latLng((a.lat + b.lat) / 2 + (b.lng - a.lng) * 0.2, (a.lng + b.lng) / 2 - (b.lat - a.lat) * 0.2); const p = []; for (let t = 0; t <= 1; t += 0.05) p.push([(1 - t) ** 2 * a.lat + 2 * (1 - t) * t * mid.lat + t * t * b.lat, (1 - t) ** 2 * a.lng + 2 * (1 - t) * t * mid.lng + t * t * b.lng]); return L.polyline(p, o); }
+  /* filled triangular arrowhead at b, pointing along a→b, sized in screen pixels (consistent regardless of length) */
+  function pxHead(a, b, o) {
+    const pa = map.latLngToContainerPoint(a), pb = map.latLngToContainerPoint(b);
+    const ang = Math.atan2(pb.y - pa.y, pb.x - pa.x), len = 15, half = 7;
+    const back = { x: pb.x - Math.cos(ang) * len, y: pb.y - Math.sin(ang) * len }, nx = Math.cos(ang + Math.PI / 2), ny = Math.sin(ang + Math.PI / 2);
+    const toLL = p => map.containerPointToLatLng(p);
+    return L.polygon([toLL(pb), toLL({ x: back.x + nx * half, y: back.y + ny * half }), toLL({ x: back.x - nx * half, y: back.y - ny * half })],
+      { color: o.color, weight: 1, opacity: o.opacity != null ? o.opacity : 1, fillColor: o.color, fillOpacity: o.opacity != null ? o.opacity : 1, className: 'el-head' });
+  }
+  function flowOpts(o) { return { color: o.color, weight: o.weight || dw(), opacity: o.opacity != null ? o.opacity : 1, dashArray: '2 12', lineCap: 'round', className: 'el-flow' }; }
+  function arrowLine(a, b, o) { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], o)); g.addLayer(L.polyline([a, b], flowOpts(o))); g.addLayer(pxHead(a, b, o)); return g; }
+  function curvePts(a, b) { const mid = L.latLng((a.lat + b.lat) / 2 + (b.lng - a.lng) * 0.2, (a.lng + b.lng) / 2 - (b.lat - a.lat) * 0.2); const p = []; for (let t = 0; t <= 1.0001; t += 0.05) p.push([(1 - t) ** 2 * a.lat + 2 * (1 - t) * t * mid.lat + t * t * b.lat, (1 - t) ** 2 * a.lng + 2 * (1 - t) * t * mid.lng + t * t * b.lng]); return p; }
+  function curveLine(a, b, o) { const p = curvePts(a, b), g = L.layerGroup(); g.addLayer(L.polyline(p, o)); g.addLayer(L.polyline(p, flowOpts(o))); const n = p.length; g.addLayer(pxHead(L.latLng(p[n - 2][0], p[n - 2][1]), L.latLng(p[n - 1][0], p[n - 1][1]), o)); return g; }
+  function tarrowLine(pts, o) { if (!pts || pts.length < 2) return L.layerGroup(); const g = L.layerGroup(); g.addLayer(L.polyline(pts, o)); g.addLayer(L.polyline(pts, flowOpts(o))); const n = pts.length; g.addLayer(pxHead(L.latLng(pts[n - 2][0], pts[n - 2][1]), L.latLng(pts[n - 1][0], pts[n - 1][1]), o)); return g; }
 
   function bindSelect(layer, el) {
     const wire = lyr => lyr && lyr.on && lyr.on('mousedown', ev => {
@@ -110,27 +134,42 @@ const Draw = (() => {
       L.DomEvent.stopPropagation(ev);
       skipClick = true;   // swallow the map 'click' that follows so we don't deselect
       if (tool === 'erase') { S.removeElement(el.id); return; }
-      selectEl(el);
+      selectEl(el, layer);
       dragEl = el; dragPrev = ev.latlng; map.dragging.disable();   // begin move
     });
     if (layer.eachLayer) layer.eachLayer(wire); else wire(layer);
   }
+  function findLayer(id) { let r = null; drawn.eachLayer(l => { if (l.__id === id) r = l; }); return r; }
+  function highlight(layer, on) { if (!layer) return; const f = lyr => { if (lyr._path) lyr._path.classList.toggle('el-sel', on); if (lyr._icon) lyr._icon.classList.toggle('mk-sel', on); }; if (layer.eachLayer) layer.eachLayer(f); else f(layer); }
 
   /* ---------------- tools ---------------- */
   const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure', 'frontline'];
-  function setTool(t) { tool = t; if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t)); }
+  function setTool(t) {
+    const prev = tool; tool = t;
+    if (prev === 'tarrow' && t !== 'tarrow') cancelPoly();
+    if (t === 'tarrow') { polyPts = []; if (map.doubleClickZoom) map.doubleClickZoom.disable(); }
+    else if (map.doubleClickZoom) map.doubleClickZoom.enable();
+    if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));
+  }
+  /* multi-point zigzag-arrow drawing */
+  function drawPolyGhost(cur) { if (ghost) { drawn.removeLayer(ghost); ghost = null; } const pts = (polyPts || []).concat(cur ? [[cur.lat, cur.lng]] : []); if (pts.length >= 2) { ghost = tarrowLine(pts, { color: S.state.color, weight: dw(), opacity: 0.7 }); drawn.addLayer(ghost); } }
+  function finishPoly() { if (ghost) { drawn.removeLayer(ghost); ghost = null; } const pts = (polyPts || []).filter((p, i, a) => i === 0 || map.distance(L.latLng(p[0], p[1]), L.latLng(a[i - 1][0], a[i - 1][1])) > 2); if (pts.length >= 2) S.addElement({ type: 'tarrow', pts, color: S.state.color }); polyPts = []; }
+  function cancelPoly() { if (ghost) { drawn.removeLayer(ghost); ghost = null; } polyPts = []; }
 
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = tool === 'sketch' ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => {
     if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
+    if (tool === 'tarrow' && polyPts && polyPts.length) { drawPolyGhost(e.latlng); return; }
     if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
   });
+  map.on('dblclick', e => { if (tool === 'tarrow') { if (e.originalEvent) L.DomEvent.stop(e.originalEvent); finishPoly(); } });
   map.on('mouseup', e => {
     if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
     if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
   });
   map.on('click', e => {
     if (skipClick) { skipClick = false; return; }   // came from selecting/erasing an element
+    if (tool === 'tarrow') { polyPts.push([e.latlng.lat, e.latlng.lng]); drawPolyGhost(e.latlng); return; }
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
     else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
     else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
@@ -164,8 +203,8 @@ const Draw = (() => {
 
   /* ---------------- selection + context bar ---------------- */
   const ctx = h('div', 'ctxbar'); ctx.hidden = true; document.body.appendChild(ctx);
-  function selectEl(el) { selected = el; buildCtx(el); }
-  function deselect() { selected = null; ctx.hidden = true; }
+  function selectEl(el, layer) { if (selLayer) highlight(selLayer, false); selected = el; selLayer = layer || findLayer(el.id); highlight(selLayer, true); buildCtx(el); }
+  function deselect() { if (selLayer) highlight(selLayer, false); selLayer = null; selected = null; ctx.hidden = true; }
   function elAnchor(el) { if (el.ll) return el.ll; if (el.a) return el.a; if (el.pts) return el.pts[0]; return null; }
   function buildCtx(el) {
     ctx.innerHTML = '';
@@ -190,7 +229,7 @@ const Draw = (() => {
   }
   function ctxBtn(icon, title, fn) { const b = h('button', 'ctxbar__btn', icon); b.title = title; b.onclick = fn; return b; }
   function positionCtx(el) { const a = elAnchor(el); if (!a) return; const p = map.latLngToContainerPoint(L.latLng(a[0], a[1])); ctx.style.left = Math.max(10, Math.min(p.x - ctx.offsetWidth / 2, innerWidth - ctx.offsetWidth - 10)) + 'px'; ctx.style.top = Math.max(60, p.y - ctx.offsetHeight - 14) + 'px'; }
-  function refreshCtx() { if (selected && !S.activeScene().elements.find(e => e.id === selected.id)) deselect(); else if (selected) positionCtx(selected); }
+  function refreshCtx() { if (selected && !S.activeScene().elements.find(e => e.id === selected.id)) deselect(); else if (selected) { selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); } }
   map.on('move zoom', () => { if (selected) positionCtx(selected); });
 
   /* ---------------- asset library (image placement) ---------------- */
@@ -218,7 +257,7 @@ const Draw = (() => {
 
   /* ---------------- quick-add launcher (+ FAB) + menu + arm chip ---------------- */
   const TOOLS = [
-    ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['curve', I.curve, 'Curved arrow'],
+    ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['tarrow', I.arrowZig, 'Zigzag arrow'], ['curve', I.curve, 'Curved arrow'],
     ['ring', I.target, 'Range ring'], ['circle', I.circle, 'Circle'], ['polygon', I.polygon, 'Area'], ['sketch', I.sketch, 'Freehand'],
     ['frontline', I.frontline, 'Front line'], ['country', I.country, 'Highlight country'],
     ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['erase', I.erase, 'Erase'],
@@ -257,12 +296,21 @@ const Draw = (() => {
   }
 
   /* ---------------- presenter quick toolbar (vertical, left edge) ---------------- */
+  // Full button library — every tool can be shown/reordered in the bar (extras hidden by default via config.qbar)
   const QTOOLS = [
     ['select', I.pan, 'Select / Pan'],
     ['arrow', I.arrow, 'Arrow'],
+    ['tarrow', I.arrowZig, 'Zigzag arrow'],
+    ['curve', I.curve, 'Curved arrow'],
     ['marker', I.marker, 'Marker'],
     ['ring', I.target, 'Range ring'],
+    ['circle', I.circle, 'Circle'],
+    ['polygon', I.polygon, 'Area'],
+    ['sketch', I.sketch, 'Freehand'],
+    ['frontline', I.frontline, 'Front line'],
+    ['country', I.country, 'Highlight country'],
     ['text', I.text, 'Label'],
+    ['measure', I.ruler, 'Measure'],
     ['asset', I.asset, 'Image'],
     ['erase', I.erase, 'Erase'],
   ];
