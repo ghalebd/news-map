@@ -23,6 +23,27 @@
 .cfg-drawer.open { transform: none; }
 .cfg-drawer--wide { width: min(720px, 96vw); }
 
+/* ===== enhanced side panel ===== */
+.cfg-panel { width: 388px; }
+.cfg-hd { gap: 8px; }
+.cfg-qa { display: flex; gap: 6px; margin-left: auto; }
+.cfg-qbtn { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid var(--stroke); background: var(--glass-2); transition: all var(--t-fast) var(--ease); }
+.cfg-qbtn svg { width: 16px; height: 16px; }
+.cfg-qbtn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.cfg-body { padding: 12px 0 34px; }
+.cfg-body .cfg-sec { margin: 0 12px 10px; border: 1px solid var(--stroke); border-radius: var(--r); background: var(--glass-2); overflow: hidden; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.cfg-body .cfg-sec:hover { border-color: var(--stroke-2); }
+.cfg-body .cfg-sec.open { border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
+.cfg-body .cfg-sec__hd { padding: 11px 13px; }
+.cfg-body .cfg-sec__hd .i { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
+.cfg-body .cfg-sec__hd .i svg { width: 15px; height: 15px; }
+.cfg-body .cfg-sec__hd .t { flex: 1; font-size: 12px; }
+.cfg-body .cfg-sec__bd { padding: 4px 14px 15px; gap: 13px; }
+.cfg-panel input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: var(--stroke); }
+.cfg-panel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: var(--accent-glow); cursor: pointer; border: 2px solid #0b0f17; }
+.cfg-panel .cfg-sw button { width: 27px; height: 27px; border-radius: 8px; }
+.cfg-panel .cfg-field > .lab .val { background: var(--accent-soft); color: var(--accent); padding: 1px 7px; border-radius: var(--pill); font-size: 10px; }
+
 /* ===== modern dock + floating glass panels ===== */
 .cdock { position: fixed; top: 64px; right: 16px; z-index: var(--z-modal); display: flex; flex-direction: column; gap: 3px; padding: 8px;
   border-radius: var(--r); background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
