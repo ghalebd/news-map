@@ -86,6 +86,7 @@ const Store = (() => {
   function addMapStyle(id, name) { if (!state.config.mapStyles.find(x => x.id === id)) { state.config.mapStyles.push({ id, name: name || id, on: true }); emit('config'); } }
   function removeMapStyle(id) { state.config.mapStyles = state.config.mapStyles.filter(x => x.id !== id); emit('config'); }
   function addAssetCat(name) { if (name && !state.config.assetCats.includes(name)) { state.config.assetCats.push(name); emit('config'); } }
+  function removeAssetCat(name) { state.config.assetCats = state.config.assetCats.filter(c => c !== name); emit('config'); }
   function addCustomAsset(a) { a.id = uid('img'); state.config.customAssets.push(a); emit('config'); return a; }
   function removeCustomAsset(id) { state.config.customAssets = state.config.customAssets.filter(a => a.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -100,7 +101,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, addCustomAsset, removeCustomAsset, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, resetConfig,
   };
 })();
 window.Store = Store;

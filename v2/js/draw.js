@@ -34,6 +34,7 @@ const Draw = (() => {
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
+      case 'asset':   { const w = el.w || 54; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${el.src}" style="width:${w}px;height:auto">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
     }
     return null;
   }
@@ -52,7 +53,7 @@ const Draw = (() => {
 
   /* ---------------- tools ---------------- */
   const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure'];
-  function setTool(t) { tool = t; deselect(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t)); }
+  function setTool(t) { tool = t; if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t)); }
 
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = tool === 'sketch' ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => { if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost); });
@@ -60,6 +61,7 @@ const Draw = (() => {
   map.on('click', e => {
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color });
     else if (tool === 'text') { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll: [e.latlng.lat, e.latlng.lng], text: t, color: S.state.color }); }
+    else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
     else if (tool === 'select') deselect();
   });
   function preview(t, a, b) {
@@ -97,6 +99,7 @@ const Draw = (() => {
     COLORS.forEach(c => { const s = h('button', 'ctxbar__sw' + (c === el.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.updateElement(el.id, { color: c }); el.color = c; buildCtx(el); }; colors.appendChild(s); });
     ctx.appendChild(colors);
     if (el.type === 'arrow' || el.type === 'curve') ctx.appendChild(ctxBtn(I.curve, 'Straight ↔ Curved', () => { S.updateElement(el.id, { type: el.type === 'arrow' ? 'curve' : 'arrow' }); el.type = el.type === 'arrow' ? 'curve' : 'arrow'; }));
+    if (el.type === 'asset') { ctx.appendChild(ctxBtn(I.minus, 'Smaller', () => { const w = Math.max(24, (el.w || 54) - 10); S.updateElement(el.id, { w }); el.w = w; })); ctx.appendChild(ctxBtn(I.plus, 'Larger', () => { const w = Math.min(180, (el.w || 54) + 10); S.updateElement(el.id, { w }); el.w = w; })); }
     ctx.appendChild(ctxBtn(I.layers, 'Duplicate', () => { const copy = JSON.parse(JSON.stringify(el)); delete copy.id; S.addElement(copy); }));
     ctx.appendChild(ctxBtn(I.close, 'Delete', () => { S.removeElement(el.id); deselect(); }));
     ctx.hidden = false; positionCtx(el);
@@ -106,11 +109,34 @@ const Draw = (() => {
   function refreshCtx() { if (selected && !S.activeScene().elements.find(e => e.id === selected.id)) deselect(); else if (selected) positionCtx(selected); }
   map.on('move zoom', () => { if (selected) positionCtx(selected); });
 
+  /* ---------------- asset library (image placement) ---------------- */
+  let assetPending = null;
+  const apal = h('div', 'qa qa--assets'); apal.hidden = true; document.body.appendChild(apal);
+  function buildPalette() {
+    apal.innerHTML = '';
+    apal.appendChild(h('div', 'qa__title', 'PLACE IMAGE'));
+    const assets = S.cfg().customAssets || [];
+    if (!assets.length) { apal.appendChild(h('div', 'qa-asset__empty', 'No images yet. Add them from the Control Panel — Assets section.')); return; }
+    const cats = (S.cfg().assetCats || []).concat(['(uncategorised)']);
+    cats.forEach(cat => {
+      const items = assets.filter(a => (a.cat || '(uncategorised)') === cat);
+      if (!items.length) return;
+      apal.appendChild(h('div', 'qa-asset__cat', cat));
+      const grid = h('div', 'qa-asset__grid');
+      items.forEach(a => { const b = h('button', 'qa-asset__item' + (assetPending && assetPending.id === a.id ? ' is-on' : ''), `<img src="${a.url}" alt=""><span>${esc(a.name || '')}</span>`); b.title = a.name || ''; b.onclick = () => { assetPending = a; setTool('asset'); }; grid.appendChild(b); });
+      apal.appendChild(grid);
+    });
+  }
+  function openPalette() { buildPalette(); apal.hidden = false; }
+  function closePalette() { apal.hidden = true; }
+  function togglePalette() { apal.hidden ? openPalette() : closePalette(); }
+  document.addEventListener('click', e => { if (!apal.hidden && !apal.contains(e.target) && !e.target.closest('.qtool,.qa__tool')) closePalette(); });
+
   /* ---------------- quick-add launcher (+ FAB) + menu + arm chip ---------------- */
   const TOOLS = [
     ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['curve', I.curve, 'Curved arrow'],
     ['ring', I.target, 'Range ring'], ['circle', I.circle, 'Circle'], ['polygon', I.polygon, 'Area'], ['sketch', I.sketch, 'Freehand'],
-    ['measure', I.ruler, 'Measure'], ['erase', I.erase, 'Erase'],
+    ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['erase', I.erase, 'Erase'],
   ];
   const COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
 
@@ -123,7 +149,7 @@ const Draw = (() => {
     const cRow = h('div', 'qa__colors');
     COLORS.forEach(c => { const s = h('button', 'qa__sw' + (c === S.state.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.setColor(c); cRow.querySelectorAll('.qa__sw').forEach(x => x.classList.remove('is-on')); s.classList.add('is-on'); }; cRow.appendChild(s); });
     const grid = h('div', 'qa__tools');
-    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = () => { setTool(id); closeMenu(); }; grid.appendChild(b); });
+    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else setTool(id); }; grid.appendChild(b); });
     menu.append(h('div', 'qa__title', 'ADD'), cRow, grid);
   }
   function openMenu() { buildMenu(); menu.hidden = false; }
@@ -147,10 +173,11 @@ const Draw = (() => {
     ['marker', I.marker, 'Marker'],
     ['ring', I.target, 'Range ring'],
     ['text', I.text, 'Label'],
+    ['asset', I.asset, 'Image'],
     ['erase', I.erase, 'Erase'],
   ];
   const qbar = h('div', 'qtools');
-  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.onclick = () => setTool(id); qbar.appendChild(b); qbtns[id] = b; });
+  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.onclick = e => { if (id === 'asset') { e.stopPropagation(); togglePalette(); } else setTool(id); }; qbar.appendChild(b); qbtns[id] = b; });
   qbar.appendChild(h('div', 'qtools__sep'));
   // colour button + popover
   const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour';
@@ -173,6 +200,6 @@ const Draw = (() => {
     if (noDraw && tool !== 'select') setTool('select');
   }
 
-  return { render, setTool, openMenu, closeMenu, toggleMenu, deselect, applyPerms, get tool() { return tool; } };
+  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, deselect, applyPerms, get tool() { return tool; } };
 })();
 window.Draw = Draw;

@@ -79,5 +79,29 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-add button { padding: 0 12px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
 .cfg-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .cfg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--pill); font-size: 11px; font-weight: 600; background: var(--glass-2); border: 1px solid var(--stroke); }
+.cfg-chip .x { margin-left: 6px; width: 14px; height: 14px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; color: var(--text-3); }
+.cfg-chip .x:hover { color: var(--danger); }
+
+/* asset upload */
+.cfg-up { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cfg-uploadbtn { grid-column: 1 / -1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; border-radius: 8px; border: 1px dashed var(--stroke-2); color: var(--text-2); font-size: 12px; font-weight: 600; background: var(--glass-2); transition: all var(--t-fast) var(--ease); }
+.cfg-uploadbtn svg { width: 15px; height: 15px; color: var(--accent); }
+.cfg-uploadbtn:hover { border-color: var(--accent); color: var(--accent); }
+.cfg-sel, .cfg-name { height: 32px; padding: 0 9px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font: 500 12px var(--font); min-width: 0; }
+.cfg-sel { appearance: none; cursor: pointer; }
+.cfg-name::placeholder { color: var(--text-3); }
+
+/* asset library */
+.cfg-aset { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+.cfg-aset__i { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 7px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--stroke); }
+.cfg-aset__i img { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
+.cfg-aset__i .m { min-width: 0; }
+.cfg-aset__i .m b { display: block; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cfg-aset__i .m small { font-size: 9px; color: var(--text-3); letter-spacing: .5px; text-transform: uppercase; }
+.cfg-aset__x { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-3); opacity: 0; transition: all var(--t-fast) var(--ease); }
+.cfg-aset__x svg { width: 11px; height: 11px; }
+.cfg-aset__i:hover .cfg-aset__x { opacity: 1; }
+.cfg-aset__x:hover { color: var(--danger); }
+
 .cfg-reset { margin: 4px 18px; padding: 9px; border-radius: 8px; border: 1px solid var(--stroke); color: var(--text-2); font-size: 11px; font-weight: 600; width: calc(100% - 36px); }
 .cfg-reset:hover { border-color: var(--danger); color: var(--danger); }

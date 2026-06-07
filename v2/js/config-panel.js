@@ -6,6 +6,15 @@
 (() => {
   const S = window.Store, I = window.ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  /* read + downscale an uploaded image to a small PNG data-URL (keeps the
+     shared store light enough for localStorage + cross-window sync) */
+  function readImage(file, max = 256) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => { const img = new Image(); img.onload = () => { let w = img.width, hh = img.height; const sc = Math.min(1, max / Math.max(w, hh)); w = Math.round(w * sc); hh = Math.round(hh * sc); const cv = document.createElement('canvas'); cv.width = w; cv.height = hh; cv.getContext('2d').drawImage(img, 0, 0, w, hh); res(cv.toDataURL('image/png')); }; img.onerror = rej; img.src = fr.result; };
+      fr.onerror = rej; fr.readAsDataURL(file);
+    });
+  }
 
   const ACCENTS = ['#5b9dff', '#22d3ee', '#2dd4bf', '#34d399', '#d9b25f', '#ffb020', '#fb7185', '#8b7bff'];
   const TOOLS = [['select', 'Select'], ['marker', 'Marker'], ['arrow', 'Arrow'], ['curve', 'Curve'], ['ring', 'Range'], ['circle', 'Circle'], ['polygon', 'Area'], ['sketch', 'Freehand'], ['text', 'Label'], ['measure', 'Measure'], ['erase', 'Erase'], ['asset', 'Assets']];
@@ -87,12 +96,31 @@
     }
     // ASSETS
     {
-      const { sec, bd } = section('Asset categories', I.folder);
+      const { sec, bd } = section('Assets & images', I.folder);
+      // categories
+      bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>CATEGORIES</span></div>'));
       const chips = h('div', 'cfg-chips');
-      C.assetCats.forEach(cat => chips.appendChild(h('span', 'cfg-chip', cat)));
-      const add = h('div', 'cfg-add', '<input placeholder="New category">'); const ab = h('button', null, 'Add'); add.appendChild(ab);
-      ab.onclick = () => { const v = add.querySelector('input').value.trim(); if (v) { S.addAssetCat(v); render(); } };
-      bd.append(chips, add, h('div', 'hint', 'Image upload is added with the asset library.'));
+      C.assetCats.forEach(cat => { const c = h('span', 'cfg-chip', `${cat}<button class="x" title="Remove">×</button>`); c.querySelector('.x').onclick = () => { S.removeAssetCat(cat); render(); }; chips.appendChild(c); });
+      const addc = h('div', 'cfg-add', '<input placeholder="New category">'); const acb = h('button', null, 'Add'); addc.appendChild(acb);
+      acb.onclick = () => { const v = addc.querySelector('input').value.trim(); if (v) { S.addAssetCat(v); render(); } };
+      bd.append(chips, addc);
+      // upload
+      bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>ADD IMAGE</span></div>'));
+      const up = h('div', 'cfg-up');
+      const file = h('input'); file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
+      const cat = h('select', 'cfg-sel'); C.assetCats.forEach(x => { const o = h('option', null, x); o.value = x; cat.appendChild(o); });
+      const name = h('input', 'cfg-name'); name.placeholder = 'Name (optional)';
+      const pick = h('button', 'cfg-uploadbtn', `${I.upload}<span>Choose image…</span>`);
+      pick.onclick = () => file.click();
+      file.onchange = async () => { const f = file.files[0]; if (!f) return; try { const url = await readImage(f); S.addCustomAsset({ name: name.value.trim() || f.name.replace(/\.[^.]+$/, ''), cat: cat.value || C.assetCats[0], url }); render(); } catch (e) { alert('Could not read that image.'); } };
+      up.append(pick, cat, name, file); bd.appendChild(up);
+      // library
+      const assets = C.customAssets || [];
+      if (assets.length) {
+        const grid = h('div', 'cfg-aset');
+        assets.forEach(a => { const it = h('div', 'cfg-aset__i', `<img src="${a.url}" alt=""><div class="m"><b>${a.name || ''}</b><small>${a.cat || ''}</small></div>`); const del = h('button', 'cfg-aset__x', I.close); del.title = 'Delete'; del.onclick = () => { S.removeCustomAsset(a.id); render(); }; it.appendChild(del); grid.appendChild(it); });
+        bd.appendChild(grid);
+      } else bd.appendChild(h('div', 'hint', 'No images yet. Uploads are stored in the shared store and appear in the presenter\'s Image tool.'));
       body.appendChild(sec);
     }
     // RESET
