@@ -2,7 +2,7 @@
    CONTROL PANEL — config drawer (control.html only)
    ============================================================ */
 .cfg-toggle {
-  position: fixed; top: 14px; right: 16px; z-index: var(--z-modal);
+  position: fixed; top: 14px; left: 16px; z-index: var(--z-modal);
   width: 44px; height: 44px; border-radius: var(--r-sm);
   display: inline-flex; align-items: center; justify-content: center; color: var(--text);
   background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen);
@@ -72,6 +72,8 @@
 .cfg-panel .cfg-uploadbtn { border-radius: 10px; }
 .cfg-panel .cfg-add button { border-radius: 9px; font-weight: 700; }
 .cfg-panel .cfg-chip { border-radius: var(--pill); padding: 6px 11px; }
+.cfg-color { width: 100%; height: 30px; margin-top: 6px; padding: 0; border: 1px solid var(--stroke); border-radius: var(--r-sm); background: var(--glass-2); cursor: pointer; }
+.cfg-color::-webkit-color-swatch-wrapper { padding: 3px; } .cfg-color::-webkit-color-swatch { border: 0; border-radius: 6px; }
 
 /* ===== modern dock + floating glass panels ===== */
 .cdock { position: fixed; top: 64px; right: 16px; z-index: var(--z-modal); display: flex; flex-direction: column; gap: 3px; padding: 8px;

@@ -10,7 +10,7 @@ const Store = (() => {
   const uid = p => p + (++n) + '_' + Math.floor(performance.now());
 
   const DEFAULT_CONFIG = {
-    style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14 },
+    style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14, sat: 1.7, sheen: 16, shadow: 1, brightness: 105 },
     visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true },
     permissions: {
       tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, erase: true, asset: true },
@@ -24,6 +24,7 @@ const Store = (() => {
       { id: 'streets-v2', name: 'Streets', on: true },
       { id: 'ocean', name: 'Marine', on: true },
       { id: 'topo-v2', name: 'Topo', on: false },
+      { id: 'topographique', name: 'Relief (3D-look)', on: false },
       { id: 'outdoor-v2', name: 'Outdoor', on: false },
       { id: 'winter-v2', name: 'Winter', on: false },
       { id: 'basic-v2', name: 'Basic', on: false },

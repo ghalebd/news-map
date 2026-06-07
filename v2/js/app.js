@@ -11,8 +11,8 @@
   const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);
   function applyTilt() {
     const t = +S.cfg().tilt || 0; const el = M.map.getContainer();
-    el.style.transformOrigin = '50% 64%';
-    el.style.transform = t > 0 ? `perspective(1500px) rotateX(${t}deg) scale(${1 + t / 120})` : '';
+    el.style.transformOrigin = '50% 86%';
+    el.style.transform = t > 0 ? `perspective(1300px) rotateX(${t}deg) scale(${1 + t / 55})` : '';
   }
   function applyBrand() {
     const img = brand.querySelector('img'); const br = S.cfg().brand || {};

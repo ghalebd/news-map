@@ -62,13 +62,20 @@
 
   /* ---- tab builders ---- */
   function tabIdentity(C, ct) {
+    const st = C.style;
     const { sec, bd } = section('Theme', I.sliders);
-    bd.append(field('Accent', swatches(ACCENTS, C.style.accent, c => S.setStyle({ accent: c }))),
-      slider('Glass opacity', C.style.glass, 25, 85, 1, v => S.setStyle({ glass: v })),
-      slider('Blur', C.style.blur, 0, 60, 1, v => S.setStyle({ blur: v })),
-      slider('Glass distortion', C.style.distort, 0, 120, 1, v => S.setStyle({ distort: v })),
-      slider('Corner radius', C.style.radius, 0, 22, 1, v => S.setStyle({ radius: v })),
-      slider('3D perspective tilt', C.tilt || 0, 0, 55, 1, v => S.setTilt(v)),
+    const ci = h('input', 'cfg-color'); ci.type = 'color'; ci.value = st.accent; ci.oninput = () => S.setStyle({ accent: ci.value });
+    const accField = field('Accent', swatches(ACCENTS, st.accent, c => { ci.value = c; S.setStyle({ accent: c }); })); accField.appendChild(ci);
+    bd.append(accField,
+      slider('Glass opacity %', st.glass, 0, 100, 1, v => S.setStyle({ glass: v })),
+      slider('Blur (px)', st.blur, 0, 60, 1, v => S.setStyle({ blur: v })),
+      slider('Glass saturation', st.sat == null ? 1.7 : st.sat, 1, 3, 0.05, v => S.setStyle({ sat: v })),
+      slider('Glass brightness %', st.brightness == null ? 105 : st.brightness, 70, 140, 1, v => S.setStyle({ brightness: v })),
+      slider('Glass distortion', st.distort, 0, 120, 1, v => S.setStyle({ distort: v })),
+      slider('Sheen %', st.sheen == null ? 16 : st.sheen, 0, 50, 1, v => S.setStyle({ sheen: v })),
+      slider('Shadow strength', st.shadow == null ? 1 : st.shadow, 0, 2.5, 0.1, v => S.setStyle({ shadow: v })),
+      slider('Corner radius (px)', st.radius, 0, 24, 1, v => S.setStyle({ radius: v })),
+      slider('3D perspective tilt °', C.tilt || 0, 0, 55, 1, v => S.setTilt(v)),
       rowTog('Touch mode (large controls)', !!C.touch, on => S.setTouch(on)));
     ct.appendChild(sec);
     const lg = section('Logo', I.camera); const Br = C.brand || {};

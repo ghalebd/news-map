@@ -5,8 +5,9 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
-#map { position: absolute; inset: 0; z-index: var(--z-map); background: #0e1622; cursor: crosshair; transition: transform .5s var(--ease); will-change: transform; }
+body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: antialiased;
+  background: radial-gradient(120% 90% at 50% 8%, #0a1322 0%, #070b13 55%, #04060b 100%); }
+#map { position: absolute; inset: 0; z-index: var(--z-map); background: transparent; cursor: crosshair; transition: transform .5s var(--ease); will-change: transform; }
 .tiles-underlay img { image-rendering: auto; }
 button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
 svg { display: block; }
@@ -16,8 +17,8 @@ svg { display: block; }
 .glass,
 .modesw, .deck, .nownext, .qa, .qtools, .ctxbar, .panel {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.7) brightness(1.05);
-  backdrop-filter: url(#glassDistort) blur(var(--blur)) saturate(1.7) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--glass-sat, 1.7)) brightness(var(--glass-bright, 1.05));
+  backdrop-filter: url(#glassDistort) blur(var(--blur)) saturate(var(--glass-sat, 1.7)) brightness(var(--glass-bright, 1.05));
   border: 1px solid var(--stroke);
   box-shadow: var(--shadow), var(--sheen);
   border-radius: var(--r);
