@@ -9,6 +9,9 @@ const Draw = (() => {
   const esc = s => String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
   const fmtDist = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
   const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${color}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
+  /* permission gate — the control console (full console) always permits;
+     the presenter is limited by config.permissions. */
+  const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
 
   let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {};
 
@@ -120,7 +123,7 @@ const Draw = (() => {
     const cRow = h('div', 'qa__colors');
     COLORS.forEach(c => { const s = h('button', 'qa__sw' + (c === S.state.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.setColor(c); cRow.querySelectorAll('.qa__sw').forEach(x => x.classList.remove('is-on')); s.classList.add('is-on'); }; cRow.appendChild(s); });
     const grid = h('div', 'qa__tools');
-    TOOLS.forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = () => { setTool(id); closeMenu(); }; grid.appendChild(b); });
+    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = () => { setTool(id); closeMenu(); }; grid.appendChild(b); });
     menu.append(h('div', 'qa__title', 'ADD'), cRow, grid);
   }
   function openMenu() { buildMenu(); menu.hidden = false; }
@@ -162,6 +165,14 @@ const Draw = (() => {
   const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
   document.body.appendChild(qbar);
 
-  return { render, setTool, openMenu, closeMenu, toggleMenu, deselect, get tool() { return tool; } };
+  /* hide presenter toolbar buttons the operator has disallowed (no-op for the control console) */
+  function applyPerms() {
+    Object.keys(qbtns).forEach(id => { qbtns[id].hidden = !permits(id); });
+    const noDraw = window.APP_ROLE !== 'control' && !S.cfg().permissions.canDraw;
+    qcolor.hidden = noDraw; qundo.hidden = noDraw;
+    if (noDraw && tool !== 'select') setTool('select');
+  }
+
+  return { render, setTool, openMenu, closeMenu, toggleMenu, deselect, applyPerms, get tool() { return tool; } };
 })();
 window.Draw = Draw;
