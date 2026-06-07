@@ -173,6 +173,29 @@ const Draw = (() => {
     else if (tool === 'country') { const c = countryAt(e.latlng.lng, e.latlng.lat); if (c) S.addElement({ type: 'country', name: c.n, geom: c.g, color: S.state.color }); else window.UI && UI.toast('No country here'); }
     else if (tool === 'select') deselect();
   });
+  /* touch drawing: one finger drives the same tools (browsers don't emit mousemove
+     during touch drags). Select tool leaves native pan/pinch to Leaflet. */
+  (function touchDraw() {
+    const cont = map.getContainer();
+    const llOf = t => { const r = cont.getBoundingClientRect(); return map.containerPointToLatLng([t.clientX - r.left, t.clientY - r.top]); };
+    let active = false, moved = false, last = null;
+    cont.addEventListener('touchstart', e => {
+      if (tool === 'select' || e.touches.length !== 1) { active = false; return; }
+      if (!(window.APP_ROLE === 'control' || permits(tool))) return;
+      e.preventDefault(); active = true; moved = false; last = llOf(e.touches[0]);
+      if (DRAG.includes(tool)) map.fire('mousedown', { latlng: last });
+    }, { passive: false });
+    cont.addEventListener('touchmove', e => {
+      if (!active || e.touches.length !== 1) return;
+      e.preventDefault(); moved = true; last = llOf(e.touches[0]);
+      if (DRAG.includes(tool)) map.fire('mousemove', { latlng: last });
+    }, { passive: false });
+    cont.addEventListener('touchend', e => {
+      if (!active) return; e.preventDefault(); active = false;
+      if (DRAG.includes(tool)) map.fire('mouseup', { latlng: last });
+      else if (!moved && last) map.fire('click', { latlng: last });   // tap = click tools
+    }, { passive: false });
+  })();
   function preview(t, a, b) {
     const o = { color: S.state.color, weight: dw(), opacity: 0.6 };
     if (t === 'circle') return L.circle(a, { radius: map.distance(a, b), ...o, fillOpacity: 0.08 });

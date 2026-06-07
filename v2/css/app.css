@@ -502,6 +502,18 @@ body.touch .mapstyle { height: 54px; font-size: 14px; }
 body.touch .cfg-toggle { width: 54px; height: 54px; }
 body.touch .qa__tool { padding: 13px 12px; font-size: 13px; }
 body.touch .qtools { padding: 10px; gap: 9px; }
+/* bigger touch targets for drawing/editing + 3D + popups + sliders */
+body.touch .ctxbar { padding: 9px 11px; gap: 9px; }
+body.touch .ctxbar__btn { width: 42px; height: 42px; }
+body.touch .ctxbar__btn svg { width: 22px; height: 22px; }
+body.touch .ctxbar__sw { width: 28px; height: 28px; }
+body.touch .d3ctrl__b { width: 46px; height: 46px; font-size: 18px; }
+body.touch .d3ctrl__b svg { width: 22px; height: 22px; }
+body.touch .lbar-pop__i { padding: 13px 14px; font-size: 14px; }
+body.touch .mapstyle-pop__i { padding: 12px 14px; font-size: 14px; }
+body.touch input[type=range] { height: 26px; }
+body.touch .zoomctl__b { width: 48px; height: 48px; }
+body.touch .ov-wipe__grip { width: 44px; height: 44px; }
 
 /* ---------- shift on-screen chrome aside when the control panel opens ---------- */
 .brand, .modesw, .qtools, .status, .livetrack, .deck, .nownext, .cfg-toggle { transition: transform var(--t) var(--ease); }
