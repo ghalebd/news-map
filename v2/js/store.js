@@ -17,6 +17,7 @@ const Store = (() => {
       canDraw: true, canEditScenes: false, canNavigate: true, canChangeStyle: false, canChangeMapStyle: true, canTrack: true,
     },
     mapStyles: [
+      { id: '019caada-7e48-7379-ba36-e8967f4fcc92', name: 'News', on: true },
       { id: 'satellite', name: 'Satellite', on: true },
       { id: 'hybrid', name: 'Hybrid', on: true },
       { id: 'dataviz-dark', name: 'Dark', on: true },
@@ -41,7 +42,7 @@ const Store = (() => {
   const state = {
     mode: 'build',                 // 'build' | 'live'
     color: '#ff453a',
-    mapStyle: 'satellite',
+    mapStyle: '019caada-7e48-7379-ba36-e8967f4fcc92',   // custom broadcast "News" style (default)
     rundown: { title: 'News Rundown', scenes: [], activeId: null },
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     reveal: {},                    // sceneId -> number of revealed elements (synced)

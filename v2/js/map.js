@@ -6,6 +6,7 @@ const GameMap = (() => {
   const tile = id => `https://api.maptiler.com/maps/${id}/{z}/{x}/{y}.png?key=${KEY}`;
 
   const STYLES = [
+    { id: '019caada-7e48-7379-ba36-e8967f4fcc92', ar: 'إخبارية' },
     { id: 'satellite', ar: 'قمر صناعي' },
     { id: 'hybrid', ar: 'هجين' },
     { id: 'dataviz-dark', ar: 'داكن' },
