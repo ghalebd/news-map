@@ -375,19 +375,19 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
-/* ---------- movable panels: visible grab tab above each panel (touch-friendly) ---------- */
-/* tabs are fixed on <body>; JS sets left/top to each panel's top-centre, the
-   translate lifts the tab just above the panel edge so nothing is clipped */
-.mvh { position: fixed; transform: translate(-50%, -100%); height: 18px; min-width: 38px; padding: 0 9px; z-index: var(--z-flyout);
-  display: inline-flex; align-items: center; justify-content: center; cursor: grab; opacity: .92; pointer-events: auto;
-  border: 1px solid var(--stroke); background: var(--glass-2); color: var(--text-3); border-radius: 9px; box-shadow: var(--sheen);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
-.mvh svg { width: 22px; height: 11px; display: block; }
-.mvh:hover { opacity: 1; color: var(--accent); border-color: var(--accent); }
-.mvh.is-drag { opacity: 1; color: var(--accent); border-color: var(--accent); cursor: grabbing; }
-body.touch .mvh { height: 26px; min-width: 54px; border-radius: 13px; }
-body.touch .mvh svg { width: 30px; height: 15px; }
+/* ---------- movable panels: a slim dot-grip rail inside the top of each panel ---------- */
+/* no extra button — just the dots, sitting in reserved empty space at the panel top */
+[data-movable] { padding-top: 15px; }
+[data-movable] > .mvh { position: absolute; top: 0; left: 0; right: 0; height: 14px; z-index: 4; padding: 0;
+  display: flex; align-items: center; justify-content: center; cursor: grab; pointer-events: auto;
+  border: 0; background: transparent; color: var(--text-3); opacity: .5;
+  transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+[data-movable] > .mvh svg { width: 26px; height: 11px; display: block; }
+[data-movable] > .mvh:hover { opacity: 1; color: var(--accent); }
+[data-movable] > .mvh.is-drag { opacity: 1; color: var(--accent); cursor: grabbing; }
+body.touch [data-movable] { padding-top: 22px; }
+body.touch [data-movable] > .mvh { height: 20px; }
+body.touch [data-movable] > .mvh svg { width: 34px; height: 15px; }
 body.mv-dragging { cursor: grabbing; user-select: none; }
 body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }

@@ -29,17 +29,7 @@
   let pending = null;
   let cfgOffset = 0;   // how far the open settings panel pushes left-side chrome right
 
-  /* the grab tabs live on <body> (fixed) so panel overflow can never clip them */
-  function positionHandle(el, hd) {
-    if (!el || !hd) return;
-    const cs = getComputedStyle(el);
-    const r = el.getBoundingClientRect();
-    if (cs.display === 'none' || cs.visibility === 'hidden' || el.hidden || (r.width === 0 && r.height === 0)) { hd.style.display = 'none'; return; }
-    hd.style.display = '';
-    hd.style.left = Math.round(r.left + r.width / 2) + 'px';
-    hd.style.top = Math.round(r.top + 6) + 'px';   // CSS lifts it up via translate(-50%,-100%)
-  }
-  function reflow() { for (const sel in handles) positionHandle(els[sel], handles[sel]); }
+  function reflow() {}   // grips are in-panel children now — nothing to reposition
 
   function styleAt(el, x, y, s) {
     el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
@@ -66,7 +56,7 @@
       let ny = axis === 'x' ? rect.top : ev.clientY - oy;
       nx = Math.max(0, Math.min(nx, window.innerWidth - rect.width));
       ny = Math.max(0, Math.min(ny, window.innerHeight - rect.height));
-      styleAt(el, nx, ny, s); positionHandle(el, hd); pending = { sel, x: nx, y: ny, h: rect.height, s };
+      styleAt(el, nx, ny, s); pending = { sel, x: nx, y: ny, h: rect.height, s };
     }
     function up() {
       document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
@@ -77,12 +67,12 @@
   }
 
   function attach(sel) {
+    if (sel === '.brand') return;   // the logo is placed from its own Logo card (X / Y / size)
     const el = document.querySelector(sel); if (!el || el.dataset.movable != null) return;
     els[sel] = el; el.dataset.movable = '';
-    const hd = document.createElement('button'); hd.className = 'mvh'; hd.title = 'Drag to move' + (meta[sel].axis === 'y' ? ' (up / down)' : ''); hd.innerHTML = I.gripH;
+    const hd = document.createElement('div'); hd.className = 'mvh'; hd.title = 'Drag to move' + (meta[sel].axis === 'y' ? ' (up / down)' : ''); hd.innerHTML = I.gripH;
     hd.addEventListener('pointerdown', e => startDrag(el, sel, hd, e));
-    document.body.appendChild(hd); handles[sel] = hd;
-    el.addEventListener('transitionend', () => positionHandle(el, hd));
+    el.insertBefore(hd, el.firstChild); handles[sel] = hd;
   }
 
   function applyLayout() {
