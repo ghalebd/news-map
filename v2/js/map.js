@@ -20,7 +20,10 @@ const GameMap = (() => {
   const WORLD = L.latLngBounds([[-85, -180], [85, 180]]);
   const map = L.map('map', {
     zoomControl: false, attributionControl: false, fadeAnimation: true,
-    minZoom: 3, maxBounds: WORLD, maxBoundsViscosity: 1.0, worldCopyJump: false,
+    minZoom: 3, maxBounds: WORLD, maxBoundsViscosity: 0.4, worldCopyJump: false,
+    // smooth feel: glide on release, gentle edge rubber-band, fine wheel zoom
+    inertia: true, inertiaDeceleration: 2600, inertiaMaxSpeed: 2400, easeLinearity: 0.22,
+    zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 120,
   }).setView([29.5, 45], 5);
 
   // PERMANENT LOW-RES BACKDROP: very coarse (maxNativeZoom 3) so a few big tiles
@@ -45,9 +48,10 @@ const GameMap = (() => {
   function currentView() { const c = map.getCenter(); return { lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), zoom: +map.getZoom().toFixed(2) }; }
   function flyToView(view, t) {
     if (!view) return;
-    const dur = (t && t.duration) || 1.0;
-    if (t && t.type === 'cut') map.setView([view.lat, view.lng], view.zoom);
-    else map.flyTo([view.lat, view.lng], view.zoom, { duration: dur });
+    const type = t && t.type, dur = (t && t.duration) || 1.4;
+    if (type === 'cut') { map.setView([view.lat, view.lng], view.zoom); return; }
+    // 'ease' = gentle linear glide; default 'flyTo' = cinematic zoom-out-and-in arc
+    map.flyTo([view.lat, view.lng], view.zoom, { duration: dur, easeLinearity: type === 'ease' ? 0.45 : 0.18 });
   }
 
   return { map, drawn, setStyle, currentView, flyToView, STYLES };
