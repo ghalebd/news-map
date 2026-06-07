@@ -8,6 +8,16 @@ html, body { height: 100%; overflow: hidden; }
 body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: antialiased;
   background: radial-gradient(120% 90% at 50% 8%, #0a1322 0%, #070b13 55%, #04060b 100%); }
 #map { position: absolute; inset: 0; z-index: var(--z-map); background: transparent; cursor: crosshair; transition: transform .5s var(--ease); will-change: transform; }
+/* atmospheric horizon for 3D tilt — fades the receding map edge into sky (kills the black void) */
+.skyhaze { position: fixed; left: 0; right: 0; top: 0; height: 52%; z-index: 6; pointer-events: none; opacity: 0;
+  transition: opacity .5s var(--ease);
+  background:
+    radial-gradient(120% 80% at 50% 100%, rgba(120,170,235,.16) 0%, rgba(60,100,170,.06) 30%, transparent 60%),
+    linear-gradient(to bottom, #0a1322 0%, #0b1626 24%, rgba(11,20,36,.82) 52%, rgba(10,17,30,.34) 78%, transparent 100%); }
+body.is-tilted .skyhaze { opacity: clamp(0, calc(var(--tilt, 0) / 32), 1); }
+/* gentle foreground vignette adds depth when tilted */
+body.is-tilted::after { content: ''; position: fixed; inset: 0; z-index: 5; pointer-events: none;
+  background: radial-gradient(140% 100% at 50% 118%, transparent 55%, rgba(2,5,10,.4) 100%); }
 .tiles-underlay img { image-rendering: auto; }
 button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
 svg { display: block; }

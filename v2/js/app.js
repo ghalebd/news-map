@@ -9,10 +9,16 @@
 
   /* ---------- brand + status ---------- */
   const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);
+  // 3D camera tilt — Leaflet stays flat, we rake the whole map plane back and
+  // blend the receding horizon into an atmospheric haze (no black void on top).
+  const skyHaze = (() => { const s = document.createElement('div'); s.className = 'skyhaze'; document.body.appendChild(s); return s; })();
   function applyTilt() {
     const t = +S.cfg().tilt || 0; const el = M.map.getContainer();
-    el.style.transformOrigin = '50% 86%';
-    el.style.transform = t > 0 ? `perspective(1300px) rotateX(${t}deg) scale(${1 + t / 55})` : '';
+    document.body.classList.toggle('is-tilted', t > 0);
+    document.body.style.setProperty('--tilt', t);
+    el.style.transformOrigin = '50% 100%';
+    // deeper perspective + lift-and-scale so the foreground fills the frame and the horizon sits high
+    el.style.transform = t > 0 ? `perspective(${1500 - t * 12}px) rotateX(${t}deg) scale(${1 + t / 38}) translateY(${-t * 0.25}%)` : '';
   }
   function applyBrand() {
     const img = brand.querySelector('img'); const br = S.cfg().brand || {};
