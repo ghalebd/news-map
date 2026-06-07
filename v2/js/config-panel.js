@@ -362,7 +362,25 @@
     ct.appendChild(sec);
   }
 
-  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabTracking, tabBroadcast, tabAssets, tabProject];
+  function tabFx(C, ct) {
+    const { sec, bd } = section('Grid & sea FX', I.grid || I.layers, () => { S.setGrid(cp(S.DEFAULT_CONFIG.grid)); S.setSea(cp(S.DEFAULT_CONFIG.sea)); });
+    const g = Object.assign({}, S.DEFAULT_CONFIG.grid, C.grid || {});
+    bd.appendChild(rowTog('Square grid', !!g.on, on => { S.setGrid({ on }); }));
+    bd.append(
+      field('Grid colour', swatches(['#7fb0ff', '#46d8ff', '#ffffff', '#ffd60a', '#36ff9e', '#ff453a'], g.color, c => S.setGrid({ color: c }))),
+      slider('Cell size', g.size, 20, 160, 2, v => S.setGrid({ size: v })),
+      slider('Line opacity', g.opacity, 0, 60, 1, v => S.setGrid({ opacity: v })),
+      slider('Line weight', g.weight, 1, 4, 1, v => S.setGrid({ weight: v })));
+    const s = Object.assign({}, S.DEFAULT_CONFIG.sea, C.sea || {});
+    bd.appendChild(rowTog('Animated sea', !!s.on, on => { S.setSea({ on }); }));
+    bd.append(
+      slider('Sea intensity', s.intensity, 0, 80, 1, v => S.setSea({ intensity: v })),
+      slider('Sea speed (s)', s.speed, 3, 30, 1, v => S.setSea({ speed: v })),
+      h('div', 'hint', 'The animated sea is an ambient shimmer across the whole map (raster tiles can’t isolate water); keep it subtle for broadcast.'));
+    ct.appendChild(sec);
+  }
+
+  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
   function applyFilter() {
     const q = search.value.trim().toLowerCase();
     bodyEl.querySelectorAll('.cfg-sec').forEach(sec => {

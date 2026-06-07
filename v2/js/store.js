@@ -43,6 +43,8 @@ const Store = (() => {
     tilt: 0,                 // 3D perspective tilt (deg)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
     threeD: { exaggeration: 2.6, pitch: 62 },   // 3D terrain defaults (MapLibre)
+    grid: { on: false, size: 60, color: '#7fb0ff', opacity: 16, weight: 1 },   // aesthetic square grid overlay
+    sea: { on: false, intensity: 35, speed: 9 },   // animated water shimmer overlay
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
     overlayWipe: 0.5,        // global before/after wipe line (0..1 of the map width)
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
@@ -171,6 +173,8 @@ const Store = (() => {
   function moveOverlay(id, dir) { const a = overlays(), i = a.findIndex(x => x.id === id), j = i + dir; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; emit('overlays'); }
   function setOverlayWipe(f) { state.config.overlayWipe = Math.max(0, Math.min(1, f)); emit('overlays'); }
   function setThreeD(patch) { if (!state.config.threeD) state.config.threeD = {}; Object.assign(state.config.threeD, patch); emit('threed'); }
+  function setGrid(patch) { if (!state.config.grid) state.config.grid = {}; Object.assign(state.config.grid, patch); emit('config'); }
+  function setSea(patch) { if (!state.config.sea) state.config.sea = {}; Object.assign(state.config.sea, patch); emit('config'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -187,7 +191,7 @@ const Store = (() => {
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
-    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD,
+    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD, setGrid, setSea,
   };
 })();
 window.Store = Store;
