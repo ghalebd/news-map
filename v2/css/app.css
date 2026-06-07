@@ -24,8 +24,8 @@ svg { display: block; }
 }
 
 /* ---------- brand + status ---------- */
-.brand { position: fixed; left: 16px; top: 14px; z-index: var(--z-bar); height: 26px; pointer-events: none; }
-.brand img { height: 100%; }
+.brand { position: fixed; left: 16px; top: 14px; z-index: var(--z-bar); pointer-events: none; display: flex; align-items: center; }
+.brand img { display: block; height: auto; width: auto; max-height: 38px; max-width: 240px; object-fit: contain; object-position: left center; }
 .status {
   position: fixed; left: 16px; top: 50px; z-index: var(--z-bar);
   padding: 6px 12px; border-radius: var(--r-sm);
@@ -311,6 +311,10 @@ body.ui-hidden .nownext, body.ui-hidden .qtools, body.ui-hidden .fab, body.ui-hi
 body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrack,
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
+
+/* ---------- spotlight (focus mask) ---------- */
+.spotlight { position: fixed; z-index: var(--z-flyout); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
+  box-shadow: 0 0 0 99999px rgba(4, 7, 12, 0.66); border: 1.5px solid rgba(255, 255, 255, .35); }
 
 /* ---------- broadcast graphics: breaking banner + news ticker ---------- */
 .bcast-ticker { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); height: 36px; display: flex; align-items: stretch;

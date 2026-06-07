@@ -36,7 +36,7 @@ const Store = (() => {
     assetCats: ['ground', 'air', 'naval', 'weapons', 'infra'],
     customAssets: [],   // { id, name, cat, url }
     trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
-    brand: { logo: null },   // data-URL logo override
+    brand: { logo: null, size: 38 },   // data-URL logo override + display height (px)
     touch: false,            // large touch-friendly controls
   };
 
@@ -47,9 +47,9 @@ const Store = (() => {
     rundown: { title: 'News Rundown', scenes: [], activeId: null },
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     reveal: {},                    // sceneId -> number of revealed elements (synced)
-    tracking: { ships: false, flights: false, trails: true },  // live overlays (synced); trails = show route/trail lines
+    tracking: { ships: false, flights: false, trails: true },  // live overlays (synced)
     trackFocus: null,             // focused ship MMSI (route shown) — synced
-    broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 } },
+    broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 }, spotlight: { on: false, lat: 25, lng: 45, radiusKm: 400 } },
   };
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
@@ -102,6 +102,7 @@ const Store = (() => {
   function setBanner(patch) { Object.assign(state.broadcast.banner, patch); emit('broadcast'); }
   function setTicker(patch) { Object.assign(state.broadcast.ticker, patch); emit('broadcast'); }
   function setTour(patch) { Object.assign(state.broadcast.tour, patch); emit('broadcast'); }
+  function setSpotlight(patch) { Object.assign(state.broadcast.spotlight, patch); emit('broadcast'); }
 
   /* ---- elements (active scene) ---- */
   function addElement(rec) { const s = activeScene(); if (!s) return null; rec.id = uid('el'); s.__redo = []; s.elements.push(rec); emit('elements'); return rec; }
@@ -127,6 +128,7 @@ const Store = (() => {
   function removeCustomAsset(id) { state.config.customAssets = state.config.customAssets.filter(a => a.id !== id); emit('config'); }
   function setTrackStyle(patch) { Object.assign(state.config.trackStyle, patch); emit('config'); }
   function setLogo(url) { state.config.brand.logo = url; emit('config'); }
+  function setLogoSize(px) { state.config.brand.size = px; emit('config'); }
   function setTouch(on) { state.config.touch = on; emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
 
@@ -138,10 +140,10 @@ const Store = (() => {
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
-    setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour,
+    setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setTouch, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setTouch, resetConfig,
   };
 })();
 window.Store = Store;

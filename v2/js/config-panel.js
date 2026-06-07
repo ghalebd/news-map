@@ -78,6 +78,7 @@
       const clr = h('button', 'cfg-btn', `${I.close}<span>Default</span>`); clr.onclick = () => S.setLogo(null);
       lf.onchange = async () => { const f = lf.files[0]; if (!f) return; try { const url = await readImage(f, 512); S.setLogo(url); } catch (e) { alert('Could not read image'); } lf.value = ''; };
       lr.append(pick, clr, lf); bd.appendChild(lr);
+      bd.appendChild(slider('Logo size', (C.brand && C.brand.size) || 38, 16, 90, 2, v => S.setLogoSize(v)));
       bd.appendChild(rowTog('Touch mode (large controls)', !!C.touch, on => S.setTouch(on)));
       body.appendChild(sec);
     }
@@ -180,6 +181,12 @@
       bd.appendChild(slider('Ticker speed', bc.ticker.speed || 60, 20, 160, 5, v => S.setTicker({ speed: v })));
       bd.appendChild(rowTog('Auto-play scenes', !!bc.tour.playing, on => S.setTour({ playing: on })));
       bd.appendChild(slider('Auto-play interval (s)', bc.tour.sec || 8, 2, 30, 1, v => S.setTour({ sec: v })));
+      // spotlight (focus mask)
+      const sp = bc.spotlight || {};
+      bd.appendChild(rowTog('Spotlight (focus mask)', !!sp.on, on => { const cv = window.GameMap.currentView(); S.setSpotlight(on ? { on: true, lat: cv.lat, lng: cv.lng } : { on: false }); }));
+      bd.appendChild(slider('Spotlight radius (km)', sp.radiusKm || 400, 50, 2000, 50, v => S.setSpotlight({ radiusKm: v })));
+      const rc = h('button', 'cfg-btn', `${I.target}<span>Centre on current view</span>`); rc.onclick = () => { const cv = window.GameMap.currentView(); S.setSpotlight({ lat: cv.lat, lng: cv.lng }); };
+      bd.appendChild(rc);
       body.appendChild(sec);
     }
     // PROJECT (save / load / hide-UI / clear)

@@ -9,7 +9,7 @@
 
   /* ---------- brand + status ---------- */
   const brand = h('div', 'brand', `<img alt="Al Jazeera" onerror="this.style.display='none'">`); document.body.appendChild(brand);
-  function applyBrand() { const img = brand.querySelector('img'); const logo = S.cfg().brand && S.cfg().brand.logo; img.src = logo || '../live_assets/aljazeera_logo.png'; img.style.display = ''; }
+  function applyBrand() { const img = brand.querySelector('img'); const br = S.cfg().brand || {}; if (br.logo) { img.src = br.logo; img.style.display = 'block'; img.style.maxHeight = (br.size || 38) + 'px'; } else { img.removeAttribute('src'); img.style.display = 'none'; } }
   const status = h('div', 'status'); document.body.appendChild(status);
   function renderStatus() { const v = M.currentView(); status.innerHTML = `<span class="status__dot"></span><span>${v.lat.toFixed(2)} , ${v.lng.toFixed(2)}</span> · <b>Z${v.zoom.toFixed(1)}</b>`; }
   M.map.on('move zoom', renderStatus); renderStatus();
@@ -93,6 +93,20 @@
     document.body.classList.toggle('has-banner', !!bn.on);
   }
 
+  /* ---------- spotlight (dim everything except a circle) ---------- */
+  const spot = h('div', 'spotlight'); spot.hidden = true; document.body.appendChild(spot);
+  function renderSpotlight() {
+    const s = (S.state.broadcast && S.state.broadcast.spotlight) || {};
+    if (!s.on) { spot.hidden = true; return; }
+    const pt = M.map.latLngToContainerPoint([s.lat, s.lng]);
+    const mpp = 40075016.686 * Math.cos(s.lat * Math.PI / 180) / (256 * Math.pow(2, M.map.getZoom()));
+    const rPx = Math.max(30, (s.radiusKm * 1000) / mpp);
+    spot.style.left = pt.x + 'px'; spot.style.top = pt.y + 'px';
+    spot.style.width = spot.style.height = (rPx * 2) + 'px';
+    spot.hidden = false;
+  }
+  M.map.on('move zoom moveend zoomend', renderSpotlight);
+
   /* ---------- auto-tour (control window drives; presenter follows via sync) ---------- */
   let tourT = null;
   function applyTour() {
@@ -116,7 +130,7 @@
     if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
     if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
-    if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); }
+    if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); renderSpotlight(); }
     if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
     if (evt === 'mapstyle' || evt === 'sync') M.setStyle(S.state.mapStyle);
   });
@@ -144,6 +158,7 @@
   applyBrand();
   renderBroadcast();
   applyTour();
+  renderSpotlight();
   window.Theme && window.Theme.apply(S.cfg().style);
   M.setStyle(S.state.mapStyle);
   if (!S.scenes().length) S.addScene(M.currentView(), { title: 'Opening Scene' });
