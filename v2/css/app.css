@@ -216,6 +216,29 @@ body.mode-live .qtools { display: flex; }
 .mapstyle-pop__i:hover { color: var(--text); background: var(--glass-2); }
 .mapstyle-pop__i.is-on { color: var(--accent); background: var(--accent-soft); }
 
+/* ---------- scene inspector (PREP) ---------- */
+.sceneins { position: fixed; right: 16px; top: 70px; width: 268px; z-index: var(--z-bar); padding: 14px; display: flex; flex-direction: column; gap: 13px; }
+.sceneins__hd { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent); }
+.sceneins__hd svg { width: 15px; height: 15px; }
+.sceneins__f { display: flex; flex-direction: column; gap: 6px; }
+.sceneins__lab { font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-3); }
+.sceneins__in, .sceneins__sel { height: 34px; padding: 0 11px; border-radius: var(--r-sm); background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font: 500 13px var(--font); }
+.sceneins__in::placeholder { color: var(--text-3); }
+.sceneins__in:focus, .sceneins__sel:focus { outline: none; border-color: var(--accent); }
+.sceneins__sel { appearance: none; cursor: pointer; }
+.sceneins__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sceneins__rlab { font-size: 12px; font-weight: 600; color: var(--text); }
+.sceneins__rlab small { display: block; font-size: 9px; font-weight: 500; color: var(--text-3); letter-spacing: .3px; margin-top: 2px; }
+
+/* ---------- lower third (LIVE) ---------- */
+.lthird { position: fixed; left: 48px; bottom: 92px; z-index: var(--z-bar); display: flex; align-items: stretch; gap: 0; max-width: 46vw;
+  border-radius: var(--r-sm); overflow: hidden; box-shadow: var(--shadow); animation: ltin var(--t) var(--ease-out); }
+@keyframes ltin { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+.lthird__bar { width: 5px; background: var(--accent); flex: 0 0 auto; box-shadow: var(--accent-glow); }
+.lthird__tx { padding: 11px 20px 12px 16px; background: rgba(8, 11, 18, 0.86); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); }
+.lthird__t { font-size: 21px; font-weight: 800; letter-spacing: .2px; color: #fff; line-height: 1.1; }
+.lthird__s { font-size: 12px; font-weight: 600; letter-spacing: .4px; color: var(--accent); margin-top: 4px; text-transform: uppercase; }
+
 /* ---------- mode visibility ---------- */
 body.mode-build .nownext { display: none; }
 body.mode-live .deck { display: none; }

@@ -5,6 +5,7 @@
 (() => {
   const I = window.ICONS, S = window.Store, M = window.GameMap;
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 
   /* ---------- brand + status ---------- */
   document.body.appendChild(h('div', 'brand', `<img src="../live_assets/aljazeera_logo.png" alt="Al Jazeera" onerror="this.style.display='none'">`));
@@ -52,8 +53,8 @@
 
   /* ---------- NOW / NEXT (LIVE) ---------- */
   const nownext = h('div', 'nownext');
-  const nnPrev = h('button', 'nownext__nav', I.navL); nnPrev.onclick = () => S.prevScene();
-  const nnNext = h('button', 'nownext__nav nownext__nav--main', I.navR); nnNext.onclick = () => S.nextScene();
+  const nnPrev = h('button', 'nownext__nav', I.navL); nnPrev.onclick = () => S.retreat();
+  const nnNext = h('button', 'nownext__nav nownext__nav--main', I.navR); nnNext.onclick = () => S.advance();
   const nnNow = h('div', 'nownext__now'), nnNext2 = h('div', 'nownext__next');
   nownext.append(nnPrev, h('div', 'nownext__body', ''), nnNext);
   nownext.children[1].append(h('div', 'nownext__lbl', 'NOW'), nnNow, h('div', 'nownext__lbl', 'NEXT'), nnNext2);
@@ -61,8 +62,20 @@
 
   function renderNowNext() {
     const sc = S.scenes(); const i = S.sceneIndex(S.state.rundown.activeId);
-    nnNow.textContent = sc[i] ? sc[i].title : '—';
-    nnNext2.textContent = sc[i + 1] ? sc[i + 1].title : '— END —';
+    const cur = sc[i];
+    nnNow.textContent = cur ? cur.title : '—';
+    if (cur && cur.reveal) { const done = S.revealedCount(cur), tot = cur.elements.length; nnNext2.textContent = done < tot ? `Reveal ${done}/${tot} — next: ${sc[i + 1] ? sc[i + 1].title : 'END'}` : (sc[i + 1] ? sc[i + 1].title : '— END —'); }
+    else nnNext2.textContent = sc[i + 1] ? sc[i + 1].title : '— END —';
+  }
+
+  /* ---------- lower third (LIVE) ---------- */
+  const lthird = h('div', 'lthird'); lthird.hidden = true; document.body.appendChild(lthird);
+  function renderLowerThird() {
+    const s = S.activeScene(); const lt = s && s.lowerThird;
+    const on = S.state.mode === 'live' && lt && (lt.title || lt.subtitle);
+    if (!on) { lthird.hidden = true; return; }
+    lthird.innerHTML = `<div class="lthird__bar"></div><div class="lthird__tx"><div class="lthird__t">${esc(lt.title)}</div>${lt.subtitle ? `<div class="lthird__s">${esc(lt.subtitle)}</div>` : ''}</div>`;
+    lthird.hidden = false;
   }
 
   /* ---------- mode application ---------- */
@@ -70,14 +83,16 @@
     document.body.classList.toggle('mode-build', S.state.mode === 'build');
     document.body.classList.toggle('mode-live', S.state.mode === 'live');
     modeSwitch.querySelectorAll('.modesw__btn').forEach(b => b.classList.toggle('is-active', b.dataset.mode === S.state.mode));
+    renderLowerThird(); window.Draw && window.Draw.render();
   }
 
   /* ---------- react to store ---------- */
   S.on((st, evt) => {
     if (evt === 'mode') applyMode();
     if (evt === 'config' || evt === 'sync') window.Theme && window.Theme.apply(S.cfg().style);
-    if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'sync') { renderDeck(); renderNowNext(); }
-    if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'sync') window.Draw && window.Draw.render();
+    if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
+    if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
+    if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
     if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
     if (evt === 'mapstyle' || evt === 'sync') M.setStyle(S.state.mapStyle);
   });
@@ -93,8 +108,8 @@
     if (e.key.toLowerCase() === 'm' && S.state.mode === 'live') S.toggleMode();
     else if (e.key.toLowerCase() === 'm' && D && D.tool === 'select') S.toggleMode();
     if (S.state.mode === 'live') {
-      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); S.nextScene(); }
-      if (e.key === 'ArrowLeft') { e.preventDefault(); S.prevScene(); }
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); S.advance(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); S.retreat(); }
       if (/^[1-9]$/.test(e.key)) { const s = S.scenes()[+e.key - 1]; if (s) S.setActive(s.id); }
     }
   });

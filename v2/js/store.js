@@ -34,17 +34,18 @@ const Store = (() => {
     mapStyle: 'satellite',
     rundown: { title: 'News Rundown', scenes: [], activeId: null },
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
+    reveal: {},                    // sceneId -> number of revealed elements (synced)
   };
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
   const subs = [];
   const on = fn => { subs.push(fn); return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); }; };
   let _t = null;
-  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle })); } catch (e) {} }, 120); }
+  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal })); } catch (e) {} }, 120); }
   const emit = (evt, opts) => { subs.forEach(fn => fn(state, evt || 'change')); if (!(opts && opts.silent)) persist(); };
 
   function deepMerge(def, ov) { const o = JSON.parse(JSON.stringify(def)); for (const k in ov) { if (ov[k] && typeof ov[k] === 'object' && !Array.isArray(ov[k])) o[k] = deepMerge(def[k] || {}, ov[k]); else o[k] = ov[k]; } return o; }
-  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; return true; } catch (e) { return false; } }
+  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; return true; } catch (e) { return false; } }
   window.addEventListener('storage', e => { if (e.key === KEY) { load(); emit('sync', { silent: true }); } });
 
   /* ---- scenes ---- */
@@ -52,15 +53,26 @@ const Store = (() => {
   const activeScene = () => scenes().find(s => s.id === state.rundown.activeId) || null;
   const sceneIndex = id => scenes().findIndex(s => s.id === id);
   function addScene(view, opts = {}) {
-    const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: view || { lat: 29.5, lng: 45, zoom: 5 }, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], lowerThird: null };
-    scenes().push(s); state.rundown.activeId = s.id; emit('scenes'); return s;
+    const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: view || { lat: 29.5, lng: 45, zoom: 5 }, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], reveal: false, lowerThird: null };
+    scenes().push(s); state.rundown.activeId = s.id; revealReset(s.id); emit('scenes'); return s;
   }
   function removeScene(id) { const i = sceneIndex(id); if (i < 0) return; scenes().splice(i, 1); if (state.rundown.activeId === id) state.rundown.activeId = (scenes()[i] || scenes()[i - 1] || {}).id || null; emit('scenes'); }
   function moveScene(id, dir) { const i = sceneIndex(id), j = i + dir; if (i < 0 || j < 0 || j >= scenes().length) return; const a = scenes();[a[i], a[j]] = [a[j], a[i]]; emit('scenes'); }
-  function setActive(id) { state.rundown.activeId = id; emit('active'); }
+  function setActive(id) { state.rundown.activeId = id; revealReset(id); emit('active'); }
   function nextScene() { const i = sceneIndex(state.rundown.activeId); if (i < scenes().length - 1) setActive(scenes()[i + 1].id); }
   function prevScene() { const i = sceneIndex(state.rundown.activeId); if (i > 0) setActive(scenes()[i - 1].id); }
   function renameScene(id, title) { const s = scenes().find(x => x.id === id); if (s) { s.title = title; emit('scenes'); } }
+
+  /* ---- storyboard reveal + scene settings ---- */
+  function revealReset(id) { const s = scenes().find(x => x.id === id); if (!s) return; state.reveal[id] = s.reveal ? 0 : s.elements.length; }
+  function revealedCount(s) { if (!s) return 0; if (!s.reveal) return s.elements.length; const v = state.reveal[s.id]; return v == null ? 0 : Math.min(v, s.elements.length); }
+  function revealNext() { const s = activeScene(); if (!s || !s.reveal) return false; const cur = revealedCount(s); if (cur >= s.elements.length) return false; state.reveal[s.id] = cur + 1; emit('reveal'); return true; }
+  function revealPrev() { const s = activeScene(); if (!s || !s.reveal) return false; const cur = revealedCount(s); if (cur <= 0) return false; state.reveal[s.id] = cur - 1; emit('reveal'); return true; }
+  function advance() { if (!revealNext()) nextScene(); }
+  function retreat() { if (!revealPrev()) prevScene(); }
+  function toggleSceneReveal(id) { const s = scenes().find(x => x.id === id); if (!s) return; s.reveal = !s.reveal; state.reveal[id] = s.reveal ? 0 : s.elements.length; emit('scenes'); }
+  function setLowerThird(id, lt) { const s = scenes().find(x => x.id === id); if (!s) return; s.lowerThird = lt; emit('scenes'); }
+  function setTransition(id, tr) { const s = scenes().find(x => x.id === id); if (!s) return; s.transition = tr; emit('scenes'); }
 
   function setMode(m) { state.mode = m; emit('mode'); }
   function toggleMode() { setMode(state.mode === 'build' ? 'live' : 'build'); }
@@ -98,6 +110,7 @@ const Store = (() => {
     state, on, emit, uid, load, DEFAULT_CONFIG,
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene,
+    revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
     setMode, toggleMode, setColor, setMapStyle,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,

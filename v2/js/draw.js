@@ -19,7 +19,8 @@ const Draw = (() => {
   function render() {
     drawn.clearLayers();
     const sc = S.activeScene(); if (!sc) return;
-    sc.elements.forEach(el => { const l = buildLayer(el); if (l) { l.__id = el.id; drawn.addLayer(l); bindSelect(l, el); } });
+    const n = S.state.mode === 'live' ? S.revealedCount(sc) : sc.elements.length;
+    sc.elements.slice(0, n).forEach(el => { const l = buildLayer(el); if (l) { l.__id = el.id; drawn.addLayer(l); bindSelect(l, el); } });
     refreshCtx();
   }
   function buildLayer(el) {
