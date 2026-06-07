@@ -63,9 +63,22 @@ const Draw = (() => {
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
       case 'asset':   { const w = el.w || 54, rot = el.rot || 0; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${el.src}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      case 'frontline': return frontLine(L.latLng(el.a), L.latLng(el.b), { color: el.color });
+      case 'country': { const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: el.color, weight: 2, fillColor: el.color, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(el.name, { sticky: true, className: 'trk-tip' }); return lyr; }
     }
     return null;
   }
+  function frontLine(a, b, o) {
+    const g = L.layerGroup();
+    g.addLayer(L.polyline([a, b], { color: o.color, weight: 4, opacity: 1 }));
+    const steps = 9, d = map.distance(a, b) * 0.045, ang = Math.atan2(b.lat - a.lat, b.lng - a.lng) + Math.PI / 2;
+    for (let i = 0; i < steps; i++) { const t = (i + 0.5) / steps, lat = a.lat + (b.lat - a.lat) * t, lng = a.lng + (b.lng - a.lng) * t; const tl = lat + Math.sin(ang) * d / 111000, tg = lng + Math.cos(ang) * d / (111000 * Math.cos(lat * Math.PI / 180) || 1); g.addLayer(L.polyline([[lat, lng], [tl, tg]], { color: o.color, weight: 3, opacity: 1 })); }
+    return g;
+  }
+  /* point-in-polygon (ray casting) for country highlight */
+  function pir(p, ring) { let x = p[0], y = p[1], inside = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1]; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside; } return inside; }
+  function pip(p, poly) { if (!pir(p, poly[0])) return false; for (let i = 1; i < poly.length; i++) if (pir(p, poly[i])) return false; return true; }
+  function countryAt(lng, lat) { for (const c of (window.COUNTRIES || [])) { const g = c.g; if (g.type === 'Polygon') { if (pip([lng, lat], g.coordinates)) return c; } else if (g.type === 'MultiPolygon') { for (const poly of g.coordinates) if (pip([lng, lat], poly)) return c; } } return null; }
   function arrowLine(a, b, o) { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], o)); const ang = Math.atan2(b.lat - a.lat, b.lng - a.lng); const d = map.distance(a, b) * 0.18; const head = w => L.latLng(b.lat + Math.sin(w) * d / 111000, b.lng + Math.cos(w) * d / 111000); g.addLayer(L.polyline([head(ang + 2.6), b, head(ang - 2.6)], o)); return g; }
   function curveLine(a, b, o) { const mid = L.latLng((a.lat + b.lat) / 2 + (b.lng - a.lng) * 0.2, (a.lng + b.lng) / 2 - (b.lat - a.lat) * 0.2); const p = []; for (let t = 0; t <= 1; t += 0.05) p.push([(1 - t) ** 2 * a.lat + 2 * (1 - t) * t * mid.lat + t * t * b.lat, (1 - t) ** 2 * a.lng + 2 * (1 - t) * t * mid.lng + t * t * b.lng]); return L.polyline(p, o); }
 
@@ -81,7 +94,7 @@ const Draw = (() => {
   }
 
   /* ---------------- tools ---------------- */
-  const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure'];
+  const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'measure', 'frontline'];
   function setTool(t) { tool = t; if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t)); }
 
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = tool === 'sketch' ? [[e.latlng.lat, e.latlng.lng]] : null; });
@@ -97,6 +110,7 @@ const Draw = (() => {
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
     else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
     else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
+    else if (tool === 'country') { const c = countryAt(e.latlng.lng, e.latlng.lat); if (c) S.addElement({ type: 'country', name: c.n, geom: c.g, color: S.state.color }); else window.UI && UI.toast('No country here'); }
     else if (tool === 'select') deselect();
   });
   function preview(t, a, b) {
@@ -104,6 +118,7 @@ const Draw = (() => {
     if (t === 'circle') return L.circle(a, { radius: map.distance(a, b), ...o, fillOpacity: 0.08 });
     if (t === 'ring') { const g = L.layerGroup(); g.addLayer(L.circle(a, { radius: map.distance(a, b), ...o, fill: false, dashArray: '6 5' })); g.addLayer(L.marker(a, { icon: labelIcon((map.distance(a, b) / 1000).toFixed(0) + ' KM', S.state.color) })); return g; }
     if (t === 'arrow') return arrowLine(a, b, o);
+    if (t === 'frontline') return frontLine(a, b, o);
     if (t === 'curve') return curveLine(a, b, o);
     if (t === 'polygon') return L.polygon([a, b, [a.lat, b.lng]], { ...o, fillOpacity: 0.08 });
     if (t === 'measure') { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(b, { icon: labelIcon(fmtDist(map.distance(a, b)), S.state.color) })); return g; }
@@ -116,6 +131,7 @@ const Draw = (() => {
     if (t === 'circle') S.addElement({ type: 'circle', ll: A, radius: map.distance(a, b), color: c });
     else if (t === 'ring') S.addElement({ type: 'ring', ll: A, radius: map.distance(a, b), color: c });
     else if (t === 'arrow') S.addElement({ type: 'arrow', a: A, b: B, color: c });
+    else if (t === 'frontline') S.addElement({ type: 'frontline', a: A, b: B, color: c });
     else if (t === 'curve') S.addElement({ type: 'curve', a: A, b: B, color: c });
     else if (t === 'polygon') S.addElement({ type: 'polygon', pts: [A, B, [a.lat, b.lng]], color: c });
     else if (t === 'measure') S.addElement({ type: 'measure', a: A, b: B, color: c });
@@ -177,6 +193,7 @@ const Draw = (() => {
   const TOOLS = [
     ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['curve', I.curve, 'Curved arrow'],
     ['ring', I.target, 'Range ring'], ['circle', I.circle, 'Circle'], ['polygon', I.polygon, 'Area'], ['sketch', I.sketch, 'Freehand'],
+    ['frontline', I.frontline, 'Front line'], ['country', I.country, 'Highlight country'],
     ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['erase', I.erase, 'Erase'],
   ];
   const COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
