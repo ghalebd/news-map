@@ -36,8 +36,9 @@
   const x = h('button', 'x', I.close); head.append(qa, x);
   const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
   const bodyEl = h('div', 'cfg-body'); drawer.append(head, search, bodyEl); document.body.append(toggle, drawer);
-  toggle.onclick = () => { const o = !drawer.classList.contains('open'); drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); };
-  x.onclick = () => { drawer.classList.remove('open'); toggle.classList.remove('is-open'); };
+  const setOpen = o => { drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); document.body.style.setProperty('--cfg-w', drawer.getBoundingClientRect().width + 'px'); document.body.classList.toggle('cfg-open', o); };
+  toggle.onclick = () => setOpen(!drawer.classList.contains('open'));
+  x.onclick = () => setOpen(false);
 
   /* ---- builders ---- */
   function section(title, icon) {
@@ -57,6 +58,22 @@
     f.append(lab, inp); return f;
   }
   function swatches(list, cur, fn) { const sw = h('div', 'cfg-sw'); list.forEach(c => { const b = h('button'); b.style.background = c; if (c === cur) b.classList.add('on'); b.onclick = () => { sw.querySelectorAll('button').forEach(z => z.classList.remove('on')); b.classList.add('on'); fn(c); }; sw.appendChild(b); }); return sw; }
+  /* rotary knob (drag up/down) — DaVinci-style visual control */
+  function knob(label, val, min, max, step, fn) {
+    const wrap = h('div', 'knob');
+    wrap.innerHTML = `<div class="knob__dial" title="Drag up/down"><svg viewBox="0 0 50 50"><circle class="knob__bg" cx="25" cy="25" r="20"/><circle class="knob__fg" cx="25" cy="25" r="20"/></svg><span class="knob__num"></span></div><div class="knob__lab">${label}</div>`;
+    const fg = wrap.querySelector('.knob__fg'), num = wrap.querySelector('.knob__num'), dial = wrap.querySelector('.knob__dial');
+    const C = 2 * Math.PI * 20; fg.style.strokeDasharray = C; let v = val;
+    const fmt = x => step < 1 ? x.toFixed(step < 0.1 ? 2 : 1) : String(Math.round(x));
+    const paint = () => { const f = Math.max(0, Math.min(1, (v - min) / (max - min))); fg.style.strokeDashoffset = C * (1 - f); num.textContent = fmt(v); };
+    paint();
+    let drag = false, sy = 0, sv = 0;
+    dial.addEventListener('pointerdown', e => { drag = true; sy = e.clientY; sv = v; dial.setPointerCapture(e.pointerId); e.preventDefault(); });
+    dial.addEventListener('pointermove', e => { if (!drag) return; let nv = sv + ((sy - e.clientY) / 130) * (max - min); nv = Math.max(min, Math.min(max, Math.round(nv / step) * step)); if (nv !== v) { v = nv; paint(); fn(v); } });
+    dial.addEventListener('pointerup', () => { drag = false; });
+    return wrap;
+  }
+  const knobs = (...ks) => { const g = h('div', 'cfg-knobs'); ks.forEach(k => g.appendChild(k)); return g; };
   function field(label, el) { const f = h('div', 'cfg-field'); f.appendChild(h('div', 'lab', `<span>${label}</span>`)); if (el) f.appendChild(el); return f; }
   const live = {};
 
@@ -141,11 +158,13 @@
     const t2 = section('Tracking style', I.curve);
     t2.bd.append(field('Ship colour', swatches(TC, T.shipColor, c => S.setTrackStyle({ shipColor: c }))),
       field('Flight colour', swatches(TC, T.flightColor, c => S.setTrackStyle({ flightColor: c }))),
-      slider('Line thickness', T.lineWeight, 0.5, 4, 0.5, v => S.setTrackStyle({ lineWeight: v })),
-      slider('Line opacity %', Math.round(T.lineOpacity * 100), 10, 100, 5, v => S.setTrackStyle({ lineOpacity: v / 100 })),
-      slider('Vector length (min)', T.vectorMins, 0, 15, 1, v => S.setTrackStyle({ vectorMins: v })),
-      slider('Trail length (pts)', T.trailPoints, 5, 200, 5, v => S.setTrackStyle({ trailPoints: v })),
-      slider('Max ships', T.maxShips, 50, 1000, 50, v => S.setTrackStyle({ maxShips: v })),
+      knobs(
+        knob('Thick', T.lineWeight, 0.5, 4, 0.5, v => S.setTrackStyle({ lineWeight: v })),
+        knob('Opacity', Math.round(T.lineOpacity * 100), 10, 100, 5, v => S.setTrackStyle({ lineOpacity: v / 100 })),
+        knob('Vector', T.vectorMins, 0, 15, 1, v => S.setTrackStyle({ vectorMins: v })),
+        knob('Trail', T.trailPoints, 5, 200, 5, v => S.setTrackStyle({ trailPoints: v })),
+        knob('Max', T.maxShips, 50, 1000, 50, v => S.setTrackStyle({ maxShips: v })),
+      ),
       rowTog('Course vectors', T.showVectors !== false, on => S.setTrackStyle({ showVectors: on })),
       rowTog('Travelled trails', T.showHistory !== false, on => S.setTrackStyle({ showHistory: on })),
       rowTog('Destination routes', T.showRoutes !== false, on => S.setTrackStyle({ showRoutes: on })));
@@ -168,9 +187,11 @@
     const sp = bc.spotlight || {};
     const b4 = section('Spotlight', I.target);
     b4.bd.appendChild(rowTog('Focus mask', !!sp.on, on => { const cv = window.GameMap.currentView(); S.setSpotlight(on ? { on: true, lat: cv.lat, lng: cv.lng } : { on: false }); }));
-    b4.bd.appendChild(slider('Radius (km)', sp.radiusKm || 400, 50, 2000, 50, v => S.setSpotlight({ radiusKm: v })));
-    b4.bd.appendChild(slider('Edge feather %', sp.feather == null ? 40 : sp.feather, 0, 100, 5, v => S.setSpotlight({ feather: v })));
-    b4.bd.appendChild(slider('Dim outside %', sp.dim == null ? 66 : sp.dim, 0, 95, 5, v => S.setSpotlight({ dim: v })));
+    b4.bd.appendChild(knobs(
+      knob('Radius', sp.radiusKm || 400, 50, 2000, 50, v => S.setSpotlight({ radiusKm: v })),
+      knob('Feather', sp.feather == null ? 40 : sp.feather, 0, 100, 5, v => S.setSpotlight({ feather: v })),
+      knob('Dim', sp.dim == null ? 66 : sp.dim, 0, 95, 5, v => S.setSpotlight({ dim: v })),
+    ));
     const rc = h('button', 'cfg-btn', `${I.target}<span>Centre on view</span>`); rc.onclick = () => { const cv = window.GameMap.currentView(); S.setSpotlight({ lat: cv.lat, lng: cv.lng }); }; b4.bd.appendChild(rc);
     ct.appendChild(b4.sec);
     // animation engine (auto-build the scene with draw-on)

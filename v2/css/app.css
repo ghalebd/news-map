@@ -380,6 +380,12 @@ body.touch .cfg-toggle { width: 54px; height: 54px; }
 body.touch .qa__tool { padding: 13px 12px; font-size: 13px; }
 body.touch .qtools { padding: 10px; gap: 9px; }
 
+/* ---------- shift on-screen chrome aside when the control panel opens ---------- */
+.brand, .modesw, .qtools, .status, .livetrack, .deck, .nownext, .cfg-toggle { transition: transform var(--t) var(--ease); }
+body.cfg-open .cfg-toggle, body.cfg-open .status, body.cfg-open .livetrack { transform: translateX(var(--cfg-w, 0px)); }
+body.cfg-open .brand, body.cfg-open .qtools { transform: translateX(var(--cfg-w, 0px)) translateY(-50%); }
+body.cfg-open .modesw, body.cfg-open .deck, body.cfg-open .nownext { transform: translateX(calc(-50% + var(--cfg-w, 0px) / 2)); }
+
 /* ---------- mode visibility ---------- */
 body.mode-build .nownext { display: none; }
 body.mode-live .deck { display: none; }
