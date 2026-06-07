@@ -230,11 +230,19 @@ body.mode-live .qtools { display: flex; }
 
 /* tracking markers */
 .trk { display: flex; align-items: center; justify-content: center; }
-.trk__rot { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .6)); }
-.trk--ship .trk__rot { color: #7fd4ff; }
-.trk--plane .trk__rot { color: #ffd60a; }
-.trk__rot svg { width: 22px; height: 22px; }
+.trk__rot { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; transition: transform .9s linear; will-change: transform; }
+.trk--ship .trk__rot { color: #46d8ff; filter: drop-shadow(0 0 5px rgba(70, 216, 255, .55)) drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
+.trk--plane .trk__rot { color: #ffd54a; filter: drop-shadow(0 0 5px rgba(255, 213, 74, .5)) drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
+.trk__rot svg { width: 30px; height: 30px; }
+.trk.is-focus .trk__rot { color: #fff; filter: drop-shadow(0 0 8px var(--accent)) drop-shadow(0 0 3px var(--accent)); transform: scale(1.18); }
 .trk-tip { font: 600 11px var(--font) !important; }
+.trk-tip .trk-sub { opacity: .8; font-size: 10px; }
+.trk-tip .trk-dest { color: #7cf3ff; font-size: 10px; }
+.trk-tip .trk-eta { color: var(--text-3); font-size: 9px; }
+
+/* destination port pin */
+.port-pin i { display: block; width: 12px; height: 12px; border-radius: 50%; background: #7cf3ff; border: 2px solid #06121f; box-shadow: 0 0 8px rgba(124, 243, 255, .8); }
+.port-pin__lbl { position: absolute; left: 16px; top: -3px; white-space: nowrap; background: rgba(8, 11, 18, .86); color: #cfefff; font: 700 10px var(--font); letter-spacing: .4px; padding: 3px 8px; border-radius: 5px; border: 1px solid rgba(124, 243, 255, .5); text-transform: uppercase; }
 
 /* ---------- scene inspector (PREP) ---------- */
 .sceneins { position: fixed; right: 16px; top: 70px; width: 268px; z-index: var(--z-bar); padding: 14px; display: flex; flex-direction: column; gap: 13px; }

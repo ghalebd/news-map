@@ -36,17 +36,18 @@ const Store = (() => {
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     reveal: {},                    // sceneId -> number of revealed elements (synced)
     tracking: { ships: false, flights: false },  // live overlays (synced)
+    trackFocus: null,             // focused ship MMSI (route shown) — synced
   };
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
   const subs = [];
   const on = fn => { subs.push(fn); return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); }; };
   let _t = null;
-  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking })); } catch (e) {} }, 120); }
+  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus })); } catch (e) {} }, 120); }
   const emit = (evt, opts) => { subs.forEach(fn => fn(state, evt || 'change')); if (!(opts && opts.silent)) persist(); };
 
   function deepMerge(def, ov) { const o = JSON.parse(JSON.stringify(def)); for (const k in ov) { if (ov[k] && typeof ov[k] === 'object' && !Array.isArray(ov[k])) o[k] = deepMerge(def[k] || {}, ov[k]); else o[k] = ov[k]; } return o; }
-  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; return true; } catch (e) { return false; } }
+  function load() { try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; if ('trackFocus' in d) state.trackFocus = d.trackFocus; return true; } catch (e) { return false; } }
   window.addEventListener('storage', e => { if (e.key === KEY) { load(); emit('sync', { silent: true }); } });
 
   /* ---- scenes ---- */
@@ -80,6 +81,7 @@ const Store = (() => {
   function setColor(c) { state.color = c; emit('color'); }
   function setMapStyle(id) { state.mapStyle = id; emit('mapstyle'); }
   function setTracking(kind, on) { state.tracking[kind] = on; emit('tracking'); }
+  function setTrackFocus(mmsi) { state.trackFocus = mmsi; emit('trackfocus'); }
 
   /* ---- elements (active scene) ---- */
   function addElement(rec) { const s = activeScene(); if (!s) return null; rec.id = uid('el'); s.__redo = []; s.elements.push(rec); emit('elements'); return rec; }
@@ -113,7 +115,7 @@ const Store = (() => {
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
-    setMode, toggleMode, setColor, setMapStyle, setTracking,
+    setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, resetConfig,

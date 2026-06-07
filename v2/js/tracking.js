@@ -13,14 +13,18 @@
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   const isControl = window.APP_ROLE === 'control';
   const AIS_KEY = '3da0a878476db856ac5cf273d312875598270404';
+  const SHIP_COLOR = '#46d8ff', PLANE_COLOR = '#ffd54a';
+  const TRAIL_MAX = 30;   // points kept per ship trail
 
   /* -------------------- ships (AIS) -------------------- */
   const Ships = {
-    on: false, socket: null, ships: new Map(), layer: null,
+    on: false, socket: null, ships: new Map(), layer: null, focus: null,
     reconnectT: null, pruneT: null, resubT: null, STALE: 5 * 60 * 1000,
     set(v) { if (v === this.on) return; this.on = v; v ? this.start() : this.stop(); setCounts(); },
     start() {
-      this.layer = this.layer || L.layerGroup(); this.layer.addTo(map);
+      this.route = this.route || L.layerGroup(); this.route.addTo(map);     // planned route (bottom)
+      this.trails = this.trails || L.layerGroup(); this.trails.addTo(map);   // travelled trail
+      this.layer = this.layer || L.layerGroup(); this.layer.addTo(map);      // markers (top)
       this.connect();
       this.pruneT = setInterval(() => this.prune(), 30000);
     },
@@ -28,6 +32,8 @@
       clearTimeout(this.reconnectT); clearInterval(this.pruneT); clearTimeout(this.resubT);
       if (this.socket) { try { this.socket.close(); } catch (e) {} this.socket = null; }
       if (this.layer) map.removeLayer(this.layer);
+      if (this.trails) { map.removeLayer(this.trails); this.trails.clearLayers(); }
+      if (this.route) { map.removeLayer(this.route); this.route.clearLayers(); }
       this.ships.clear();
     },
     connect() {
@@ -60,18 +66,72 @@
         let rot = (pr.TrueHeading >= 0 && pr.TrueHeading < 360) ? pr.TrueHeading : pr.Cog;
         this.upsert(mmsi, { lat: pr.Latitude, lng: pr.Longitude, course: typeof rot === 'number' ? rot : 0, speed: pr.Sog, name: (meta.ShipName || '').trim() || ('MMSI ' + mmsi), t: Date.now() });
       }
+      // static data: voyage destination + ETA
+      const sd = msg.Message && msg.Message.ShipStaticData;
+      if (sd) {
+        const s = this.ships.get(mmsi); if (!s) return;
+        const dest = (sd.Destination || '').replace(/[@_]+/g, ' ').replace(/\s+/g, ' ').trim();
+        if (dest) s.dest = dest; s.eta = sd.Eta;
+        if (sd.Name) s.name = sd.Name.replace(/[@_]+/g, ' ').trim() || s.name;
+        this.resolveDest(s);
+        if (s.marker) s.marker.setTooltipContent(this.tipHtml(s));
+        if (this.focus === mmsi) this.drawRoute(s);
+      }
+    },
+    resolveDest(s) { if (s.dest && window.PortLookup) { const p = window.PortLookup.find(s.dest); if (p) s.destPort = p; } },
+    etaText(eta) { if (!eta || !eta.Month) return ''; const p = n => String(n).padStart(2, '0'); return `${p(eta.Day)}/${p(eta.Month)} ${p(eta.Hour)}:${p(eta.Minute)} UTC`; },
+    tipHtml(s) {
+      const sp = typeof s.speed === 'number' ? s.speed.toFixed(1) + ' kn' : '—';
+      let h = `<b>${s.name}</b><br><span class="trk-sub">${sp}</span>`;
+      if (s.dest) { const d = s.destPort ? s.destPort.name : s.dest; h += `<br><span class="trk-dest">→ ${d}</span>`; const e = this.etaText(s.eta); if (e) h += `<br><span class="trk-eta">ETA ${e}</span>`; }
+      return h;
     },
     upsert(mmsi, info) {
       let s = this.ships.get(mmsi);
       if (!s) {
-        s = { mmsi, ...info };
-        s.marker = L.marker([s.lat, s.lng], { icon: icon('ship', s.course), zIndexOffset: 100, keyboard: false });
-        s.marker.bindTooltip(`<b>${s.name}</b><br>${typeof s.speed === 'number' ? s.speed.toFixed(1) + ' kn' : '—'}`, { direction: 'top', offset: [0, -10], className: 'trk-tip', sticky: true });
+        s = { mmsi, trail: [[info.lat, info.lng]], ...info };
+        s.marker = L.marker([s.lat, s.lng], { icon: icon('ship', s.course, this.focus === mmsi), zIndexOffset: 100, keyboard: false });
+        s.marker.bindTooltip(this.tipHtml(s), { direction: 'top', offset: [0, -12], className: 'trk-tip', sticky: true });
+        s.marker.on('click', () => S.setTrackFocus(this.focus === mmsi ? null : mmsi));
         if (this.layer) s.marker.addTo(this.layer);
         this.ships.set(mmsi, s); setCounts();
-      } else { Object.assign(s, info); s.marker.setLatLng([s.lat, s.lng]); s.marker.setIcon(icon('ship', s.course)); s.marker.setTooltipContent(`<b>${s.name}</b><br>${typeof s.speed === 'number' ? s.speed.toFixed(1) + ' kn' : '—'}`); }
+      } else { Object.assign(s, info); s.marker.setLatLng([s.lat, s.lng]); s.marker.setIcon(icon('ship', s.course, this.focus === mmsi)); s.marker.setTooltipContent(this.tipHtml(s)); }
+      this.trail(s);
+      if (this.focus === mmsi && s.destPort && Date.now() - (s._rt || 0) > 8000) this.drawRoute(s);
     },
-    prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); this.ships.delete(k); n++; } } if (n) setCounts(); },
+    /* focus -> draw the planned sea-route + destination pin */
+    applyFocus(mmsi) {
+      this.focus = mmsi;
+      if (this.route) this.route.clearLayers();
+      for (const [, s] of this.ships) if (s.marker) s.marker.setIcon(icon('ship', s.course, false));
+      if (mmsi == null) return;
+      const s = this.ships.get(mmsi); if (!s) return;
+      if (s.marker) s.marker.setIcon(icon('ship', s.course, true));
+      this.resolveDest(s); this.drawRoute(s);
+    },
+    drawRoute(s) {
+      if (!this.route || !this.on) return;
+      this.route.clearLayers(); s._rt = Date.now();
+      if (!s.destPort || !window.searoute) return;
+      let line = null;
+      try { line = window.searoute([s.lng, s.lat], [s.destPort.lng, s.destPort.lat]); } catch (e) {}
+      if (line) L.geoJSON(line, { interactive: false, style: { color: '#7cf3ff', weight: 2.4, opacity: .85, dashArray: '7 7', lineCap: 'round' } }).addTo(this.route);
+      else L.polyline([[s.lat, s.lng], [s.destPort.lat, s.destPort.lng]], { interactive: false, color: '#7cf3ff', weight: 2, opacity: .6, dashArray: '4 8' }).addTo(this.route);
+      const lbl = `<span class="port-pin__lbl">${s.destPort.name}${this.etaText(s.eta) ? ' · ETA ' + this.etaText(s.eta) : ''}</span>`;
+      L.marker([s.destPort.lat, s.destPort.lng], { interactive: false, icon: L.divIcon({ className: 'port-pin', html: `<i></i>${lbl}`, iconSize: [14, 14], iconAnchor: [7, 7] }) }).addTo(this.route);
+    },
+    trail(s) {
+      const last = s.trail[s.trail.length - 1];
+      if (!last || Math.abs(last[0] - s.lat) > 1e-4 || Math.abs(last[1] - s.lng) > 1e-4) s.trail.push([s.lat, s.lng]);
+      if (s.trail.length > TRAIL_MAX) s.trail.shift();
+      if (s.trail.length < 2 || !this.trails) return;
+      const recent = s.trail.slice(-8);
+      if (!s.line) { s.line = L.polyline(s.trail, { color: SHIP_COLOR, weight: 1.6, opacity: .28, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
+      else s.line.setLatLngs(s.trail);
+      if (!s.head) { s.head = L.polyline(recent, { color: SHIP_COLOR, weight: 2.6, opacity: .8, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.trails); }
+      else s.head.setLatLngs(recent);
+    },
+    prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); } if (k === this.focus && this.route) this.route.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
   };
 
   /* -------------------- flights (airplanes.live) -------------------- */
@@ -109,8 +169,11 @@
     },
   };
 
-  function icon(kind, rot) {
-    return L.divIcon({ className: 'trk trk--' + kind, html: `<span class="trk__rot" style="transform:rotate(${rot || 0}deg)">${kind === 'ship' ? I.ship : I.plane}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+  /* sleek top-down silhouettes (nose/bow point up = heading 0; rotated by the wrapper) */
+  const SHIP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.3c2.7 3.3 4 7 4 11.5l-.6 6.7c-.12 1.3-1.5 2-3.4 2s-3.28-.7-3.4-2L8 12.8C8 8.3 9.3 4.6 12 1.3Z" stroke="#06121f" stroke-width="1.1" stroke-linejoin="round"/><rect x="10.1" y="13.5" width="3.8" height="4.2" rx="1" fill="#06121f" opacity=".55"/></svg>';
+  const PLANE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.7c.78 0 1.3.95 1.3 2.3v5.2l8.7 5v2.1l-8.7-2.8v4.9l2.4 1.8v1.5L12 20.2l-3.4 1.5v-1.5l2.4-1.8v-4.9L2.3 16.3v-2.1l8.7-5V4C10.7 2.65 11.22 1.7 12 1.7Z" stroke="#06121f" stroke-width=".9" stroke-linejoin="round"/></svg>';
+  function icon(kind, rot, focus) {
+    return L.divIcon({ className: 'trk trk--' + kind + (focus ? ' is-focus' : ''), html: `<span class="trk__rot" style="transform:rotate(${rot || 0}deg)">${kind === 'ship' ? SHIP_SVG : PLANE_SVG}</span>`, iconSize: [34, 34], iconAnchor: [17, 17] });
   }
 
   /* -------------------- control bar -------------------- */
@@ -130,9 +193,12 @@
     const can = isControl || S.cfg().permissions.canTrack !== false;
     bar.classList.toggle('is-locked', !can);
   }
-  function sync() { bShips.classList.toggle('is-on', S.state.tracking.ships); bFlights.classList.toggle('is-on', S.state.tracking.flights); Ships.set(S.state.tracking.ships); Flights.set(S.state.tracking.flights); applyGate(); }
+  function sync() { bShips.classList.toggle('is-on', S.state.tracking.ships); bFlights.classList.toggle('is-on', S.state.tracking.flights); Ships.set(S.state.tracking.ships); Flights.set(S.state.tracking.flights); applyGate(); if (Ships.on && Ships.focus !== S.state.trackFocus) Ships.applyFocus(S.state.trackFocus); }
 
-  S.on((st, evt) => { if (evt === 'tracking' || evt === 'sync' || evt === 'config') sync(); });
+  S.on((st, evt) => {
+    if (evt === 'tracking' || evt === 'sync' || evt === 'config') sync();
+    if (evt === 'trackfocus' || evt === 'sync') { if (Ships.on) Ships.applyFocus(S.state.trackFocus); }
+  });
   map.on('moveend', () => { if (Ships.on) Ships.onView(); if (Flights.on) Flights.fetch(); });
   sync();
   window.Tracking = { Ships, Flights };
