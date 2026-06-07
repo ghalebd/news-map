@@ -173,6 +173,16 @@
     b4.bd.appendChild(slider('Dim outside %', sp.dim == null ? 66 : sp.dim, 0, 95, 5, v => S.setSpotlight({ dim: v })));
     const rc = h('button', 'cfg-btn', `${I.target}<span>Centre on view</span>`); rc.onclick = () => { const cv = window.GameMap.currentView(); S.setSpotlight({ lat: cv.lat, lng: cv.lng }); }; b4.bd.appendChild(rc);
     ct.appendChild(b4.sec);
+    // animation engine (auto-build the scene with draw-on)
+    const an = bc.anim || {};
+    const b5 = section('Animation', I.play);
+    const play = h('button', 'cfg-btn', `${an.playing ? I.minus : I.play}<span>${an.playing ? 'Stop' : 'Play scene build'}</span>`);
+    play.onclick = () => S.setAnim({ playing: !an.playing });
+    b5.bd.appendChild(play);
+    b5.bd.appendChild(slider('Step speed (ms)', an.ms || 700, 150, 2500, 50, v => S.setAnim({ ms: v })));
+    b5.bd.appendChild(rowTog('Loop', !!an.loop, on => S.setAnim({ loop: on })));
+    b5.bd.appendChild(h('div', 'hint', 'Reveals the scene\'s elements one-by-one with draw-on animation (presenter mode).'));
+    ct.appendChild(b5.sec);
   }
   function tabAssets(C, ct) {
     const { sec, bd } = section('Categories', I.folder);

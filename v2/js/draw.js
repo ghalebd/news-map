@@ -39,12 +39,33 @@ const Draw = (() => {
   const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target'];
 
   /* ---------------- render the active scene ---------------- */
+  let lastScene = null, lastN = 0;
   function render() {
     drawn.clearLayers();
-    const sc = S.activeScene(); if (!sc) return;
-    const n = S.state.mode === 'live' ? S.revealedCount(sc) : sc.elements.length;
-    sc.elements.slice(0, n).forEach(el => { const l = buildLayer(el); if (l) { l.__id = el.id; drawn.addLayer(l); if (el.desc && l.bindTooltip) l.bindTooltip(esc(el.desc), { direction: 'top', offset: [0, -10], className: 'trk-tip' }); bindSelect(l, el); } });
+    const sc = S.activeScene(); if (!sc) { lastScene = null; lastN = 0; return; }
+    const live = S.state.mode === 'live';
+    const n = live ? S.revealedCount(sc) : sc.elements.length;
+    // which elements are newly revealed -> animate them in
+    let animFrom = -1;
+    if (live) { if (sc.id === lastScene && n > lastN) animFrom = lastN; lastScene = sc.id; lastN = n; }
+    else { lastScene = sc.id; lastN = n; }
+    sc.elements.slice(0, n).forEach((el, i) => {
+      const l = buildLayer(el); if (!l) return;
+      l.__id = el.id; drawn.addLayer(l);
+      if (el.desc && l.bindTooltip) l.bindTooltip(esc(el.desc), { direction: 'top', offset: [0, -10], className: 'trk-tip' });
+      bindSelect(l, el);
+      if (animFrom >= 0 && i >= animFrom) animateIn(l, el);
+    });
     refreshCtx();
+  }
+  /* draw-on / fade-in animation for a revealed element */
+  function animateIn(layer, el) {
+    const ms = (S.state.broadcast && S.state.broadcast.anim && S.state.broadcast.anim.ms) || 700;
+    const paths = []; const marks = [];
+    const collect = lyr => { if (lyr._path) paths.push(lyr._path); if (lyr._icon) marks.push(lyr._icon); };
+    if (layer.eachLayer) layer.eachLayer(collect); else collect(layer);
+    paths.forEach(p => { try { const len = p.getTotalLength ? p.getTotalLength() : 0; if (len) { p.style.transition = 'none'; p.style.strokeDasharray = len; p.style.strokeDashoffset = len; p.getBoundingClientRect(); p.style.transition = `stroke-dashoffset ${ms}ms ease`; p.style.strokeDashoffset = 0; } } catch (e) {} });
+    marks.forEach(m => { m.style.animation = `mkIn ${Math.min(500, ms)}ms var(--ease-out)`; });
   }
   const dw = () => (S.cfg().drawDefaults && S.cfg().drawDefaults.weight) || 3;
   function buildLayer(el) {

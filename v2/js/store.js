@@ -61,7 +61,7 @@ const Store = (() => {
     reveal: {},                    // sceneId -> number of revealed elements (synced)
     tracking: { ships: false, flights: false, trails: true },  // live overlays (synced)
     trackFocus: null,             // focused ship MMSI (route shown) — synced
-    broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 }, spotlight: { on: false, lat: 25, lng: 45, radiusKm: 400, feather: 40, dim: 66 } },
+    broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 }, spotlight: { on: false, lat: 25, lng: 45, radiusKm: 400, feather: 40, dim: 66 }, anim: { ms: 700, loop: false, playing: false } },
   };
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
@@ -116,6 +116,7 @@ const Store = (() => {
   function setTicker(patch) { Object.assign(state.broadcast.ticker, patch); emit('broadcast'); }
   function setTour(patch) { Object.assign(state.broadcast.tour, patch); emit('broadcast'); }
   function setSpotlight(patch) { Object.assign(state.broadcast.spotlight, patch); emit('broadcast'); }
+  function setAnim(patch) { Object.assign(state.broadcast.anim, patch); emit('broadcast'); }
 
   /* ---- elements (active scene) ---- */
   function addElement(rec) { const s = activeScene(); if (!s) return null; rec.id = uid('el'); s.__redo = []; s.elements.push(rec); emit('elements'); return rec; }
@@ -159,7 +160,7 @@ const Store = (() => {
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene, setSceneView,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
-    setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight,
+    setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight, setAnim,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, addPlace, removePlace, resetConfig,

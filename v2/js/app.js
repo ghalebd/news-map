@@ -126,6 +126,23 @@
     if (t.playing && window.APP_ROLE === 'control') tourT = setInterval(() => S.advance(), Math.max(2, t.sec || 8) * 1000);
   }
 
+  /* ---------- animation: auto-build the active scene (reveal step-by-step) ---------- */
+  let animT = null, animPlaying = false;
+  function applyAnim() {
+    const a = (S.state.broadcast && S.state.broadcast.anim) || {};
+    if (a.playing && window.APP_ROLE === 'control') {
+      if (!animPlaying) {   // fresh start: rewind the scene to reveal from zero
+        animPlaying = true; const sc = S.activeScene(); if (!sc) { S.setAnim({ playing: false }); return; }
+        if (!sc.reveal) S.toggleSceneReveal(sc.id); else { S.revealReset(sc.id); S.emit('reveal'); }
+      }
+      clearInterval(animT);
+      animT = setInterval(() => {
+        const s = S.activeScene(); if (!s) return;
+        if (!S.revealNext()) { if (a.loop) { S.revealReset(s.id); S.emit('reveal'); } else { clearInterval(animT); animT = null; S.setAnim({ playing: false }); } }
+      }, Math.max(150, a.ms || 700));
+    } else { animPlaying = false; clearInterval(animT); animT = null; }
+  }
+
   /* ---------- zoom / reset cluster + help ---------- */
   const zc = h('div', 'zoomctl glass');
   const zb = (icon, title, fn) => { const b = h('button', 'zoomctl__b', icon); b.title = title; b.onclick = fn; return b; };
@@ -164,7 +181,7 @@
     if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
     if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
-    if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); renderSpotlight(); }
+    if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); applyAnim(); renderSpotlight(); }
     if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
     if (evt === 'mapstyle' || evt === 'sync') M.setStyle(S.state.mapStyle);
   });
@@ -194,6 +211,7 @@
   applyTilt();
   renderBroadcast();
   applyTour();
+  applyAnim();
   renderSpotlight();
   window.Theme && window.Theme.apply(S.cfg().style);
   M.setStyle(S.state.mapStyle);
