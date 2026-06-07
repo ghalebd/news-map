@@ -21,18 +21,13 @@
   const TC = ['#46d8ff', '#7cf3ff', '#34d399', '#ffd54a', '#ff9f0a', '#fb7185', '#bf5af2', '#ffffff'];
   const DCOLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
 
-  /* ---- shell ---- */
+  /* ---- shell: gear toggles a category dock; categories open as floating glass panels ---- */
   const toggle = h('button', 'cfg-toggle', I.settings); toggle.title = 'Control panel';
-  const drawer = h('div', 'cfg-drawer cfg-drawer--wide');
-  const head = h('div', 'cfg-hd', `<div class="t">Control Panel<small>NEWS MAP · CONSOLE</small></div>`);
-  const x = h('button', 'x', I.close); head.appendChild(x);
-  const body = h('div', 'cfg-body');
-  drawer.append(head, body);
-  document.body.append(toggle, drawer);
-  const open = () => { drawer.classList.add('open'); toggle.classList.add('is-open'); };
-  const close = () => { drawer.classList.remove('open'); toggle.classList.remove('is-open'); };
-  toggle.onclick = () => drawer.classList.contains('open') ? close() : open();
-  x.onclick = close;
+  const dock = h('div', 'cdock');
+  document.body.append(toggle, dock);
+  let dockOpen = false;
+  const setDock = v => { dockOpen = v; dock.classList.toggle('open', v); toggle.classList.toggle('is-open', v); };
+  toggle.onclick = () => setDock(!dockOpen);
 
   /* ---- builders ---- */
   function section(title, icon) {
@@ -204,30 +199,42 @@
     ct.appendChild(reset);
   }
 
-  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabTracking, tabBroadcast, tabAssets, tabProject];
-  const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
-  const acc = h('div', 'cfg-acc'); body.append(search, acc);
-  function applyFilter() {
-    const q = search.value.trim().toLowerCase();
-    acc.querySelectorAll('.cfg-sec').forEach(sec => {
-      let any = false;
-      sec.querySelectorAll('.cfg-sec__bd > *').forEach(row => { const hit = !q || row.textContent.toLowerCase().includes(q); row.style.display = hit ? '' : 'none'; if (hit) any = true; });
-      const titleHit = !q || sec.querySelector('.cfg-sec__hd .t').textContent.toLowerCase().includes(q);
-      sec.style.display = (titleHit || any) ? '' : 'none';
-      if (q && (any || titleHit)) sec.classList.add('open');
+  const CATS = [
+    { id: 'identity', label: 'Identity', icon: I.sliders, build: tabIdentity },
+    { id: 'layout', label: 'Layout', icon: I.eye, build: tabLayout },
+    { id: 'permissions', label: 'Permissions', icon: I.lock, build: tabPermissions },
+    { id: 'tools', label: 'Tools', icon: I.sketch, build: tabTools },
+    { id: 'map', label: 'Map', icon: I.layers, build: tabMap },
+    { id: 'tracking', label: 'Tracking', icon: I.ship, build: tabTracking },
+    { id: 'broadcast', label: 'Broadcast', icon: I.film, build: tabBroadcast },
+    { id: 'assets', label: 'Assets', icon: I.folder, build: tabAssets },
+    { id: 'project', label: 'Project', icon: I.save, build: tabProject },
+  ];
+  const panels = {};   // id -> { el, bd, cat, btn }
+  function buildBody(cat, bd) { bd.innerHTML = ''; cat.build(S.cfg(), bd); bd.querySelectorAll('.cfg-sec').forEach(s => s.classList.add('open')); }
+  function renderTab() { Object.values(panels).forEach(p => buildBody(p.cat, p.bd)); }   // refresh open panels
+  function drag(el, handle) {
+    handle.addEventListener('pointerdown', e => {
+      if (e.target.closest('.cpanel__x')) return;
+      const r = el.getBoundingClientRect(); el.style.right = 'auto'; el.style.left = r.left + 'px'; el.style.top = r.top + 'px';
+      const ox = e.clientX - r.left, oy = e.clientY - r.top; handle.setPointerCapture(e.pointerId); el.classList.add('drag');
+      const mv = ev => { el.style.left = Math.max(4, Math.min(ev.clientX - ox, innerWidth - 80)) + 'px'; el.style.top = Math.max(4, Math.min(ev.clientY - oy, innerHeight - 50)) + 'px'; };
+      const up = () => { handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); el.classList.remove('drag'); };
+      handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up);
     });
   }
-  search.oninput = applyFilter;
-  function renderTab() {
-    const openT = new Set([...acc.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
-    acc.innerHTML = '';
-    GROUPS.forEach(b => b(S.cfg(), acc));
-    const secs = [...acc.querySelectorAll('.cfg-sec')];
-    if (openT.size) secs.forEach(s => { if (openT.has(s.querySelector('.cfg-sec__hd .t').textContent)) s.classList.add('open'); });
-    else if (secs[0]) secs[0].classList.add('open');
-    applyFilter();
+  function toggleCat(cat, btn) {
+    if (panels[cat.id]) { panels[cat.id].el.remove(); delete panels[cat.id]; btn && btn.classList.remove('on'); return; }
+    const el = h('div', 'cpanel');
+    const hd = h('div', 'cpanel__hd', `<span class="grip">${I.grip || '⋮⋮'}</span><span class="i">${cat.icon}</span><span class="t">${cat.label}</span>`);
+    const cx = h('button', 'cpanel__x', I.close); hd.appendChild(cx);
+    const bd = h('div', 'cpanel__bd'); el.append(hd, bd); document.body.appendChild(el);
+    const n = Object.keys(panels).length; el.style.right = (78 + n * 26) + 'px'; el.style.top = (64 + n * 26) + 'px';
+    panels[cat.id] = { el, bd, cat, btn }; buildBody(cat, bd);
+    cx.onclick = () => { el.remove(); delete panels[cat.id]; btn && btn.classList.remove('on'); };
+    drag(el, hd); btn && btn.classList.add('on');
   }
-  renderTab();
+  CATS.forEach(cat => { const btn = h('button', 'cdock__b', `<span class="i">${cat.icon}</span><span class="cdock__lbl">${cat.label}</span>`); btn.title = cat.label; btn.onclick = () => toggleCat(cat, btn); dock.appendChild(btn); });
 
   S.on((st, evt) => {
     if (evt === 'sync') renderTab();
