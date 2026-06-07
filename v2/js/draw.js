@@ -273,11 +273,11 @@ const Draw = (() => {
   const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour'; qcolor.dataset.qid = 'color';
   const setDot = () => qcolor.querySelector('.qtool__dot').style.background = S.state.color;
   setDot();
-  const qpop = h('div', 'qtools-pop'); qpop.hidden = true;
+  const qpop = h('div', 'qtools-pop lbar-pop'); qpop.hidden = true;
   ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'].forEach(c => { const s = h('button', 'qtools-pop__sw'); s.style.background = c; s.onclick = () => { S.setColor(c); setDot(); qpop.hidden = true; }; qpop.appendChild(s); });
-  qcolor.onclick = e => { e.stopPropagation(); qpop.hidden = !qpop.hidden; };
-  document.addEventListener('click', e => { if (e.target !== qcolor && !qpop.contains(e.target)) qpop.hidden = true; });
-  qbar.append(qcolor, qpop);
+  qcolor.onclick = e => { e.stopPropagation(); window.LBar ? LBar.toggle(qcolor, qpop) : (qpop.hidden = !qpop.hidden); };
+  document.addEventListener('click', e => { if (e.target !== qcolor && !qcolor.contains(e.target) && !qpop.contains(e.target)) qpop.hidden = true; });
+  qbar.appendChild(qcolor); document.body.appendChild(qpop);
   // undo
   const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.dataset.qid = 'undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
   document.body.appendChild(qbar);

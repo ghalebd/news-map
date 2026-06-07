@@ -15,20 +15,21 @@
   const btn = inBar ? h('button', 'qtool', I.layers)
                     : h('button', 'mapstyle', `${I.layers}<span class="mapstyle__cur"></span>`);
   if (inBar) btn.dataset.qid = 'mapstyle';
-  const pop = h('div', 'mapstyle-pop'); pop.hidden = true;
+  const pop = h('div', 'mapstyle-pop' + (inBar ? ' lbar-pop' : '')); pop.hidden = true;
   if (inBar) { qbar.insertBefore(h('div', 'qtools__sep'), qbar.firstChild); qbar.insertBefore(btn, qbar.firstChild); document.body.append(pop); }
   else { document.body.append(btn, pop); if (isControl) { btn.style.right = '70px'; pop.style.right = '70px'; } }   // clear the settings gear
 
   const styleName = () => { const m = S.cfg().mapStyles.find(x => x.id === S.state.mapStyle); return m ? m.name : S.state.mapStyle; };
 
   // anchor the popup beside the bar button (it lives on the left edge)
-  function place() { if (!inBar) return; const r = btn.getBoundingClientRect(); pop.style.left = (r.right + 8) + 'px'; pop.style.right = 'auto'; pop.style.top = Math.max(12, Math.min(r.top, window.innerHeight - pop.offsetHeight - 12)) + 'px'; }
+  function place() { if (inBar && window.LBar) LBar.anchor(btn, pop); }
 
   function applyPerm() { btn.hidden = !isControl && S.cfg().permissions.canChangeMapStyle === false; }
   function build() {
     pop.innerHTML = '';
+    if (inBar) pop.appendChild(h('div', 'lbar-pop__hd', 'Base map'));
     S.cfg().mapStyles.filter(m => m.on !== false).forEach(m => {
-      const it = h('button', 'mapstyle-pop__i' + (m.id === S.state.mapStyle ? ' is-on' : ''), m.name);
+      const it = h('button', (inBar ? 'lbar-pop__i' : 'mapstyle-pop__i') + (m.id === S.state.mapStyle ? ' is-on' : ''), `${I.layers}<span>${m.name}</span>`);
       it.onclick = () => { S.setMapStyle(m.id); pop.hidden = true; };
       pop.appendChild(it);
     });

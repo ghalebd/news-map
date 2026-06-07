@@ -3,6 +3,7 @@ const ICONS = (() => {
   const s = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   return {
     grip:    `<svg viewBox="0 0 24 24"><g fill="currentColor"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></g></svg>`,
+    gripH:   `<svg viewBox="0 0 24 24"><g fill="currentColor"><circle cx="6" cy="9.5" r="1.35"/><circle cx="12" cy="9.5" r="1.35"/><circle cx="18" cy="9.5" r="1.35"/><circle cx="6" cy="14.5" r="1.35"/><circle cx="12" cy="14.5" r="1.35"/><circle cx="18" cy="14.5" r="1.35"/></g></svg>`,
     minus:   s('<line x1="6" y1="12" x2="18" y2="12"/>'),
     close:   s('<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>'),
     chevron: s('<polyline points="6 9 12 15 18 9"/>'),

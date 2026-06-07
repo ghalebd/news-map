@@ -132,11 +132,21 @@
     q.bd.appendChild(h('div', 'hint', 'Reorder, show or hide the buttons in the left vertical bar (live mode).'));
     ct.appendChild(q.sec);
 
-    // ---- free panel positions ----
-    const p = section('Panel positions', I.pan);
-    const rb = h('button', 'cfg-btn', 'Reset all panel positions');
+    // ---- free panel size & position ----
+    const p = section('Panel size & position', I.pan, () => { S.clearLayout(); S.setBrand({ x: D.brand.x, y: D.brand.y }); });
+    p.bd.appendChild(h('div', 'hint', 'Drag any panel by the small grip that appears on hover. Resize each panel below; the tool bar moves up / down only.'));
+    (window.Movable ? Movable.panels : []).forEach(({ sel, label }) => {
+      const pct = Math.round((Movable.scaleOf(sel)) * 100);
+      const row = h('div', 'cfg-scl');
+      row.appendChild(h('span', 'cfg-scl__n', label));
+      const rng = h('input'); rng.type = 'range'; rng.min = '50'; rng.max = '170'; rng.step = '5'; rng.value = pct;
+      const val = h('span', 'cfg-scl__v', pct + '%');
+      rng.oninput = () => { val.textContent = rng.value + '%'; Movable.setScale(sel, (+rng.value) / 100); };
+      row.append(rng, val); p.bd.appendChild(row);
+    });
+    const rb = h('button', 'cfg-btn', 'Reset all sizes & positions');
     rb.onclick = () => { S.clearLayout(); S.setBrand({ x: D.brand.x, y: D.brand.y }); renderTab(); };
-    p.bd.append(h('div', 'hint', 'Drag any panel by its small round handle to move it anywhere. Positions are saved & shared with the presenter.'), rb);
+    p.bd.appendChild(rb);
     ct.appendChild(p.sec);
   }
   function tabPermissions(C, ct) {

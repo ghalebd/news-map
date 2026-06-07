@@ -180,8 +180,22 @@ body.mode-live .qtools { display: flex; }
 .qtool.is-on { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
 .qtool--color { position: relative; }
 .qtool__dot { width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--stroke-2); }
-.qtools-pop { position: absolute; left: 54px; top: 50%; transform: translateY(-50%); z-index: var(--z-flyout); display: flex; flex-direction: column; gap: 6px; padding: 9px; border-radius: var(--r-sm); }
-.qtools-pop__sw { width: 20px; height: 20px; border-radius: 5px; cursor: pointer; border: 1px solid var(--stroke); }
+/* ---------- unified left-bar popup (shared by every menu off the tool bar) ---------- */
+.lbar-pop { position: fixed; z-index: var(--z-flyout); width: max-content; min-width: 132px; max-width: 320px;
+  padding: 7px; border-radius: 13px; background: var(--glass); border: 1px solid var(--stroke);
+  box-shadow: var(--shadow), var(--sheen); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
+  display: flex; flex-direction: column; gap: 3px; animation: lbarIn .14s var(--ease-out); }
+@keyframes lbarIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+.lbar-pop__hd { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); padding: 3px 8px 5px; }
+.lbar-pop__i { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 8px 11px; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: var(--text-2); white-space: nowrap; transition: all var(--t-fast) var(--ease); }
+.lbar-pop__i svg { width: 17px; height: 17px; flex: 0 0 auto; }
+.lbar-pop__i:hover { color: var(--text); background: var(--glass-2); }
+.lbar-pop__i.is-on { color: var(--accent); background: var(--accent-soft); }
+.lbar-pop__row { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; max-width: 184px; }
+
+.qtools-pop { z-index: var(--z-flyout); }
+.qtools-pop.lbar-pop { flex-direction: row; flex-wrap: wrap; max-width: 168px; padding: 9px; gap: 7px; }
+.qtools-pop__sw { width: 22px; height: 22px; border-radius: 6px; cursor: pointer; border: 1px solid var(--stroke); }
 .qtools-pop__sw:hover { border-color: var(--accent); transform: scale(1.12); }
 
 /* ---------- marker icons ---------- */
@@ -335,14 +349,17 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
-/* ---------- movable panels: unified drag handle ---------- */
-.mvh { position: absolute; top: -9px; left: -9px; width: 19px; height: 19px; padding: 0; z-index: 6;
-  display: inline-flex; align-items: center; justify-content: center; cursor: grab; opacity: .32;
-  border-radius: 50%; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease); pointer-events: auto; }
-.mvh svg { width: 12px; height: 12px; }
-.mvh:hover { opacity: 1; color: var(--accent); border-color: var(--accent); }
-.mvh.is-drag { opacity: 1; cursor: grabbing; color: var(--accent); border-color: var(--accent); }
+/* ---------- movable panels: elegant in-panel grip (hover-reveal) ---------- */
+.mvh { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 30px; height: 13px; padding: 0; z-index: 6;
+  display: inline-flex; align-items: center; justify-content: center; cursor: grab; opacity: 0; pointer-events: none;
+  border: 0; background: transparent; color: var(--text-3); border-radius: 6px;
+  transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.mvh svg { width: 24px; height: 12px; display: block; }
+[data-movable]:hover > .mvh { opacity: .55; pointer-events: auto; }
+.mvh:hover { opacity: 1; color: var(--accent); }
+.mvh.is-drag { opacity: 1; pointer-events: auto; color: var(--accent); cursor: grabbing; }
+.brand > .mvh { opacity: .3; pointer-events: auto; }   /* logo lets pointer-events through, so keep its grip live */
+.brand:hover > .mvh { opacity: 1; }
 body.mv-dragging { cursor: grabbing; user-select: none; }
 body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }
