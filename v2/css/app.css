@@ -415,6 +415,15 @@ body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }
 /* keyboard focus indicator (accessibility) */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- georeferenced image overlays + before/after wipe ---------- */
+.ov-img { image-rendering: auto; }
+.ov-wipe { position: fixed; z-index: var(--z-bar); pointer-events: none; }
+.ov-wipe__line { position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, .92); box-shadow: 0 0 10px rgba(0, 0, 0, .65); pointer-events: auto; cursor: ew-resize; }
+.ov-wipe__grip { position: absolute; left: -16px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; gap: 3px; cursor: ew-resize; pointer-events: auto; background: var(--glass); border: 1.5px solid #fff; box-shadow: var(--shadow); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.ov-wipe__grip span { width: 2px; height: 12px; background: #fff; border-radius: 1px; }
+.ov-wipe.is-drag .ov-wipe__line { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.ov-wipe.is-drag .ov-wipe__grip { border-color: var(--accent); }
 /* movable panels position via inline left/top + transform:scale — no transform
    transition, or scaling animates against the old transform and the centre drifts */
 [data-movable] { transition: none !important; }

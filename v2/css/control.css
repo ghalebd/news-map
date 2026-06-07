@@ -166,6 +166,17 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-ordb:disabled { opacity: .3; cursor: default; }
 .cfg-ordb.is-on { color: var(--accent); }
 
+/* satellite overlay controls */
+.cfg-in { width: 100%; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font-size: 12px; }
+.cfg-in::placeholder { color: var(--text-3); }
+.cfg-in:focus { border-color: var(--accent); outline: none; }
+.cfg-ovgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cfg-ovgrid .cfg-in { padding: 0 7px; }
+.cfg-in--name { flex: 1; height: 28px; font-weight: 700; background: transparent; border: 1px solid transparent; padding: 0 6px; }
+.cfg-in--name:hover, .cfg-in--name:focus { border-color: var(--stroke); background: var(--glass-2); }
+.cfg-ovtools { display: flex; gap: 5px; flex-wrap: wrap; }
+.cfg-ovtools .cfg-ordb { width: 30px; height: 28px; font-size: 14px; line-height: 1; }
+
 /* per-panel size & position cards */
 .cfg-pan { padding: 8px 9px; border-radius: 10px; background: var(--glass-2); border: 1px solid var(--stroke); display: flex; flex-direction: column; gap: 7px; }
 .cfg-pan__h { display: flex; align-items: center; gap: 8px; }

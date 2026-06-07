@@ -7,6 +7,7 @@
   const S = window.Store, I = window.ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const aspectOf = url => new Promise((res, rej) => { const im = new Image(); im.onload = () => res((im.naturalWidth / im.naturalHeight) || 1); im.onerror = rej; im.src = url; });
   function readImage(file, max = 256) {
     return new Promise((res, rej) => {
       const fr = new FileReader();
@@ -298,7 +299,58 @@
     sn.bd.appendChild(reset); ct.appendChild(sn.sec);
   }
 
-  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabTracking, tabBroadcast, tabAssets, tabProject];
+  function tabOverlays(C, ct) {
+    const { sec, bd } = section('Satellite overlays', I.layers);
+    // ---- add a new overlay ----
+    let pendingUrl = null, pendingAspect = 1;
+    const file = h('input'); file.type = 'file'; file.accept = 'image/*'; file.style.display = 'none';
+    const pick = h('button', 'cfg-btn', `${I.upload}<span>Choose image…</span>`); pick.onclick = () => file.click();
+    file.onchange = async () => { const f = file.files[0]; if (!f) return; try { pendingUrl = await readImage(f, 1280); pendingAspect = await aspectOf(pendingUrl).catch(() => 1); pick.querySelector('span').textContent = f.name.slice(0, 22); } catch (e) { alert('Could not read image.'); } };
+    const nameI = h('input', 'cfg-in'); nameI.placeholder = 'Layer name (optional)';
+    const urlI = h('input', 'cfg-in'); urlI.placeholder = '…or paste an image URL';
+    const num = ph => { const i = h('input', 'cfg-in cfg-in--n'); i.type = 'number'; i.step = 'any'; i.placeholder = ph; return i; };
+    const latI = num('Lat'), lngI = num('Lng'), wI = num('Width km');
+    const coordRow = h('div', 'cfg-ovgrid'); coordRow.append(latI, lngI, wI);
+    const srcUrl = async () => { if (pendingUrl) return { url: pendingUrl, aspect: pendingAspect }; const u = urlI.value.trim(); if (!u) return null; return { url: u, aspect: await aspectOf(u).catch(() => 1) }; };
+    const reset = () => { pendingUrl = null; pendingAspect = 1; file.value = ''; pick.querySelector('span').textContent = 'Choose image…'; };
+    const bView = h('button', 'cfg-btn', `${I.target}<span>Place at current view</span>`);
+    bView.onclick = async () => { const s = await srcUrl(); if (!s) { alert('Choose an image or paste a URL first.'); return; } S.addOverlay({ name: nameI.value.trim() || 'Overlay', url: s.url, bounds: window.Overlays.viewBounds() }); reset(); renderTab(); };
+    const bCoord = h('button', 'cfg-btn', `${I.marker}<span>Place at coordinates</span>`);
+    bCoord.onclick = async () => { const s = await srcUrl(); if (!s) { alert('Choose an image or paste a URL first.'); return; } const lat = +latI.value, lng = +lngI.value, w = +wI.value || 10; if (isNaN(lat) || isNaN(lng)) { alert('Enter latitude & longitude.'); return; } S.addOverlay({ name: nameI.value.trim() || 'Overlay', url: s.url, bounds: window.Overlays.boundsFromCenter(lat, lng, w, s.aspect) }); reset(); renderTab(); };
+    bd.append(pick, file, nameI, urlI, coordRow, bView, bCoord, h('div', 'hint', 'Frame the map like your image, then “Place at current view” — or drop it by centre coordinates (width in km; height auto from the image). Then nudge / scale to align.'));
+
+    // ---- existing layers ----
+    const ovs = S.overlays();
+    ovs.forEach((o, idx) => {
+      const card = h('div', 'cfg-pan');
+      const head = h('div', 'cfg-pan__h');
+      const nm = h('input', 'cfg-in cfg-in--name'); nm.value = o.name || 'Overlay'; nm.oninput = () => S.updateOverlay(o.id, { name: nm.value });
+      const onb = h('button', 'cfg-ordb' + (o.on !== false ? ' is-on' : ''), o.on !== false ? I.eye : I.eyeOff); onb.title = 'Show / hide'; onb.onclick = () => { S.updateOverlay(o.id, { on: o.on === false }); renderTab(); };
+      const del = h('button', 'cfg-pan__x', I.close); del.title = 'Delete layer'; del.onclick = () => { S.removeOverlay(o.id); renderTab(); };
+      head.append(nm, onb, del); card.appendChild(head);
+      card.appendChild(slider('Opacity', Math.round((o.opacity != null ? o.opacity : 1) * 100), 0, 100, 1, v => S.updateOverlay(o.id, { opacity: v / 100 })));
+      card.appendChild(rowTog('Before / after wipe', !!o.wipe, on => { S.updateOverlay(o.id, { wipe: on }); }));
+      // align controls: nudge pad + scale + order
+      const tools = h('div', 'cfg-ovtools');
+      const nb = (label, fn) => { const b = h('button', 'cfg-ordb', label); b.onclick = fn; return b; };
+      const span = () => { const b = S.overlays().find(x => x.id === o.id).bounds; return { dLat: (b[1][0] - b[0][0]) * 0.06, dLng: (b[1][1] - b[0][1]) * 0.06 }; };
+      tools.append(
+        nb('↑', () => { const s = span(); window.Overlays.nudge(o.id, s.dLat, 0); }),
+        nb('↓', () => { const s = span(); window.Overlays.nudge(o.id, -s.dLat, 0); }),
+        nb('←', () => { const s = span(); window.Overlays.nudge(o.id, 0, -s.dLng); }),
+        nb('→', () => { const s = span(); window.Overlays.nudge(o.id, 0, s.dLng); }),
+        nb('−', () => window.Overlays.scale(o.id, 0.92)),
+        nb('+', () => window.Overlays.scale(o.id, 1.08)),
+        nb(I.chevron, () => { S.moveOverlay(o.id, 1); renderTab(); }),   // down = later = on top
+      );
+      card.appendChild(tools);
+      bd.appendChild(card);
+    });
+    if (ovs.some(o => o.wipe && o.on !== false)) bd.appendChild(slider('Wipe position', Math.round(((C.overlayWipe == null ? 0.5 : C.overlayWipe)) * 100), 0, 100, 1, v => S.setOverlayWipe(v / 100)));
+    ct.appendChild(sec);
+  }
+
+  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabTracking, tabBroadcast, tabAssets, tabProject];
   function applyFilter() {
     const q = search.value.trim().toLowerCase();
     bodyEl.querySelectorAll('.cfg-sec').forEach(sec => {

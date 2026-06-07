@@ -42,6 +42,8 @@ const Store = (() => {
     locator: false,          // mini locator inset map
     tilt: 0,                 // 3D perspective tilt (deg)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
+    overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
+    overlayWipe: 0.5,        // global before/after wipe line (0..1 of the map width)
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
     qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
@@ -161,6 +163,12 @@ const Store = (() => {
   function setLayout(sel, pos) { if (!state.config.layout) state.config.layout = {}; if (pos) state.config.layout[sel] = pos; else delete state.config.layout[sel]; emit('config'); }
   function clearLayout() { state.config.layout = {}; emit('config'); }
   function setQbar(patch) { if (!state.config.qbar) state.config.qbar = { order: [], hidden: [] }; Object.assign(state.config.qbar, patch); emit('config'); }
+  function overlays() { if (!state.config.overlays) state.config.overlays = []; return state.config.overlays; }
+  function addOverlay(o) { o.id = uid('ov'); if (o.on == null) o.on = true; if (o.opacity == null) o.opacity = 1; overlays().push(o); emit('overlays'); return o; }
+  function updateOverlay(id, patch) { const o = overlays().find(x => x.id === id); if (o) { Object.assign(o, patch); emit('overlays'); } }
+  function removeOverlay(id) { state.config.overlays = overlays().filter(x => x.id !== id); emit('overlays'); }
+  function moveOverlay(id, dir) { const a = overlays(), i = a.findIndex(x => x.id === id), j = i + dir; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; emit('overlays'); }
+  function setOverlayWipe(f) { state.config.overlayWipe = Math.max(0, Math.min(1, f)); emit('overlays'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -177,6 +185,7 @@ const Store = (() => {
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
+    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe,
   };
 })();
 window.Store = Store;
