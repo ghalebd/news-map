@@ -9,6 +9,11 @@
 
   /* ---------- brand + status ---------- */
   const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);
+  function applyTilt() {
+    const t = +S.cfg().tilt || 0; const el = M.map.getContainer();
+    el.style.transformOrigin = '50% 64%';
+    el.style.transform = t > 0 ? `perspective(1500px) rotateX(${t}deg) scale(${1 + t / 120})` : '';
+  }
   function applyBrand() {
     const img = brand.querySelector('img'); const br = S.cfg().brand || {};
     brand.style.left = (br.x == null ? 16 : br.x) + 'px'; brand.style.top = (br.y == null ? 30 : br.y) + 'px';
@@ -130,7 +135,7 @@
   /* ---------- react to store ---------- */
   S.on((st, evt) => {
     if (evt === 'mode') applyMode();
-    if (evt === 'config' || evt === 'sync') { window.Theme && window.Theme.apply(S.cfg().style); applyBrand(); }
+    if (evt === 'config' || evt === 'sync') { window.Theme && window.Theme.apply(S.cfg().style); applyBrand(); applyTilt(); }
     if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
     if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
@@ -160,6 +165,7 @@
   /* ---------- boot ---------- */
   applyMode();
   applyBrand();
+  applyTilt();
   renderBroadcast();
   applyTour();
   renderSpotlight();

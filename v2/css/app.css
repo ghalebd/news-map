@@ -6,7 +6,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
-#map { position: absolute; inset: 0; z-index: var(--z-map); background: #0e1622; cursor: crosshair; }
+#map { position: absolute; inset: 0; z-index: var(--z-map); background: #0e1622; cursor: crosshair; transition: transform .5s var(--ease); will-change: transform; }
 .tiles-underlay img { image-rendering: auto; }
 button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
 svg { display: block; }

@@ -69,6 +69,7 @@
         slider('Blur', C.style.blur, 0, 60, 1, v => S.setStyle({ blur: v })),
         slider('Glass distortion', C.style.distort, 0, 120, 1, v => S.setStyle({ distort: v })),
         slider('Corner radius', C.style.radius, 0, 22, 1, v => S.setStyle({ radius: v })),
+        slider('3D perspective tilt', C.tilt || 0, 0, 55, 1, v => S.setTilt(v)),
       );
       // logo upload
       bd.appendChild(h('div', 'cfg-field', '<div class="lab"><span>LOGO</span></div>'));

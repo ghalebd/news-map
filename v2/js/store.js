@@ -39,6 +39,7 @@ const Store = (() => {
     brand: { logo: null, size: 38, x: 16, y: 30 },   // logo data-URL + height(px) + position(px from top-left)
     touch: false,            // large touch-friendly controls
     locator: false,          // mini locator inset map
+    tilt: 0,                 // 3D perspective tilt (deg)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
@@ -141,6 +142,7 @@ const Store = (() => {
   function setBrand(patch) { Object.assign(state.config.brand, patch); emit('config'); }
   function setTouch(on) { state.config.touch = on; emit('config'); }
   function setLocator(on) { state.config.locator = on; emit('config'); }
+  function setTilt(v) { state.config.tilt = v; emit('config'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -156,7 +158,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, addPlace, removePlace, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, addPlace, removePlace, resetConfig,
   };
 })();
 window.Store = Store;
