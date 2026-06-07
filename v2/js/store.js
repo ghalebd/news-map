@@ -42,6 +42,8 @@ const Store = (() => {
     locator: false,          // mini locator inset map
     tilt: 0,                 // 3D perspective tilt (deg)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
+    layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
+    qbar: { order: [], hidden: [] },   // vertical tool-bar: button order (by id) + hidden ids
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
@@ -154,6 +156,9 @@ const Store = (() => {
   function setLocator(on) { state.config.locator = on; emit('config'); }
   function setTilt(v) { state.config.tilt = v; emit('config'); }
   function setDrawDefaults(patch) { Object.assign(state.config.drawDefaults, patch); emit('config'); }
+  function setLayout(sel, pos) { if (!state.config.layout) state.config.layout = {}; if (pos) state.config.layout[sel] = pos; else delete state.config.layout[sel]; emit('config'); }
+  function clearLayout() { state.config.layout = {}; emit('config'); }
+  function setQbar(patch) { if (!state.config.qbar) state.config.qbar = { order: [], hidden: [] }; Object.assign(state.config.qbar, patch); emit('config'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -169,7 +174,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight, setAnim,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, addPlace, removePlace, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
   };
 })();
 window.Store = Store;

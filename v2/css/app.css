@@ -335,6 +335,18 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
+/* ---------- movable panels: unified drag handle ---------- */
+.mvh { position: absolute; top: -9px; left: -9px; width: 19px; height: 19px; padding: 0; z-index: 6;
+  display: inline-flex; align-items: center; justify-content: center; cursor: grab; opacity: .32;
+  border-radius: 50%; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease); pointer-events: auto; }
+.mvh svg { width: 12px; height: 12px; }
+.mvh:hover { opacity: 1; color: var(--accent); border-color: var(--accent); }
+.mvh.is-drag { opacity: 1; cursor: grabbing; color: var(--accent); border-color: var(--accent); }
+body.mv-dragging { cursor: grabbing; user-select: none; }
+body.mv-dragging .leaflet-container { pointer-events: none; }
+body.ui-hidden .mvh { display: none !important; }
+
 /* ---------- locator inset ---------- */
 .locator { position: fixed; right: 16px; bottom: 84px; width: 200px; height: 130px; z-index: var(--z-bar);
   border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--stroke); box-shadow: var(--shadow), var(--sheen); background: #0e1622; }

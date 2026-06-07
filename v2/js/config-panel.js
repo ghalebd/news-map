@@ -115,6 +115,29 @@
     const { sec, bd } = section('Presenter visibility', I.eye, () => Object.keys(D.visibility).forEach(k => S.setVisibility(k, D.visibility[k])));
     VIS.forEach(([k, lab]) => bd.appendChild(rowTog(lab, C.visibility[k] !== false, on => S.setVisibility(k, on))));
     ct.appendChild(sec);
+
+    // ---- vertical tool-bar: reorder + show/hide buttons ----
+    const q = section('Vertical tool bar', I.sliders, () => { window.QBar && QBar.reset(); renderTab(); });
+    const items = window.QBar ? QBar.list() : [];
+    const lst = h('div', 'cfg-qbar');
+    items.forEach((it, idx) => {
+      const row = h('div', 'cfg-qrow' + (it.hidden ? ' is-off' : ''));
+      row.appendChild(h('span', 'cfg-qrow__n', it.label));
+      const up = h('button', 'cfg-qbtn', I.chevron); up.style.transform = 'rotate(180deg)'; up.title = 'Move up'; up.disabled = idx === 0; up.onclick = () => { QBar.move(it.id, -1); renderTab(); };
+      const dn = h('button', 'cfg-qbtn', I.chevron); dn.title = 'Move down'; dn.disabled = idx === items.length - 1; dn.onclick = () => { QBar.move(it.id, 1); renderTab(); };
+      const vis = h('button', 'cfg-qbtn' + (it.hidden ? '' : ' is-on'), it.hidden ? I.eyeOff : I.eye); vis.title = it.hidden ? 'Show in bar' : 'Hide from bar'; vis.onclick = () => { QBar.toggle(it.id); renderTab(); };
+      row.append(up, dn, vis); lst.appendChild(row);
+    });
+    q.bd.appendChild(lst);
+    q.bd.appendChild(h('div', 'hint', 'Reorder, show or hide the buttons in the left vertical bar (live mode).'));
+    ct.appendChild(q.sec);
+
+    // ---- free panel positions ----
+    const p = section('Panel positions', I.pan);
+    const rb = h('button', 'cfg-btn', 'Reset all panel positions');
+    rb.onclick = () => { S.clearLayout(); S.setBrand({ x: D.brand.x, y: D.brand.y }); renderTab(); };
+    p.bd.append(h('div', 'hint', 'Drag any panel by its small round handle to move it anywhere. Positions are saved & shared with the presenter.'), rb);
+    ct.appendChild(p.sec);
   }
   function tabPermissions(C, ct) {
     const { sec, bd } = section('Allowed tools', I.lock, () => { Object.keys(D.permissions.tools).forEach(t => S.setToolPerm(t, D.permissions.tools[t])); ['canDraw', 'canNavigate', 'canEditScenes', 'canChangeMapStyle', 'canChangeStyle', 'canTrack'].forEach(k => S.setPerm(k, D.permissions[k])); });

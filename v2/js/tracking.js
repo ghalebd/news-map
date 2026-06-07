@@ -263,11 +263,11 @@
   (function addToToolbar() {
     const qbar = document.querySelector('.qtools'); if (!qbar) return;
     const canTrack = () => isControl || S.cfg().permissions.canTrack !== false;
-    const qbtn = (icn, title, fn) => { const b = h('button', 'qtool', icn); b.title = title; b.onclick = () => { if (canTrack()) fn(); }; return b; };
+    const qbtn = (qid, icn, title, fn) => { const b = h('button', 'qtool', icn); b.title = title; b.dataset.qid = qid; b.onclick = () => { if (canTrack()) fn(); }; return b; };
     qbar.appendChild(h('div', 'qtools__sep'));
-    qShips = qbtn(I.ship, 'Live ships', () => S.setTracking('ships', !S.state.tracking.ships));
-    qFlights = qbtn(I.plane, 'Live flights', () => S.setTracking('flights', !S.state.tracking.flights));
-    qTrails = qbtn(I.trail, 'Route / trail lines', () => S.setTracking('trails', !showTrails()));
+    qShips = qbtn('ships', I.ship, 'Live ships', () => S.setTracking('ships', !S.state.tracking.ships));
+    qFlights = qbtn('flights', I.plane, 'Live flights', () => S.setTracking('flights', !S.state.tracking.flights));
+    qTrails = qbtn('trails', I.trail, 'Route / trail lines', () => S.setTracking('trails', !showTrails()));
     qbar.append(qShips, qFlights, qTrails);
   })();
 

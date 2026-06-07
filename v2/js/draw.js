@@ -267,10 +267,10 @@ const Draw = (() => {
     ['erase', I.erase, 'Erase'],
   ];
   const qbar = h('div', 'qtools');
-  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.onclick = e => { if (id === 'asset') { e.stopPropagation(); togglePalette(); } else setTool(id); }; qbar.appendChild(b); qbtns[id] = b; });
+  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.dataset.qid = id; b.onclick = e => { if (id === 'asset') { e.stopPropagation(); togglePalette(); } else setTool(id); }; qbar.appendChild(b); qbtns[id] = b; });
   qbar.appendChild(h('div', 'qtools__sep'));
   // colour button + popover
-  const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour';
+  const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour'; qcolor.dataset.qid = 'color';
   const setDot = () => qcolor.querySelector('.qtool__dot').style.background = S.state.color;
   setDot();
   const qpop = h('div', 'qtools-pop'); qpop.hidden = true;
@@ -279,7 +279,7 @@ const Draw = (() => {
   document.addEventListener('click', e => { if (e.target !== qcolor && !qpop.contains(e.target)) qpop.hidden = true; });
   qbar.append(qcolor, qpop);
   // undo
-  const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
+  const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.dataset.qid = 'undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
   document.body.appendChild(qbar);
 
   /* hide presenter toolbar buttons the operator has disallowed (no-op for the control console) */

@@ -14,6 +14,7 @@
   // In the vertical tool bar it's an icon-only button; otherwise the old top-right pill.
   const btn = inBar ? h('button', 'qtool', I.layers)
                     : h('button', 'mapstyle', `${I.layers}<span class="mapstyle__cur"></span>`);
+  if (inBar) btn.dataset.qid = 'mapstyle';
   const pop = h('div', 'mapstyle-pop'); pop.hidden = true;
   if (inBar) { qbar.insertBefore(h('div', 'qtools__sep'), qbar.firstChild); qbar.insertBefore(btn, qbar.firstChild); document.body.append(pop); }
   else { document.body.append(btn, pop); if (isControl) { btn.style.right = '70px'; pop.style.right = '70px'; } }   // clear the settings gear
