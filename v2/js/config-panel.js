@@ -169,6 +169,19 @@
       } else bd.appendChild(h('div', 'hint', 'No images yet. Uploads are stored in the shared store and appear in the presenter\'s Image tool.'));
       body.appendChild(sec);
     }
+    // BROADCAST GRAPHICS (banner / ticker / auto-tour)
+    {
+      const bc = S.state.broadcast;
+      const { sec, bd } = section('Broadcast graphics', I.film);
+      bd.appendChild(rowTog('Breaking banner', !!bc.banner.on, on => S.setBanner({ on })));
+      const bt = h('input', 'cfg-name'); bt.placeholder = 'Banner headline'; bt.value = bc.banner.text || ''; bt.oninput = () => S.setBanner({ text: bt.value }); bd.appendChild(bt);
+      bd.appendChild(rowTog('News ticker', !!bc.ticker.on, on => S.setTicker({ on })));
+      const tt = h('input', 'cfg-name'); tt.placeholder = 'Ticker text'; tt.value = bc.ticker.text || ''; tt.oninput = () => S.setTicker({ text: tt.value }); bd.appendChild(tt);
+      bd.appendChild(slider('Ticker speed', bc.ticker.speed || 60, 20, 160, 5, v => S.setTicker({ speed: v })));
+      bd.appendChild(rowTog('Auto-play scenes', !!bc.tour.playing, on => S.setTour({ playing: on })));
+      bd.appendChild(slider('Auto-play interval (s)', bc.tour.sec || 8, 2, 30, 1, v => S.setTour({ sec: v })));
+      body.appendChild(sec);
+    }
     // PROJECT (save / load / hide-UI / clear)
     {
       const { sec, bd } = section('Project', I.save);

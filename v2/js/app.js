@@ -79,6 +79,28 @@
     lthird.hidden = false;
   }
 
+  /* ---------- broadcast graphics: breaking banner + news ticker ---------- */
+  const banner = h('div', 'bcast-banner'); banner.hidden = true; document.body.appendChild(banner);
+  const ticker = h('div', 'bcast-ticker'); ticker.hidden = true; document.body.appendChild(ticker);
+  function renderBroadcast() {
+    const bc = S.state.broadcast || {};
+    const bn = bc.banner || {}, tk = bc.ticker || {};
+    banner.hidden = !bn.on;
+    if (bn.on) banner.innerHTML = `<span class="bcast-banner__tag">${esc((bn.tag || 'BREAKING'))}</span><span class="bcast-banner__tx">${esc(bn.text || '')}</span>`;
+    ticker.hidden = !tk.on;
+    if (tk.on) { const speed = Math.max(15, tk.speed || 60); ticker.innerHTML = `<span class="bcast-ticker__tag">LIVE</span><div class="bcast-ticker__win"><div class="bcast-ticker__run" style="animation-duration:${Math.max(6, 1200 / speed * 6)}s">${esc(tk.text || '')}&nbsp;&nbsp;•&nbsp;&nbsp;${esc(tk.text || '')}</div></div>`; }
+    document.body.classList.toggle('has-ticker', !!tk.on);
+    document.body.classList.toggle('has-banner', !!bn.on);
+  }
+
+  /* ---------- auto-tour (control window drives; presenter follows via sync) ---------- */
+  let tourT = null;
+  function applyTour() {
+    const t = (S.state.broadcast && S.state.broadcast.tour) || {};
+    clearInterval(tourT); tourT = null;
+    if (t.playing && window.APP_ROLE === 'control') tourT = setInterval(() => S.advance(), Math.max(2, t.sec || 8) * 1000);
+  }
+
   /* ---------- mode application ---------- */
   function applyMode() {
     document.body.classList.toggle('mode-build', S.state.mode === 'build');
@@ -94,6 +116,7 @@
     if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
     if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
+    if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); }
     if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
     if (evt === 'mapstyle' || evt === 'sync') M.setStyle(S.state.mapStyle);
   });
@@ -119,6 +142,8 @@
   /* ---------- boot ---------- */
   applyMode();
   applyBrand();
+  renderBroadcast();
+  applyTour();
   window.Theme && window.Theme.apply(S.cfg().style);
   M.setStyle(S.state.mapStyle);
   if (!S.scenes().length) S.addScene(M.currentView(), { title: 'Opening Scene' });

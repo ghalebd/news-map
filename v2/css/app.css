@@ -312,6 +312,23 @@ body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrac
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
+/* ---------- broadcast graphics: breaking banner + news ticker ---------- */
+.bcast-ticker { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); height: 36px; display: flex; align-items: stretch;
+  background: rgba(8, 11, 18, 0.92); border-top: 1px solid var(--stroke); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); }
+.bcast-ticker__tag { display: flex; align-items: center; padding: 0 16px; font: 800 12px var(--font); letter-spacing: 1.5px; color: #fff; background: var(--live); }
+.bcast-ticker__win { flex: 1; overflow: hidden; position: relative; }
+.bcast-ticker__run { position: absolute; white-space: nowrap; will-change: transform; padding-left: 100%; line-height: 36px; font: 600 14px var(--font); color: var(--text); animation: tickerScroll linear infinite; }
+@keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+.bcast-banner { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); height: 50px; display: flex; align-items: stretch; box-shadow: 0 -6px 24px rgba(0, 0, 0, .4); }
+body.has-ticker .bcast-banner { bottom: 36px; }
+.bcast-banner__tag { display: flex; align-items: center; padding: 0 20px; font: 900 16px var(--font); letter-spacing: 1px; color: #fff; background: var(--live); }
+.bcast-banner__tx { flex: 1; display: flex; align-items: center; padding: 0 20px; font: 800 19px var(--font); letter-spacing: .2px; color: #fff; background: rgba(8, 11, 18, 0.92); -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur)); }
+/* lift bottom chrome above active broadcast graphics */
+body.has-ticker .nownext, body.has-ticker .livetrack, body.has-ticker .fab { bottom: 50px; }
+body.has-banner .nownext, body.has-banner .livetrack, body.has-banner .fab { bottom: 66px; }
+body.has-banner.has-ticker .nownext, body.has-banner.has-ticker .livetrack, body.has-banner.has-ticker .fab { bottom: 100px; }
+
 /* ---------- touch mode (large controls) ---------- */
 body.touch .qtool { width: 54px; height: 54px; }
 body.touch .qtool svg { width: 26px; height: 26px; }
