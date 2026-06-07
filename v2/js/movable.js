@@ -27,6 +27,7 @@
   const meta = {}; PANELS.forEach(([sel, label, axis]) => meta[sel] = { label, axis });
   const els = {}; const handles = {};
   let pending = null;
+  let cfgOffset = 0;   // how far the open settings panel pushes left-side chrome right
 
   /* the grab tabs live on <body> (fixed) so panel overflow can never clip them */
   function positionHandle(el, hd) {
@@ -92,8 +93,11 @@
       const p = lay[sel];
       if (p && (p.x != null || p.s)) {
         const w = el.offsetWidth, hh = el.offsetHeight;
-        const x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
+        let x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
         const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
+        // moved panels carry an inline transform (which overrides the CSS open-shift),
+        // so we push them clear of the settings panel here instead
+        if (cfgOffset && x < cfgOffset) x = Math.min(x + cfgOffset, window.innerWidth - w);
         styleAt(el, x, y, p.s || 1);
       } else clearStyle(el);
     }
@@ -130,5 +134,6 @@
     center(sel) { this.snap(sel, 'mc'); },
     resetPanel(sel) { S.setLayout(sel, null); },
     reflow,
+    setCfgOffset(px) { cfgOffset = px || 0; applyLayout(); },
   };
 })();

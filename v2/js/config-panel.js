@@ -36,7 +36,7 @@
   const x = h('button', 'x', I.close); head.append(qa, x);
   const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
   const bodyEl = h('div', 'cfg-body'); drawer.append(head, search, bodyEl); document.body.append(toggle, drawer);
-  const setOpen = o => { drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); document.body.style.setProperty('--cfg-w', drawer.getBoundingClientRect().width + 'px'); document.body.classList.toggle('cfg-open', o); if (window.Movable) { Movable.reflow(); setTimeout(Movable.reflow, 330); } };
+  const setOpen = o => { drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); const w = drawer.getBoundingClientRect().width; document.body.style.setProperty('--cfg-w', w + 'px'); document.body.classList.toggle('cfg-open', o); if (window.Movable) { Movable.setCfgOffset(o ? w : 0); Movable.reflow(); setTimeout(Movable.reflow, 330); } };
   toggle.onclick = () => setOpen(!drawer.classList.contains('open'));
   x.onclick = () => setOpen(false);
 
