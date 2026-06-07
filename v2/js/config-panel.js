@@ -357,8 +357,9 @@
     enter.onclick = () => window.Map3D && Map3D.toggle();
     bd.append(enter,
       slider('Terrain height', Math.round(t.exaggeration * 10) / 10, 0.3, 8, 0.1, v => S.setThreeD({ exaggeration: v })),
-      slider('Camera pitch', Math.round(t.pitch), 0, 80, 1, v => S.setThreeD({ pitch: v })),
-      h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen ⟲ ⟳.'));
+      slider('Camera pitch', Math.round(t.pitch), 0, 80, 1, v => S.setThreeD({ pitch: v })));
+    bd.appendChild(rowTog('3D names (lie on terrain)', t.labels3d !== false, on => S.setThreeD({ labels3d: on })));
+    bd.appendChild(h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen ⟲ ⟳.'));
     ct.appendChild(sec);
   }
 

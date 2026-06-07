@@ -37,7 +37,13 @@
       map.setTerrain({ source: 'dem', exaggeration });
     } catch (e) {}
     try { map.setSky({ 'sky-color': '#0a1830', 'sky-horizon-blend': 0.6, 'horizon-color': '#16335c', 'horizon-fog-blend': 0.5, 'fog-color': '#0a1322', 'fog-ground-blend': 0.4 }); } catch (e) {}
-    addSceneLayers(); mirror();
+    addSceneLayers(); mirror(); applyLabels3D();
+  }
+  // make every label (base style + scene) lie on the terrain so names read as 3D when tilted
+  function applyLabels3D() {
+    if (!map) return;
+    const align = (cfg3().labels3d !== false) ? 'map' : 'viewport';
+    try { map.getStyle().layers.forEach(l => { if (l.type === 'symbol') { try { map.setLayoutProperty(l.id, 'text-pitch-alignment', align); } catch (e) {} } }); } catch (e) {}
   }
 
   /* ---- mirror the active scene geometry into GeoJSON ---- */
@@ -129,7 +135,7 @@
 
   /* ---- react to store: keep 3D base in step with the 2D app ---- */
   S.on((st, evt) => {
-    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); } return; }
+    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); } return; }
     if (!on || !map) return;
     if (evt === 'mapstyle' || evt === 'sync') { map.setStyle(styleUrl(S.state.mapStyle)); }   // style.load re-adds terrain/sky/layers
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }

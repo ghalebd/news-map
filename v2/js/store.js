@@ -42,7 +42,7 @@ const Store = (() => {
     locator: false,          // mini locator inset map
     tilt: 0,                 // 3D perspective tilt (deg)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
-    threeD: { exaggeration: 2.6, pitch: 62 },   // 3D terrain defaults (MapLibre)
+    threeD: { exaggeration: 2.6, pitch: 62, labels3d: true },   // 3D terrain defaults (MapLibre)
     grid: { on: false, size: 60, color: '#7fb0ff', opacity: 16, weight: 1 },   // aesthetic square grid overlay
     sea: { on: false, intensity: 35, speed: 9 },   // animated water shimmer overlay
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
