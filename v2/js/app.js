@@ -75,9 +75,11 @@
   /* ---------- react to store ---------- */
   S.on((st, evt) => {
     if (evt === 'mode') applyMode();
-    if (evt === 'scenes' || evt === 'active' || evt === 'elements') { renderDeck(); renderNowNext(); }
-    if (evt === 'elements' || evt === 'active' || evt === 'scenes') window.Draw && window.Draw.render();
+    if (evt === 'config' || evt === 'sync') window.Theme && window.Theme.apply(S.cfg().style);
+    if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'sync') { renderDeck(); renderNowNext(); }
+    if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'sync') window.Draw && window.Draw.render();
     if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
+    if (evt === 'mapstyle' || evt === 'sync') M.setStyle(S.state.mapStyle);
   });
 
   /* ---------- keyboard ---------- */
@@ -99,9 +101,12 @@
 
   /* ---------- boot ---------- */
   applyMode();
-  S.addScene(M.currentView(), { title: 'Opening Scene' });
+  window.Theme && window.Theme.apply(S.cfg().style);
+  M.setStyle(S.state.mapStyle);
+  if (!S.scenes().length) S.addScene(M.currentView(), { title: 'Opening Scene' });
+  else { renderDeck(); renderNowNext(); const a = S.activeScene(); if (a) M.flyToView(a.view, { type: 'cut' }); }
   window.Draw && window.Draw.render();
 
-  window.__app = { map: M.map, store: S, draw: window.Draw };
+  window.__app = { map: M.map, store: S, draw: window.Draw, theme: window.Theme };
   console.log('[news-map v3] ready');
 })();
