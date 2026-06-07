@@ -153,11 +153,13 @@
     m3.bd.append(pl, pa); ct.appendChild(m3.sec);
   }
   function tabTracking(C, ct) {
-    const t1 = section('Live layers', I.ship);
+    const T0 = window.Tracking || {};
+    const sc = T0.Ships && T0.Ships.ships ? T0.Ships.ships.size : 0, fc = T0.Flights && T0.Flights.flights ? T0.Flights.flights.size : 0;
+    const t1 = section('Live ships & flights', I.ship);
     live.ships = tog(!!S.state.tracking.ships, on => S.setTracking('ships', on));
     live.flights = tog(!!S.state.tracking.flights, on => S.setTracking('flights', on));
     live.trails = tog(S.state.tracking.trails !== false, on => S.setTracking('trails', on));
-    t1.bd.append(rowWith('Live ships (AIS)', live.ships), rowWith('Live flights', live.flights), rowWith('Route / trail lines', live.trails));
+    t1.bd.append(rowWith('Live ships (AIS)' + (sc ? ` · ${sc}` : ''), live.ships), rowWith('Live flights' + (fc ? ` · ${fc}` : ''), live.flights), rowWith('Route / trail lines', live.trails));
     ct.appendChild(t1.sec);
     const T = Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, C.trackStyle || {});
     const t2 = section('Tracking style', I.curve, () => S.setTrackStyle(cp(D.trackStyle)));

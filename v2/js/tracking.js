@@ -256,7 +256,7 @@
   const bShips = mk('ships', I.ship, 'Ships'), bFlights = mk('flights', I.plane, 'Flights');
   const bTrails = h('button', 'lt-btn', `${I.curve}<span>Trails</span>`); bTrails.title = 'Show / hide route & trail lines';
   bTrails.onclick = () => { const can = isControl || S.cfg().permissions.canTrack !== false; if (can) S.setTracking('trails', !showTrails()); };
-  bar.append(bShips, bFlights, bTrails); document.body.appendChild(bar);
+  bar.append(bShips, bFlights, bTrails);   // not appended to the DOM: control lives exclusively in the side-panel "Live ships & flights" card (counts still update these refs)
 
   function setStatus(kind, st) { const b = kind === 'ships' ? bShips : bFlights; const d = b.querySelector('.lt-dot'); if (d) d.dataset.st = st; }
   function setCounts() {
