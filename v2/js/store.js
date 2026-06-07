@@ -35,7 +35,7 @@ const Store = (() => {
     rundown: { title: 'News Rundown', scenes: [], activeId: null },
     config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     reveal: {},                    // sceneId -> number of revealed elements (synced)
-    tracking: { ships: false, flights: false },  // live overlays (synced)
+    tracking: { ships: false, flights: false, trails: true },  // live overlays (synced); trails = show route/trail lines
     trackFocus: null,             // focused ship MMSI (route shown) — synced
   };
 

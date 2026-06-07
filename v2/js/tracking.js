@@ -18,6 +18,7 @@
   const RT_FAINT = { interactive: false, color: '#5fd8ff', weight: 2, opacity: .55, dashArray: '6 6', lineCap: 'round' };
   const RT_FOCUS = { interactive: false, color: '#8af0ff', weight: 3, opacity: .95, dashArray: '9 7', lineCap: 'round' };
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
+  const showTrails = () => S.state.tracking.trails !== false;   // route/trail line visibility
 
   /* -------------------- ships (AIS) -------------------- */
   const Ships = {
@@ -25,12 +26,16 @@
     reconnectT: null, pruneT: null, resubT: null, STALE: 5 * 60 * 1000,
     set(v) { if (v === this.on) return; this.on = v; v ? this.start() : this.stop(); setCounts(); },
     start() {
-      this.route = this.route || L.layerGroup(); this.route.addTo(map);     // destination routes (bottom)
-      this.trails = this.trails || L.layerGroup(); this.trails.addTo(map);   // travelled trail
-      this.pins = this.pins || L.layerGroup(); this.pins.addTo(map);         // focused destination pin
-      this.layer = this.layer || L.layerGroup(); this.layer.addTo(map);      // markers (top)
+      this.route = this.route || L.layerGroup();
+      this.trails = this.trails || L.layerGroup();
+      this.pins = this.pins || L.layerGroup();
+      if (showTrails()) { this.route.addTo(map); this.trails.addTo(map); this.pins.addTo(map); }
+      this.layer = this.layer || L.layerGroup(); this.layer.addTo(map);      // markers (top, always)
       this.connect();
       this.pruneT = setInterval(() => this.prune(), 30000);
+    },
+    showTrails(on) {
+      [this.route, this.trails, this.pins].forEach(g => { if (!g) return; if (on) g.addTo(map); else map.removeLayer(g); });
     },
     stop() {
       clearTimeout(this.reconnectT); clearInterval(this.pruneT); clearTimeout(this.resubT);
@@ -156,10 +161,27 @@
 
   /* -------------------- flights (airplanes.live) -------------------- */
   const Flights = {
-    on: false, flights: new Map(), layer: null, timer: null,
+    on: false, flights: new Map(), layer: null, ftrails: null, timer: null,
     set(v) { if (v === this.on) return; this.on = v; v ? this.start() : this.stop(); setCounts(); },
-    start() { this.layer = this.layer || L.layerGroup(); this.layer.addTo(map); setStatus('flights', 'live'); this.fetch(); this.timer = setInterval(() => this.fetch(), 10000); },
-    stop() { clearInterval(this.timer); if (this.layer) map.removeLayer(this.layer); this.flights.clear(); },
+    start() {
+      this.ftrails = this.ftrails || L.layerGroup(); if (showTrails()) this.ftrails.addTo(map);
+      this.layer = this.layer || L.layerGroup(); this.layer.addTo(map);
+      setStatus('flights', 'live'); this.fetch(); this.timer = setInterval(() => this.fetch(), 10000);
+    },
+    stop() { clearInterval(this.timer); if (this.layer) map.removeLayer(this.layer); if (this.ftrails) { map.removeLayer(this.ftrails); this.ftrails.clearLayers(); } this.flights.clear(); },
+    showTrails(on) { if (!this.ftrails) return; if (on) this.ftrails.addTo(map); else map.removeLayer(this.ftrails); },
+    trail(f) {
+      f.trail = f.trail || [[f.lat, f.lng]];
+      const last = f.trail[f.trail.length - 1];
+      if (!last || Math.abs(last[0] - f.lat) > 1e-4 || Math.abs(last[1] - f.lng) > 1e-4) f.trail.push([f.lat, f.lng]);
+      if (f.trail.length > TRAIL_MAX) f.trail.shift();
+      if (f.trail.length < 2 || !this.ftrails) return;
+      const recent = f.trail.slice(-10);
+      if (!f.line) { f.line = L.polyline(f.trail, { color: PLANE_COLOR, weight: 2, opacity: .5, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
+      else f.line.setLatLngs(f.trail);
+      if (!f.head) { f.head = L.polyline(recent, { color: '#fff0b8', weight: 3, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(this.ftrails); }
+      else f.head.setLatLngs(recent);
+    },
     async fetch() {
       if (!this.on) return;
       const b = map.getBounds(), c = map.getCenter();
@@ -173,19 +195,20 @@
       if (!ac) return;
       const seen = new Set(), bounds = map.getBounds();
       ac.forEach(a => { if (!bounds.contains([a.lat, a.lng])) return; seen.add(a.icao); this.upsert(a.icao, a); });
-      this.flights.forEach((f, k) => { if (!seen.has(k)) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); this.flights.delete(k); } });
+      this.flights.forEach((f, k) => { if (!seen.has(k)) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); if (this.ftrails) { if (f.line) this.ftrails.removeLayer(f.line); if (f.head) this.ftrails.removeLayer(f.head); } this.flights.delete(k); } });
       setCounts();
     },
     upsert(icao, info) {
       let f = this.flights.get(icao);
       const tip = `<b>${info.callsign || 'Unknown'}</b><br>${info.type || '?'} · ${Math.round(info.alt)}ft · ${Math.round(info.velocity * 1.94)}kt`;
       if (!f) {
-        f = { icao, ...info };
+        f = { icao, trail: [[info.lat, info.lng]], ...info };
         f.marker = L.marker([info.lat, info.lng], { icon: icon('plane', info.heading), zIndexOffset: 200, keyboard: false });
         f.marker.bindTooltip(tip, { direction: 'top', offset: [0, -12], className: 'trk-tip', sticky: true });
         if (this.layer) f.marker.addTo(this.layer);
         this.flights.set(icao, f);
       } else { Object.assign(f, info); f.marker.setLatLng([info.lat, info.lng]); f.marker.setIcon(icon('plane', info.heading)); f.marker.setTooltipContent(tip); }
+      this.trail(f);
     },
   };
 
@@ -206,7 +229,9 @@
   const bar = h('div', 'livetrack glass');
   const mk = (key, icn, label) => { const b = h('button', 'lt-btn', `${icn}<span>${label}</span><i class="lt-dot"></i>`); b.onclick = () => { const can = isControl || S.cfg().permissions.canTrack !== false; if (can) S.setTracking(key, !S.state.tracking[key]); }; return b; };
   const bShips = mk('ships', I.ship, 'Ships'), bFlights = mk('flights', I.plane, 'Flights');
-  bar.append(bShips, bFlights); document.body.appendChild(bar);
+  const bTrails = h('button', 'lt-btn', `${I.curve}<span>Trails</span>`); bTrails.title = 'Show / hide route & trail lines';
+  bTrails.onclick = () => { const can = isControl || S.cfg().permissions.canTrack !== false; if (can) S.setTracking('trails', !showTrails()); };
+  bar.append(bShips, bFlights, bTrails); document.body.appendChild(bar);
 
   function setStatus(kind, st) { const b = kind === 'ships' ? bShips : bFlights; const d = b.querySelector('.lt-dot'); if (d) d.dataset.st = st; }
   function setCounts() {
@@ -219,7 +244,15 @@
     const can = isControl || S.cfg().permissions.canTrack !== false;
     bar.classList.toggle('is-locked', !can);
   }
-  function sync() { bShips.classList.toggle('is-on', S.state.tracking.ships); bFlights.classList.toggle('is-on', S.state.tracking.flights); Ships.set(S.state.tracking.ships); Flights.set(S.state.tracking.flights); applyGate(); if (Ships.on && Ships.focus !== S.state.trackFocus) Ships.applyFocus(S.state.trackFocus); }
+  function sync() {
+    bShips.classList.toggle('is-on', S.state.tracking.ships); bFlights.classList.toggle('is-on', S.state.tracking.flights);
+    bTrails.classList.toggle('is-on', showTrails());
+    Ships.set(S.state.tracking.ships); Flights.set(S.state.tracking.flights);
+    if (Ships.on) Ships.showTrails(showTrails());
+    if (Flights.on) Flights.showTrails(showTrails());
+    applyGate();
+    if (Ships.on && Ships.focus !== S.state.trackFocus) Ships.applyFocus(S.state.trackFocus);
+  }
 
   S.on((st, evt) => {
     if (evt === 'tracking' || evt === 'sync' || evt === 'config') sync();
