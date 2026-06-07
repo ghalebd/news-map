@@ -28,6 +28,14 @@
   const els = {}; const handles = {};
   let pending = null;
   let cfgOffset = 0;   // how far the open settings panel pushes left-side chrome right
+  const SHIFTED = ['.qtools', '.modesw', '.deck', '.nownext', '.status'];   // left-side chrome the settings panel pushes
+  // how much THIS panel is currently pushed right by the open settings panel
+  function shiftFor(sel) {
+    if (!cfgOffset) return 0;
+    const p = (S.cfg().layout || {})[sel];
+    if (p && p.x != null) return p.x < cfgOffset ? cfgOffset : 0;
+    return SHIFTED.includes(sel) ? cfgOffset : 0;
+  }
 
   /* the dot-grip sits on the panel's SHORTER edge: top for portrait panels,
      left for landscape panels — re-evaluated whenever layout might change */
@@ -57,14 +65,16 @@
     e.preventDefault(); e.stopPropagation();
     const axis = meta[sel].axis, rect = el.getBoundingClientRect();
     const s = (S.cfg().layout && S.cfg().layout[sel] && S.cfg().layout[sel].s) || 1;
+    const shift = shiftFor(sel);   // temporary open-shift to keep out of saved coords
     const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
     hd.classList.add('is-drag'); document.body.classList.add('mv-dragging');
     function mv(ev) {
-      let nx = axis === 'y' ? rect.left : ev.clientX - ox;
-      let ny = axis === 'x' ? rect.top : ev.clientY - oy;
-      nx = Math.max(0, Math.min(nx, window.innerWidth - rect.width));
-      ny = Math.max(0, Math.min(ny, window.innerHeight - rect.height));
-      styleAt(el, nx, ny, s); pending = { sel, x: nx, y: ny, h: rect.height, s };
+      const rawX = axis === 'y' ? rect.left : ev.clientX - ox;   // where it sits on screen
+      const rawY = axis === 'x' ? rect.top : ev.clientY - oy;
+      let nx = Math.max(0, Math.min(rawX - shift, window.innerWidth - rect.width));   // natural (un-shifted) position to save
+      let ny = Math.max(0, Math.min(rawY, window.innerHeight - rect.height));
+      styleAt(el, Math.min(nx + shift, window.innerWidth - rect.width), ny, s);       // but follow the cursor on screen
+      pending = { sel, x: nx, y: ny, h: rect.height, s };
     }
     function up() {
       document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
@@ -94,8 +104,8 @@
         let x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
         const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
         // moved panels carry an inline transform (which overrides the CSS open-shift),
-        // so we push them clear of the settings panel here instead
-        if (cfgOffset && x < cfgOffset) x = Math.min(x + cfgOffset, window.innerWidth - w);
+        // so we push them clear of the settings panel here instead (display only)
+        x = Math.min(x + shiftFor(sel), window.innerWidth - w);
         styleAt(el, x, y, p.s || 1);
       } else clearStyle(el);
     }
