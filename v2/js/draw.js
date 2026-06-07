@@ -13,7 +13,23 @@ const Draw = (() => {
      the presenter is limited by config.permissions. */
   const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
 
-  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {};
+  let tool = 'select', selected = null, dragStart = null, ghost = null, sketchPts = null, qbtns = {}, markerIcon = null;
+
+  /* marker icon set (broadcast) — keyed; '' = plain dot */
+  const mk = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const MICONS = {
+    pin: mk('<path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/>'),
+    flag: mk('<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5" fill="currentColor"/>'),
+    star: mk('<path d="M12 3l2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.9 6.7 19.5l1.1-6L3.4 9.3l6-.8Z" fill="currentColor"/>'),
+    alert: mk('<path d="M12 3 2 20h20L12 3Z" fill="currentColor"/><path d="M12 10v4" stroke="#0a0e16"/><circle cx="12" cy="17" r="1" fill="#0a0e16" stroke="none"/>'),
+    fire: mk('<path d="M12 3c1 3 4 4 4 8a4 4 0 1 1-8 0c0-1 .5-2 1-2.5C9 11 8 9 12 3Z" fill="currentColor"/>'),
+    blast: mk('<path d="M12 2l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2Z" fill="currentColor"/>'),
+    capital: mk('<circle cx="12" cy="12" r="8"/><path d="M12 8l1.6 3.2 3.4.4-2.5 2.3.7 3.3L12 15.7 8.8 17.2l.7-3.3L7 11.6l3.4-.4Z" fill="currentColor" stroke="none"/>'),
+    airport: mk('<path d="M12 3c.7 0 1 .8 1 2v4.5l7 4v2l-7-2v4l2 1.5v1.5L12 19l-3 1.5V19l2-1.5v-4l-7 2v-2l7-4V5c0-1.2.3-2 1-2Z" fill="currentColor" stroke="none"/>'),
+    port: mk('<path d="M12 5v14M12 5a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 12 5ZM6 11h12M6 11a6 6 0 0 0 12 0"/>'),
+    target: mk('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>'),
+  };
+  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target'];
 
   /* ---------------- render the active scene ---------------- */
   function render() {
@@ -26,7 +42,11 @@ const Draw = (() => {
   function buildLayer(el) {
     const o = { color: el.color, weight: 3, opacity: 1 };
     switch (el.type) {
-      case 'marker':  return L.circleMarker(el.ll, { radius: 7, color: '#fff', weight: 2, fillColor: el.color, fillOpacity: 1 });
+      case 'marker':  {
+        if (el.icon && MICONS[el.icon]) { const html = `<span class="map-mk" style="color:${el.color}">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [30, 30], iconAnchor: [15, 15] }) }); }
+        if (el.label) return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html: `<span class="map-mk__dot" style="background:${el.color}"></span><span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>`, iconSize: [14, 14], iconAnchor: [7, 7] }) });
+        return L.circleMarker(el.ll, { radius: 7, color: '#fff', weight: 2, fillColor: el.color, fillOpacity: 1 });
+      }
       case 'circle':  return L.circle(el.ll, { radius: el.radius, ...o, fillColor: el.color, fillOpacity: 0.12 });
       case 'ring':    { const g = L.layerGroup(); g.addLayer(L.circle(el.ll, { radius: el.radius, ...o, fill: false, dashArray: '6 5' })); g.addLayer(L.marker(el.ll, { icon: labelIcon((el.radius / 1000).toFixed(0) + ' KM', el.color) })); return g; }
       case 'arrow':   return arrowLine(L.latLng(el.a), L.latLng(el.b), o);
@@ -35,7 +55,7 @@ const Draw = (() => {
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
-      case 'asset':   { const w = el.w || 54; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${el.src}" style="width:${w}px;height:auto">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${el.src}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
     }
     return null;
   }
@@ -60,7 +80,7 @@ const Draw = (() => {
   map.on('mousemove', e => { if (!dragStart) return; if (tool === 'sketch') sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost); });
   map.on('mouseup', e => { if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable(); });
   map.on('click', e => {
-    if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color });
+    if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
     else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
     else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
     else if (tool === 'select') deselect();
@@ -100,7 +120,13 @@ const Draw = (() => {
     COLORS.forEach(c => { const s = h('button', 'ctxbar__sw' + (c === el.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.updateElement(el.id, { color: c }); el.color = c; buildCtx(el); }; colors.appendChild(s); });
     ctx.appendChild(colors);
     if (el.type === 'arrow' || el.type === 'curve') ctx.appendChild(ctxBtn(I.curve, 'Straight ↔ Curved', () => { S.updateElement(el.id, { type: el.type === 'arrow' ? 'curve' : 'arrow' }); el.type = el.type === 'arrow' ? 'curve' : 'arrow'; }));
-    if (el.type === 'asset') { ctx.appendChild(ctxBtn(I.minus, 'Smaller', () => { const w = Math.max(24, (el.w || 54) - 10); S.updateElement(el.id, { w }); el.w = w; })); ctx.appendChild(ctxBtn(I.plus, 'Larger', () => { const w = Math.min(180, (el.w || 54) + 10); S.updateElement(el.id, { w }); el.w = w; })); }
+    if (el.type === 'marker') ctx.appendChild(ctxBtn(I.text, 'Edit label', () => { window.UI && UI.input({ title: 'Marker label', value: el.label || '', placeholder: 'Label (optional)' }).then(v => { if (v != null) { const lab = v.trim() || undefined; S.updateElement(el.id, { label: lab }); el.label = lab; } }); }));
+    if (el.type === 'asset') {
+      ctx.appendChild(ctxBtn(I.minus, 'Smaller', () => { const w = Math.max(24, (el.w || 54) - 10); S.updateElement(el.id, { w }); el.w = w; }));
+      ctx.appendChild(ctxBtn(I.plus, 'Larger', () => { const w = Math.min(220, (el.w || 54) + 10); S.updateElement(el.id, { w }); el.w = w; }));
+      const ROT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>';
+      ctx.appendChild(ctxBtn(ROT, 'Rotate', () => { const r = ((el.rot || 0) + 15) % 360; S.updateElement(el.id, { rot: r }); el.rot = r; }));
+    }
     ctx.appendChild(ctxBtn(I.layers, 'Duplicate', () => { const copy = JSON.parse(JSON.stringify(el)); delete copy.id; S.addElement(copy); }));
     ctx.appendChild(ctxBtn(I.close, 'Delete', () => { S.removeElement(el.id); deselect(); }));
     ctx.hidden = false; positionCtx(el);
@@ -152,6 +178,11 @@ const Draw = (() => {
     const grid = h('div', 'qa__tools');
     TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else setTool(id); }; grid.appendChild(b); });
     menu.append(h('div', 'qa__title', 'ADD'), cRow, grid);
+    if (permits('marker')) {
+      const iconRow = h('div', 'qa__icons');
+      MICON_KEYS.forEach(k => { const b = h('button', 'qa__icon' + ((markerIcon || '') === k ? ' is-on' : ''), k ? MICONS[k] : '<span class="qa__dot"></span>'); b.title = k || 'Dot'; b.onclick = () => { markerIcon = k || null; setTool('marker'); closeMenu(); }; iconRow.appendChild(b); });
+      menu.append(h('div', 'qa__sub', 'MARKER ICON'), iconRow);
+    }
   }
   function openMenu() { buildMenu(); menu.hidden = false; }
   function closeMenu() { menu.hidden = true; }

@@ -34,7 +34,8 @@
     document.querySelectorAll('.card-sc__ops').forEach(o => { o.hidden = !p.canEditScenes; });
   }
 
-  function apply() { applyVisibility(); applyPermissions(); }
+  function applyTouch() { document.body.classList.toggle('touch', !!S.cfg().touch); }
+  function apply() { applyVisibility(); applyPermissions(); applyTouch(); }
 
   // re-apply whenever config changes (local or remote) or the deck re-renders
   S.on((st, evt) => {

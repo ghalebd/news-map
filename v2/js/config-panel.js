@@ -78,6 +78,7 @@
       const clr = h('button', 'cfg-btn', `${I.close}<span>Default</span>`); clr.onclick = () => S.setLogo(null);
       lf.onchange = async () => { const f = lf.files[0]; if (!f) return; try { const url = await readImage(f, 512); S.setLogo(url); } catch (e) { alert('Could not read image'); } lf.value = ''; };
       lr.append(pick, clr, lf); bd.appendChild(lr);
+      bd.appendChild(rowTog('Touch mode (large controls)', !!C.touch, on => S.setTouch(on)));
       body.appendChild(sec);
     }
     // VISIBILITY
