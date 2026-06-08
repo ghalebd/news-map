@@ -124,9 +124,13 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    Settings ▸ Layout “Panel size & position” list (size + 9-anchor snap + centre); hidden
    under `body.ui-hidden`; correct z-index tier (tokens `--z-*`); and any popup it spawns
    from the left tool bar uses the shared `.lbar-pop` style via `window.LBar`.
-3. **Settings sections auto-balance across the two columns** (masonry: each card drops into
-   the currently-shorter column) **and stay drag-reorderable** (`setupDnD`, order saved to
-   `newsmap.v3.panelOrder`). Never hard-alternate columns by index.
+3. **Settings drawer is organised into CATEGORY TABS** (`CATS` in `js/config-panel.js`:
+   Look/Layout/Tools/Map/3D/Live/Broadcast/Assets/Project) — one category shown at a time so
+   it's not a wall of cards. A new `tabX` group must be added to the right `CATS` entry.
+   Within a category, sections fill columns top-to-bottom (chunked, stable — not index
+   interleave) and stay drag-reorderable (`setupDnD`, order saved to
+   `newsmap.v3.panelOrder`). Search spans all categories (re-renders all groups, then
+   filters).
 4. **Before every commit run the smoke test** `tmp/v3smoke.js` (puppeteer): it must report
    `0 pageerrors / 0 codeErrors / 0 overlaps` for control+presenter × build+live. 3D tests
    need WebGL flags (`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`).

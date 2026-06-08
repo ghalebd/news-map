@@ -40,7 +40,8 @@
   );
   const x = h('button', 'x', I.close); head.append(qa, x);
   const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
-  const bodyEl = h('div', 'cfg-body'); const resize = h('div', 'cfg-resize'); resize.title = 'Drag to resize'; drawer.append(head, search, bodyEl, resize); document.body.append(toggle, drawer);
+  const catBar = h('div', 'cfg-cats');
+  const bodyEl = h('div', 'cfg-body'); const resize = h('div', 'cfg-resize'); resize.title = 'Drag to resize'; drawer.append(head, search, catBar, bodyEl, resize); document.body.append(toggle, drawer);
   // restore a saved width
   const CW_KEY = 'newsmap.v3.cfgW';
   try { const w = +localStorage.getItem(CW_KEY); if (w >= 360) drawer.style.width = w + 'px'; } catch (e) {}
@@ -605,6 +606,24 @@
   }
 
   const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabModels3d, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
+  // category tabs — show one logical group at a time so the drawer isn't a wall of cards
+  const CATS = [
+    { key: 'look', label: 'Look', groups: [tabIdentity] },
+    { key: 'layout', label: 'Layout', groups: [tabLayout] },
+    { key: 'tools', label: 'Tools', groups: [tabPermissions, tabTools] },
+    { key: 'map', label: 'Map', groups: [tabMap, tabOverlays, tabFx] },
+    { key: '3d', label: '3D', groups: [tabThreeD, tabModels3d] },
+    { key: 'live', label: 'Live', groups: [tabTracking] },
+    { key: 'cast', label: 'Broadcast', groups: [tabBroadcast] },
+    { key: 'assets', label: 'Assets', groups: [tabAssets] },
+    { key: 'project', label: 'Project', groups: [tabProject] },
+  ];
+  const CAT_KEY = 'newsmap.v3.cfgCat';
+  let activeCat = (() => { try { return localStorage.getItem(CAT_KEY) || 'look'; } catch (e) { return 'look'; } })();
+  function renderCats() {
+    catBar.innerHTML = ''; const searching = !!search.value.trim();
+    CATS.forEach(c => { const btn = h('button', 'cfg-cat' + (!searching && activeCat === c.key ? ' on' : ''), c.label); btn.onclick = () => { activeCat = c.key; try { localStorage.setItem(CAT_KEY, c.key); } catch (e) {} if (search.value) search.value = ''; renderTab(); }; catBar.appendChild(btn); });
+  }
   function applyFilter() {
     const q = search.value.trim().toLowerCase();
     bodyEl.querySelectorAll('.cfg-sec').forEach(sec => {
@@ -615,7 +634,7 @@
       if (q && (any || titleHit)) sec.classList.add('open');
     });
   }
-  search.oninput = applyFilter;
+  search.oninput = () => renderTab();   // searching spans all categories → re-render then filter
   /* drag-to-reorder: persisted section order (local UI preference) */
   const ORDER_KEY = 'newsmap.v3.panelOrder';
   const title = sec => sec.querySelector('.cfg-sec__hd .t').textContent;
@@ -645,26 +664,30 @@
     const order = getOrder();
     const secs = [...bodyEl.querySelectorAll('.cfg-sec')].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
     bodyEl.innerHTML = ''; const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
-    secs.forEach((sec, i) => cols[i % n].appendChild(sec));
+    const per = Math.max(1, Math.ceil(secs.length / n));
+    secs.forEach((sec, i) => cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec));
     bodyEl.scrollTop = sc;
   }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
     const sc = bodyEl.scrollTop;   // keep the operator anchored — never yank the list to the top
+    renderCats();
     bodyEl.innerHTML = '';
     const n = colCount(); const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
-    const tmp = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), tmp));
+    // searching spans ALL categories; otherwise show just the active category
+    const searching = !!search.value.trim();
+    const grp = searching ? GROUPS : (CATS.find(c => c.key === activeCat) || CATS[0]).groups;
+    const tmp = document.createElement('div'); grp.forEach(b => b(S.cfg(), tmp));
     let secs = [...tmp.children];
-    const natural = secs.map(title);
-    let order = getOrder(); if (!order.length) { order = natural; saveOrder(order); }
+    // seed the FULL order once (all categories) so within-category reorder is stable
+    let order = getOrder();
+    if (!order.length) { const all = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), all)); order = [...all.children].map(title); saveOrder(order); }
     secs.sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-    // mark open state first so card heights are accurate, then auto-balance the two
-    // columns by always dropping the next card into the currently-shorter one (masonry).
     if (openT.size) secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
     else if (secs[0]) secs[0].classList.add('open');
-    // stable, deterministic interleave across the responsive column count — sections
-    // never jump when you open/close or click controls inside them
-    secs.forEach((sec, i) => { setupDnD(sec); cols[i % n].appendChild(sec); });
+    // fill columns top-to-bottom in chunks (reads naturally down each column), stable
+    const per = Math.max(1, Math.ceil(secs.length / n));
+    secs.forEach((sec, i) => { setupDnD(sec); cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec); });
     applyFilter();
     bodyEl.scrollTop = sc;   // restore scroll after the rebuild (no jump)
   }

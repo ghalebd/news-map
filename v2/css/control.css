@@ -43,6 +43,11 @@ body.cfg-resizing .cfg-drawer, body.cfg-resizing .brand, body.cfg-resizing .qtoo
 .cfg-qbtn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 /* search */
 .cfg-search { margin: 0 14px 8px; height: 38px; padding: 0 14px; border-radius: var(--r-sm); background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font: 500 13px var(--font); }
+.cfg-cats { display: flex; gap: 5px; padding: 0 12px 9px; overflow-x: auto; flex: 0 0 auto; scrollbar-width: none; }
+.cfg-cats::-webkit-scrollbar { height: 0; }
+.cfg-cat { flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 18px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; white-space: nowrap; transition: all var(--t-fast) var(--ease); }
+.cfg-cat:hover { border-color: var(--stroke-2); color: var(--text); }
+.cfg-cat.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .cfg-search:focus { outline: none; border-color: var(--accent); }
 .cfg-search::placeholder { color: var(--text-3); }
 /* two-column masonry that scrolls vertically (flex columns, no multicol) */
