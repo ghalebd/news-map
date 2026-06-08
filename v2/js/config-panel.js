@@ -40,8 +40,7 @@
   );
   const x = h('button', 'x', I.close); head.append(qa, x);
   const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
-  const catBar = h('div', 'cfg-cats');
-  const bodyEl = h('div', 'cfg-body'); const resize = h('div', 'cfg-resize'); resize.title = 'Drag to resize'; drawer.append(head, search, catBar, bodyEl, resize); document.body.append(toggle, drawer);
+  const bodyEl = h('div', 'cfg-body'); const resize = h('div', 'cfg-resize'); resize.title = 'Drag to resize'; drawer.append(head, search, bodyEl, resize); document.body.append(toggle, drawer);
   // restore a saved width
   const CW_KEY = 'newsmap.v3.cfgW';
   try { const w = +localStorage.getItem(CW_KEY); if (w >= 360) drawer.style.width = w + 'px'; } catch (e) {}
@@ -80,8 +79,6 @@
     const sec = h('div', 'cfg-sec');
     const hd = h('div', 'cfg-sec__hd', `<span class="cfg-grip" title="Drag to reorder">${I.grip || '⋮⋮'}</span><span class="i">${icon}</span><span class="t">${title}</span>`);
     if (window.Help) hd.appendChild(Help.dot(title));   // tiny "?" explainer for every section
-    const pin = h('button', 'cfg-sec__pin' + (pinnedSet().has(slugOf(title)) ? ' on' : ''), I.pin); pin.title = 'Add a quick button for this on the tool bar';
-    pin.onclick = e => { e.stopPropagation(); togglePin(title, icon); pin.classList.toggle('on'); }; hd.appendChild(pin);
     if (onReset) { const rb = h('button', 'cfg-sec__rst', I.undo); rb.title = 'Reset this section to defaults'; rb.onclick = e => { e.stopPropagation(); onReset(); renderTab(); }; hd.appendChild(rb); }
     hd.appendChild(h('span', 'chev', I.chevron));
     const bd = h('div', 'cfg-sec__bd');
@@ -89,10 +86,23 @@
     sec.append(hd, bd); return { sec, bd };
   }
   // open the drawer and reveal a section by title (used by the pinned bar buttons)
-  function openSection(title) {
-    setOpen(true);
-    const s = [...bodyEl.querySelectorAll('.cfg-sec')].find(x => x.querySelector('.t') && x.querySelector('.t').textContent === title);
-    if (s) { s.classList.add('open'); s.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  // a single settings section as a POPUP flyout anchored to its tool-bar button
+  let flyoutEl = null;
+  function buildOne(title) { const tmp = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), tmp)); return [...tmp.children].find(s => s.querySelector('.t') && s.querySelector('.t').textContent === title); }
+  function onFlyOut(e) { if (flyoutEl && !flyoutEl.contains(e.target) && !(e.target.closest && e.target.closest('.qtool[data-qid^="cfg:"]'))) closeFlyout(); }
+  function onFlyKey(e) { if (e.key === 'Escape') closeFlyout(); }
+  function closeFlyout() { if (!flyoutEl) return; flyoutEl.remove(); flyoutEl = null; document.removeEventListener('pointerdown', onFlyOut, true); document.removeEventListener('keydown', onFlyKey); }
+  function popupSection(title, anchor) {
+    if (flyoutEl && flyoutEl._title === title) { closeFlyout(); return; }   // toggle off
+    closeFlyout();
+    const sec = buildOne(title); if (!sec) return; sec.classList.add('open');
+    const fly = h('div', 'cfg-flyout glass cfg-panel'); fly._title = title;
+    const x = h('button', 'cfg-flyout__x', I.close); x.title = 'Close'; x.onclick = closeFlyout;
+    fly.append(x, sec); document.body.appendChild(fly); flyoutEl = fly;
+    const a = anchor.getBoundingClientRect();
+    fly.style.left = Math.round(Math.min(a.right + 10, window.innerWidth - fly.offsetWidth - 12)) + 'px';
+    fly.style.top = Math.round(Math.max(12, Math.min(a.top, window.innerHeight - fly.offsetHeight - 12))) + 'px';
+    setTimeout(() => { document.addEventListener('pointerdown', onFlyOut, true); document.addEventListener('keydown', onFlyKey); }, 0);
   }
   // sync the cfg:* quick-buttons on the tool bar to match config.qbar.pinned
   function renderBarButtons() {
@@ -102,7 +112,7 @@
     pinned.forEach(id => {
       if (bar.querySelector('.qtool[data-qid="' + id + '"]')) return;
       const meta = sectionMeta[id] || { title: id.slice(4), icon: I.sliders };
-      const b = h('button', 'qtool', meta.icon); b.title = meta.title; b.dataset.qid = id; b.onclick = () => openSection(meta.title); bar.appendChild(b);
+      const b = h('button', 'qtool', meta.icon); b.title = meta.title; b.dataset.qid = id; b.onclick = () => popupSection(meta.title, b); bar.appendChild(b);
     });
     if (window.QBar) QBar.apply();
   }
@@ -186,6 +196,17 @@
     });
     q.bd.appendChild(lst);
     q.bd.appendChild(h('div', 'hint', 'Reorder, show or hide the buttons in the left vertical bar (live mode).'));
+    // add ANY settings panel as a quick bar button (opens it as a popup from the bar)
+    q.bd.appendChild(h('div', 'cfg-subhd', 'Add a settings panel to the bar'));
+    const plist = h('div', 'cfg-qbar'); const pinned = pinnedSet(); let lastCat = null;
+    sectionCatalog().forEach(s => {
+      if (s.cat !== lastCat) { plist.appendChild(h('div', 'cfg-qcat', s.cat)); lastCat = s.cat; }
+      const row = h('div', 'cfg-qrow'); row.appendChild(h('span', 'cfg-qrow__n', s.title));
+      const on = pinned.has(s.id); const add = h('button', 'cfg-ordb' + (on ? ' is-on' : ''), on ? I.eye : I.plus); add.title = on ? 'Remove from bar' : 'Add to bar';
+      add.onclick = () => { togglePin(s.title, s.icon); renderTab(); }; row.appendChild(add); plist.appendChild(row);
+    });
+    q.bd.appendChild(plist);
+    q.bd.appendChild(h('div', 'hint', 'Added panels appear as buttons on the bar; clicking one pops the panel open next to the bar — no need to open the whole settings drawer.'));
     ct.appendChild(q.sec);
 
     // ---- per-panel size & position ----
@@ -606,7 +627,9 @@
   }
 
   const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabModels3d, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
-  // category tabs — show one logical group at a time so the drawer isn't a wall of cards
+  // category BANDS — all categories stacked in one vertical scroll. Each band is
+  // collapsible and the whole band can be dragged to reorder categories; sections
+  // inside a band stay individually reorderable. Add a new tabX to the right entry.
   const CATS = [
     { key: 'look', label: 'Look', groups: [tabIdentity] },
     { key: 'layout', label: 'Layout', groups: [tabLayout] },
@@ -618,11 +641,30 @@
     { key: 'assets', label: 'Assets', groups: [tabAssets] },
     { key: 'project', label: 'Project', groups: [tabProject] },
   ];
-  const CAT_KEY = 'newsmap.v3.cfgCat';
-  let activeCat = (() => { try { return localStorage.getItem(CAT_KEY) || 'look'; } catch (e) { return 'look'; } })();
-  function renderCats() {
-    catBar.innerHTML = ''; const searching = !!search.value.trim();
-    CATS.forEach(c => { const btn = h('button', 'cfg-cat' + (!searching && activeCat === c.key ? ' on' : ''), c.label); btn.onclick = () => { activeCat = c.key; try { localStorage.setItem(CAT_KEY, c.key); } catch (e) {} if (search.value) search.value = ''; renderTab(); }; catBar.appendChild(btn); });
+  const COLL_KEY = 'newsmap.v3.cfgCatColl', CATORD_KEY = 'newsmap.v3.cfgCatOrder';
+  const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+  const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const catCollapsed = k => !!jget(COLL_KEY, {})[k];
+  const toggleCat = k => { const c = jget(COLL_KEY, {}); c[k] = !c[k]; jset(COLL_KEY, c); renderTab(); };
+  function orderedCats() { const o = jget(CATORD_KEY, []); return CATS.slice().sort((a, b) => { const ia = o.indexOf(a.key), ib = o.indexOf(b.key); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); }); }
+  function reorderCat(from, to) { let o = jget(CATORD_KEY, []); if (!o.length) o = CATS.map(c => c.key); o = o.filter(x => x !== from); const i = o.indexOf(to); o.splice(i < 0 ? o.length : i, 0, from); jset(CATORD_KEY, o); renderTab(); }
+  // flat catalog of every settings section { cat, title, icon(html), id } — built once
+  let _catalog = null, _building = false;
+  function sectionCatalog() {
+    if (_catalog) return _catalog;
+    if (_building) return [];   // re-entrancy guard: tabLayout builds this list while we render it
+    _building = true; const out = [];
+    CATS.forEach(c => { const tmp = document.createElement('div'); c.groups.forEach(b => b(S.cfg(), tmp)); [...tmp.children].forEach(secEl => { const t = secEl.querySelector('.t'); if (!t) return; const ic = secEl.querySelector('.i'); out.push({ cat: c.label, title: t.textContent, icon: ic ? ic.innerHTML : I.sliders, id: slugOf(t.textContent) }); }); });
+    _building = false; _catalog = out; return out;
+  }
+  function setupCatDnD(band, key) {
+    const grip = band.querySelector('.cfg-bandgrip'); if (!grip) return;
+    grip.setAttribute('draggable', 'true'); grip.addEventListener('click', e => e.stopPropagation());
+    grip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/cat', key); e.dataTransfer.effectAllowed = 'move'; band.classList.add('dragging'); });
+    grip.addEventListener('dragend', () => band.classList.remove('dragging'));
+    band.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('text/cat')) { e.preventDefault(); band.classList.add('catover'); } });
+    band.addEventListener('dragleave', () => band.classList.remove('catover'));
+    band.addEventListener('drop', e => { const from = e.dataTransfer.getData('text/cat'); if (!from) return; e.preventDefault(); band.classList.remove('catover'); if (from !== key) reorderCat(from, key); });
   }
   function applyFilter() {
     const q = search.value.trim().toLowerCase();
@@ -633,6 +675,8 @@
       sec.style.display = (titleHit || any) ? '' : 'none';
       if (q && (any || titleHit)) sec.classList.add('open');
     });
+    // when searching, hide a whole category band that has no matching section
+    bodyEl.querySelectorAll('.cfg-band').forEach(band => { if (!q) { band.style.display = ''; return; } const vis = [...band.querySelectorAll('.cfg-sec')].some(s => s.style.display !== 'none'); band.style.display = vis ? '' : 'none'; });
   }
   search.oninput = () => renderTab();   // searching spans all categories → re-render then filter
   /* drag-to-reorder: persisted section order (local UI preference) */
@@ -656,38 +700,36 @@
   }
   // responsive column count from the panel width (~300px per column)
   function colCount() { const w = bodyEl.clientWidth || drawer.getBoundingClientRect().width || 600; return Math.max(1, Math.min(4, Math.round((w - 24) / 300))); }
-  // re-flow existing sections into the right number of columns when the width changes
-  // (moves the live nodes, so open state + listeners are preserved — no rebuild)
-  function relayout() {
-    const n = colCount(); if (bodyEl.querySelectorAll('.cfg-col').length === n) return;
-    const sc = bodyEl.scrollTop;
-    const order = getOrder();
-    const secs = [...bodyEl.querySelectorAll('.cfg-sec')].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-    bodyEl.innerHTML = ''; const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
-    const per = Math.max(1, Math.ceil(secs.length / n));
-    secs.forEach((sec, i) => cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec));
-    bodyEl.scrollTop = sc;
-  }
+  // responsive column count from the panel width (~300px per column)
+  let _lastCols = 0;
+  function relayout() { const n = colCount(); if (n === _lastCols) return; renderTab(); }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
     const sc = bodyEl.scrollTop;   // keep the operator anchored — never yank the list to the top
-    renderCats();
     bodyEl.innerHTML = '';
-    const n = colCount(); const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
-    // searching spans ALL categories; otherwise show just the active category
+    const n = colCount(); _lastCols = n;
     const searching = !!search.value.trim();
-    const grp = searching ? GROUPS : (CATS.find(c => c.key === activeCat) || CATS[0]).groups;
-    const tmp = document.createElement('div'); grp.forEach(b => b(S.cfg(), tmp));
-    let secs = [...tmp.children];
-    // seed the FULL order once (all categories) so within-category reorder is stable
+    // section order (seed once across ALL sections so within-band reorder is stable)
     let order = getOrder();
     if (!order.length) { const all = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), all)); order = [...all.children].map(title); saveOrder(order); }
-    secs.sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-    if (openT.size) secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
-    else if (secs[0]) secs[0].classList.add('open');
-    // fill columns top-to-bottom in chunks (reads naturally down each column), stable
-    const per = Math.max(1, Math.ceil(secs.length / n));
-    secs.forEach((sec, i) => { setupDnD(sec); cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec); });
+    // render each category as a collapsible band, stacked vertically
+    orderedCats().forEach(c => {
+      const collapsed = !searching && catCollapsed(c.key);
+      const band = h('div', 'cfg-band' + (collapsed ? '' : ' open'));
+      const hd = h('div', 'cfg-bandhd', `<span class="cfg-bandgrip" title="Drag to move this category">${I.gripH}</span><span class="cfg-bandlbl">${c.label}</span><span class="cfg-bandchev">${I.chevron}</span>`);
+      hd.onclick = e => { if (e.target.closest('.cfg-bandgrip')) return; toggleCat(c.key); };
+      band.appendChild(hd);
+      const body = h('div', 'cfg-bandbody'); if (collapsed) body.style.display = 'none';
+      const cols = []; for (let i = 0; i < n; i++) { const col = h('div', 'cfg-col'); cols.push(col); body.appendChild(col); }
+      const tmp = document.createElement('div'); c.groups.forEach(b => b(S.cfg(), tmp));
+      const secs = [...tmp.children].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+      secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
+      const per = Math.max(1, Math.ceil(secs.length / n));
+      secs.forEach((sec, i) => { setupDnD(sec); cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec); });
+      band.appendChild(body);
+      setupCatDnD(band, c.key);
+      bodyEl.appendChild(band);
+    });
     applyFilter();
     bodyEl.scrollTop = sc;   // restore scroll after the rebuild (no jump)
   }

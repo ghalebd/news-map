@@ -43,11 +43,6 @@ body.cfg-resizing .cfg-drawer, body.cfg-resizing .brand, body.cfg-resizing .qtoo
 .cfg-qbtn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 /* search */
 .cfg-search { margin: 0 14px 8px; height: 38px; padding: 0 14px; border-radius: var(--r-sm); background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); font: 500 13px var(--font); }
-.cfg-cats { display: flex; gap: 5px; padding: 0 12px 9px; overflow-x: auto; flex: 0 0 auto; scrollbar-width: none; }
-.cfg-cats::-webkit-scrollbar { height: 0; }
-.cfg-cat { flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 18px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; white-space: nowrap; transition: all var(--t-fast) var(--ease); }
-.cfg-cat:hover { border-color: var(--stroke-2); color: var(--text); }
-.cfg-cat.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .cfg-search:focus { outline: none; border-color: var(--accent); }
 .cfg-search::placeholder { color: var(--text-3); }
 /* two-column masonry that scrolls vertically (flex columns, no multicol) */
@@ -109,8 +104,30 @@ body.cfg-resizing .cfg-drawer, body.cfg-resizing .brand, body.cfg-resizing .qtoo
 .cfg-hd .x { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid var(--stroke); }
 .cfg-hd .x:hover { color: var(--accent); border-color: var(--accent); }
 .cfg-hd .x svg { width: 15px; height: 15px; }
-.cfg-body { flex: 1; overflow-y: auto; padding: 6px 0 30px; }
+.cfg-body { flex: 1; display: flex; flex-direction: column; gap: 7px; align-items: stretch; overflow-y: auto; padding: 6px 12px 30px; }
 .cfg-body::-webkit-scrollbar { width: 6px; }
+/* category bands: vertical stack, collapsible + drag-reorderable; sections in columns inside */
+.cfg-band { display: flex; flex-direction: column; }
+.cfg-bandhd { display: flex; align-items: center; gap: 8px; padding: 7px 11px; cursor: pointer; border-radius: 9px; background: var(--glass-2); border: 1px solid var(--stroke); transition: border-color var(--t-fast) var(--ease); }
+.cfg-bandhd:hover { border-color: var(--stroke-2); }
+.cfg-band.catover > .cfg-bandhd { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.cfg-band.dragging { opacity: .5; }
+.cfg-bandgrip { display: inline-flex; color: var(--text-3); cursor: grab; }
+.cfg-bandgrip svg { width: 16px; height: 16px; }
+.cfg-bandlbl { flex: 1; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-2); }
+.cfg-bandchev { display: inline-flex; color: var(--text-3); transition: transform var(--t-fast) var(--ease); }
+.cfg-bandchev svg { width: 15px; height: 15px; }
+.cfg-band:not(.open) .cfg-bandchev { transform: rotate(-90deg); }
+.cfg-bandbody { display: flex; gap: 10px; align-items: flex-start; padding: 8px 2px 4px; }
+.cfg-subhd { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-2); margin: 10px 0 3px; }
+.cfg-qcat { font-size: 10px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; padding: 7px 0 2px; }
+/* settings-panel popup flyout from the bar */
+.cfg-flyout { position: fixed; z-index: 100000; width: 320px; max-width: calc(100vw - 40px); max-height: calc(100vh - 28px); overflow-y: auto; padding: 8px 8px 10px; border-radius: var(--r); }
+.cfg-flyout__x { position: absolute; top: 9px; right: 9px; z-index: 3; width: 24px; height: 24px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; }
+.cfg-flyout__x:hover { color: var(--accent); border-color: var(--accent); }
+.cfg-flyout__x svg { width: 13px; height: 13px; }
+.cfg-flyout .cfg-grip, .cfg-flyout .chev { display: none; }
+.cfg-flyout .cfg-sec { border-color: transparent; }
 .cfg-body::-webkit-scrollbar-thumb { background: var(--stroke); border-radius: 3px; }
 
 .cfg-sec { border-bottom: 1px solid var(--stroke); }

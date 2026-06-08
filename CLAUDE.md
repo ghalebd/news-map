@@ -107,11 +107,12 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    left tool-bar button (with icon, reorderable/hideable via the qbar customiser) +
    `js/movable.js` PANELS (drag grip + Panel size & position: move/scale/snap/center/reset) +
    a settings section + a tiny `Help.dot` "?".
-   **Every settings section AUTOMATICALLY gets a "pin to tool bar" button** (the shared
-   `section()` helper in `js/config-panel.js` adds it — `I.pin`, toggles
-   `config.qbar.pinned`). Pinning drops a `cfg:<slug>` quick-button on the vertical bar
-   that opens the drawer to that section. This is wired in `section()` so it applies to
-   ALL current and future sections with zero extra work — never special-case it.
+   **Any settings section can be added to the vertical bar** from the "Vertical tool bar"
+   customiser (the "Add a settings panel to the bar" list in `tabLayout`, built from
+   `sectionCatalog()` which enumerates every section). It toggles `config.qbar.pinned`;
+   `renderBarButtons()` drops a `cfg:<slug>` button on the bar; clicking it opens that
+   section as a POPUP flyout next to the bar (`popupSection()`), not the whole drawer.
+   This is automatic for all current/future sections — never special-case it.
 1. **Every new tool/feature gets a settings control automatically.** When you add any
    tool, mode, or feature, you MUST also add a matching control inside the Control Panel
    (`js/config-panel.js`): a `section(title, icon[, onReset])` card whose inputs read/write
@@ -124,13 +125,14 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    Settings ▸ Layout “Panel size & position” list (size + 9-anchor snap + centre); hidden
    under `body.ui-hidden`; correct z-index tier (tokens `--z-*`); and any popup it spawns
    from the left tool bar uses the shared `.lbar-pop` style via `window.LBar`.
-3. **Settings drawer is organised into CATEGORY TABS** (`CATS` in `js/config-panel.js`:
-   Look/Layout/Tools/Map/3D/Live/Broadcast/Assets/Project) — one category shown at a time so
-   it's not a wall of cards. A new `tabX` group must be added to the right `CATS` entry.
-   Within a category, sections fill columns top-to-bottom (chunked, stable — not index
-   interleave) and stay drag-reorderable (`setupDnD`, order saved to
-   `newsmap.v3.panelOrder`). Search spans all categories (re-renders all groups, then
-   filters).
+3. **Settings drawer = vertical stack of CATEGORY BANDS** (`CATS` in `js/config-panel.js`:
+   Look/Layout/Tools/Map/3D/Live/Broadcast/Assets/Project). All bands show at once in one
+   scroll (see most things fast). Each band is collapsible (`newsmap.v3.cfgCatColl`) and the
+   whole category is drag-reorderable via its band grip (`setupCatDnD`,
+   `newsmap.v3.cfgCatOrder`). Sections inside a band fill columns top-to-bottom (chunked,
+   stable) and stay individually drag-reorderable (`setupDnD`, `newsmap.v3.panelOrder`).
+   A new `tabX` group goes into the right `CATS` entry. Search spans all bands then filters
+   (empty bands hide).
 4. **Before every commit run the smoke test** `tmp/v3smoke.js` (puppeteer): it must report
    `0 pageerrors / 0 codeErrors / 0 overlaps` for control+presenter × build+live. 3D tests
    need WebGL flags (`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`).
