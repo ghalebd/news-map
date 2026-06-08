@@ -201,9 +201,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-cat3d__i span { font-size: 12px; font-weight: 700; line-height: 1.2; }
 .cfg-cat3d__i small { font-size: 9.5px; color: var(--text-2); opacity: .75; }
 /* ---- Timeline ---- */
-.tl-launch { position: fixed; left: 16px; bottom: 16px; z-index: var(--z-flyout, 60); display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 22px; color: var(--text); cursor: pointer; font-size: 12px; font-weight: 700; }
-.tl-launch svg { width: 16px; height: 16px; color: var(--accent); }
-.tl-launch:hover { color: var(--accent); }
 .tl { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: var(--z-flyout, 60); padding: 10px 12px; border-radius: var(--r); display: flex; flex-direction: column; gap: 8px; }
 .tl__hd { display: flex; align-items: center; gap: 7px; }
 .tl__b { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; transition: all var(--t-fast) var(--ease); }

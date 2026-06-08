@@ -24,6 +24,8 @@
     ['.bcast-banner', 'Banner', 'both'],
     ['.bcast-ticker', 'Ticker', 'both'],
     ['.d3ctrl', '3D controls', 'both'],
+    ['.mctl', 'Model control', 'both'],   // built lazily — attached when first shown
+    ['.tl', 'Timeline', 'both'],
   ];
   const meta = {}; PANELS.forEach(([sel, label, axis]) => meta[sel] = { label, axis });
   const els = {}; const handles = {};
@@ -148,6 +150,8 @@
     center(sel) { this.snap(sel, 'mc'); },
     resetPanel(sel) { S.setLayout(sel, null); },
     reflow,
+    attach,                      // wire a lazily-built panel (e.g. HUD / timeline) into the system
+    refresh: applyLayout,        // re-apply saved layout after a panel appears
     setCfgOffset(px) { cfgOffset = px || 0; applyLayout(); },
   };
 })();

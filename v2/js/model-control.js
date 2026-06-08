@@ -88,13 +88,12 @@
   function build() {
     hud = h('div', 'mctl glass'); hud.hidden = true;
     const hd = h('div', 'mctl__hd');
-    const grip = h('span', 'mctl__grip', I.move);
     nameEl = h('span', 'mctl__nm', 'Model');
     wireBtn = h('button', 'mctl__x', I.grid); wireBtn.title = 'Wireframe on/off'; wireBtn.onclick = toggleWire;
     const prev = h('button', 'mctl__x', I.navL); prev.title = 'Previous model'; prev.onclick = () => step(-1);
     const next = h('button', 'mctl__x', I.navR); next.title = 'Next model'; next.onclick = () => step(1);
     const cls = h('button', 'mctl__x', I.close); cls.title = 'Close (Esc)'; cls.onclick = deselect;
-    hd.append(grip, nameEl, wireBtn, prev, next, cls);
+    hd.append(nameEl, wireBtn, prev, next, cls);
     if (window.Help) hd.appendChild(Help.dot('Model control'));
     hud.appendChild(hd);
 
@@ -146,15 +145,11 @@
     hud.appendChild(h('div', 'mctl__hint', 'Arrows move · [ ] turn · +/- size · PgUp/PgDn altitude · drag in 3D to move'));
 
     document.body.appendChild(hud);
-    dragify(hd);
+    // wire into the universal panel system: unified drag grip + Panel size & position
+    // (move / scale / snap / reset) just like every other panel
+    if (window.Movable) { Movable.attach('.mctl'); if (Movable.refresh) Movable.refresh(); }
   }
-  function dragify(handle) {
-    let sx, sy, ox, oy, on = false;
-    handle.addEventListener('pointerdown', e => { if (e.target.closest('button,select')) return; on = true; const r = hud.getBoundingClientRect(); ox = r.left; oy = r.top; sx = e.clientX; sy = e.clientY; hud.style.right = 'auto'; hud.style.bottom = 'auto'; hud.style.left = ox + 'px'; hud.style.top = oy + 'px'; handle.setPointerCapture(e.pointerId); });
-    handle.addEventListener('pointermove', e => { if (!on) return; hud.style.left = (ox + e.clientX - sx) + 'px'; hud.style.top = (oy + e.clientY - sy) + 'px'; });
-    handle.addEventListener('pointerup', e => { on = false; try { handle.releasePointerCapture(e.pointerId); } catch (x) {} });
-  }
-  function show() { if (!hud) build(); hud.hidden = false; visible = true; }
+  function show() { if (!hud) build(); hud.hidden = false; visible = true; if (window.Movable) Movable.reflow(); }
   function hide() { if (hud) hud.hidden = true; visible = false; }
   function renderVals() {
     const m = sel(); if (!m || !hud) return;

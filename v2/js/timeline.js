@@ -90,6 +90,8 @@
     panel.appendChild(bar);
     tracks = h('div', 'tl__tracks'); panel.appendChild(tracks);
     document.body.appendChild(panel);
+    // universal panel system: unified drag grip + Panel size & position (move/scale/snap/reset)
+    if (window.Movable) { Movable.attach('.tl'); if (Movable.refresh) Movable.refresh(); }
     renderUI();
   }
   let tracks = null;
@@ -116,13 +118,8 @@
     if (headEl) headEl.style.left = (Math.max(0, Math.min(tl.dur, cur)) / Math.max(1, tl.dur) * 100) + '%';
     if (timeEl) timeEl.textContent = (cur || 0).toFixed(1) + ' / ' + tl.dur + 's';
   }
-  function toggle(v) { if (!panel) build(); open = (v == null) ? !open : v; panel.hidden = !open; if (open) renderUI(); }
-
-  if (isCtrl) {
-    // launcher chip
-    const launch = h('button', 'tl-launch glass', I.film + '<span>Timeline</span>'); launch.title = 'Open the movement timeline'; launch.onclick = () => toggle();
-    document.body.appendChild(launch);
-  }
+  function toggle(v) { if (!panel) build(); open = (v == null) ? !open : v; panel.hidden = !open; if (open) { renderUI(); if (window.Movable) Movable.reflow(); } }
+  // opened from the tool-bar button (Timeline); no floating launcher.
 
   // only re-apply when the playhead actually moved (seek/scrub) — NOT on every
   // unrelated cross-window 'sync', which would otherwise yank the camera/models.
