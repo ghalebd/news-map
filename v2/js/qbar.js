@@ -13,7 +13,8 @@
     frontline: 'Front line', country: 'Highlight country', text: 'Label', measure: 'Measure',
     asset: 'Image', flags: 'Flags', erase: 'Erase', color: 'Colour', undo: 'Undo', clear: 'Clear screen',
     mapstyle: 'Base map', ships: 'Live ships', flights: 'Live flights', trails: 'Trails',
-    timeline: 'Movement timeline', mctl: 'Model control',
+    timeline: 'Movement timeline', mctl: 'Model control', clear: 'Clear screen',
+    redo: 'Redo', hideui: 'Hide UI', grid: 'Grid', sea: 'Sea', clouds: 'Clouds', daynight: 'Day / night',
   };
   const bar = () => document.querySelector('.qtools');
   const btns = () => { const b = bar(); return b ? [...b.querySelectorAll('.qtool[data-qid]')] : []; };

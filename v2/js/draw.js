@@ -399,6 +399,15 @@ const Draw = (() => {
   const qclear = h('button', 'qtool qtool--danger', I.trash); qclear.title = 'Clear screen'; qclear.dataset.qid = 'clear';
   qclear.onclick = () => { const sc = S.activeScene(); if (!sc || !sc.elements.length) { window.UI && UI.toast && UI.toast('Nothing to clear'); return; } if (confirm('Clear everything drawn on screen?')) { S.clearElements(); window.UI && UI.toast && UI.toast('Screen cleared'); } };
   qbar.appendChild(qclear);
+  // quick action / FX toggle buttons (reorderable + hideable like any bar button)
+  const qredo = h('button', 'qtool', I.redo); qredo.title = 'Redo'; qredo.dataset.qid = 'redo'; qredo.onclick = () => S.redo && S.redo(); qbar.appendChild(qredo);
+  const qhide = h('button', 'qtool', I.eyeOff); qhide.title = 'Hide UI (clean output)'; qhide.dataset.qid = 'hideui'; qhide.onclick = () => window.UI && UI.hideUI && UI.hideUI(true); qbar.appendChild(qhide);
+  const qgrid = h('button', 'qtool', I.grid); qgrid.title = 'Grid on/off'; qgrid.dataset.qid = 'grid'; qgrid.onclick = () => S.setGrid({ on: !(S.cfg().grid || {}).on }); qbar.appendChild(qgrid);
+  const qsea = h('button', 'qtool', I.waves); qsea.title = 'Sea on/off'; qsea.dataset.qid = 'sea'; qsea.onclick = () => S.setSea({ on: !(S.cfg().sea || {}).on }); qbar.appendChild(qsea);
+  const qcloud = h('button', 'qtool', I.cloud); qcloud.title = 'Clouds on/off'; qcloud.dataset.qid = 'clouds'; qcloud.onclick = () => S.setClouds({ on: !(S.cfg().clouds || {}).on }); qbar.appendChild(qcloud);
+  const qdn = h('button', 'qtool', I.daynight); qdn.title = 'Day / night shading on/off'; qdn.dataset.qid = 'daynight'; qdn.onclick = () => S.setDayNight({ on: !(S.cfg().dayNight || {}).on }); qbar.appendChild(qdn);
+  function fxState() { qgrid.classList.toggle('is-on', !!(S.cfg().grid || {}).on); qsea.classList.toggle('is-on', !!(S.cfg().sea || {}).on); qcloud.classList.toggle('is-on', !!(S.cfg().clouds || {}).on); qdn.classList.toggle('is-on', !!(S.cfg().dayNight || {}).on); }
+  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') fxState(); }); fxState();
   // control-only tools — toggleable/reorderable like any bar button (qbar customiser)
   if (window.APP_ROLE === 'control') {
     const qtl = h('button', 'qtool', I.film); qtl.title = 'Movement timeline'; qtl.dataset.qid = 'timeline'; qtl.onclick = () => window.Timeline && Timeline.toggle(); qbar.appendChild(qtl);
