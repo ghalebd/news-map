@@ -425,7 +425,6 @@
         const id = S.uid('m3d'); await window.Assets3D.put(id, f);
         const cv = window.GameMap.currentView();
         S.addModel3d({ id, name: name.value.trim() || f.name.replace(/\.[^.]+$/, ''), lat: cv.lat, lng: cv.lng, scale: 10, rotZ: 0, alt: 0, mode: 'both', on: true });
-        window.Models3D && Models3D.invalidate(id);
         name.value = ''; file.value = ''; renderTab();
       } catch (e) { alert('Could not read GLB.'); file.value = ''; }
     };

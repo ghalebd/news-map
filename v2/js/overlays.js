@@ -9,7 +9,7 @@
    window.Overlays exposes helpers for the control panel.
    ============================================================ */
 (() => {
-  const S = window.Store, map = window.GameMap.map;
+  const S = window.Store, map = window.GameMap.map, I = window.ICONS;
   const layers = new Map();   // id -> L.imageOverlay
 
   const list = () => (S.cfg().overlays) || [];
@@ -97,12 +97,12 @@
     editGrp.addLayer(rect);
     const live = nb => { const lyr = layers.get(o.id); if (lyr) lyr.setBounds(nb); rect.setBounds(nb); applyWipe(); };
     let tmp = null;
-    const mv = L.marker(bb.getCenter(), { icon: handleIcon('✛', 'ov-handle--move'), draggable: true, zIndexOffset: 1000 });
+    const mv = L.marker(bb.getCenter(), { icon: handleIcon(I.move, 'ov-handle--move'), draggable: true, zIndexOffset: 1000 });
     mv.on('drag', e => { const c = e.latlng, b = o.bounds, hLat = (b[1][0] - b[0][0]) / 2, hLng = (b[1][1] - b[0][1]) / 2; tmp = [[c.lat - hLat, c.lng - hLng], [c.lat + hLat, c.lng + hLng]]; live(tmp); });
     mv.on('dragend', () => { if (tmp) S.updateOverlay(o.id, { bounds: tmp }); });
     editGrp.addLayer(mv);
     let tmp2 = null;
-    const rz = L.marker(bb.getNorthEast(), { icon: handleIcon('⤢', 'ov-handle--size'), draggable: true, zIndexOffset: 1000 });
+    const rz = L.marker(bb.getNorthEast(), { icon: handleIcon(I.resize, 'ov-handle--size'), draggable: true, zIndexOffset: 1000 });
     rz.on('drag', e => { const p = e.latlng, s = o.bounds[0]; tmp2 = [[s[0], s[1]], [Math.max(s[0] + 0.0005, p.lat), Math.max(s[1] + 0.0005, p.lng)]]; live(tmp2); });
     rz.on('dragend', () => { if (tmp2) S.updateOverlay(o.id, { bounds: tmp2 }); });
     editGrp.addLayer(rz);

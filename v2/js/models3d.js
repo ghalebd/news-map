@@ -40,7 +40,26 @@
     const wrap = new THREE.Group(); wrap.add(obj); wrap.scale.setScalar(1 / maxd);
     return wrap;
   }
-  function invalidate(id) { rawCache.delete(id); for (const k of [...billboards.keys()]) if (k.indexOf(id + ':') === 0) billboards.delete(k); }
+  // free three.js GPU resources of an object tree (geometries, materials, textures)
+  function disposeObject(obj) {
+    if (!obj || !obj.traverse) return;
+    obj.traverse(o => {
+      if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      mats.forEach(m => { for (const k in m) { const v = m[k]; if (v && v.isTexture && v.dispose) v.dispose(); } if (m.dispose) m.dispose(); });
+    });
+  }
+  function dropBillboards(id) { for (const k of [...billboards.keys()]) if (k.indexOf(id + ':') === 0) billboards.delete(k); }
+  // fully forget a model (re-upload of same id, or it was deleted): dispose its 2D
+  // marker, 3D group, cached scene + billboards, and free the object URL.
+  function purge(id) {
+    const mk = markers.get(id); if (mk) { L2.removeLayer(mk); markers.delete(id); }
+    const g = groups.get(id); if (g) { if (layer && layer.scene) layer.scene.remove(g.group); disposeObject(g.group); groups.delete(id); }
+    if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }
+    dropBillboards(id);
+    if (window.Assets3D && Assets3D.revoke) Assets3D.revoke(id);
+  }
+  function invalidate(id) { purge(id); }   // re-upload: forget everything so it reloads fresh
 
   /* ============ 2D billboard: offscreen three.js -> PNG ============ */
   const BB = 256;
@@ -76,16 +95,21 @@
   /* ============ 2D Leaflet markers ============ */
   const markers = new Map();   // id -> L.marker
   function px(m) { return Math.max(28, Math.min(200, Math.round(60 * ((m.scale || 1) / 10 + 0.4)))); }
+  const BLANK = L.divIcon({ className: 'm3d-billboard', html: '', iconSize: [1, 1] });
   async function place2D(m) {
-    const url = await billboard(m.id, m.rotZ);
-    if (!url) return;
-    const s = px(m), icon = L.icon({ iconUrl: url, iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)], className: 'm3d-billboard' });
+    // reserve the marker SYNCHRONOUSLY so a second sync2D (e.g. a 'models3d' emit
+    // immediately followed by a 'sync') can't create a duplicate before the await resolves
     let mk = markers.get(m.id);
     if (!mk) {
-      mk = L.marker([m.lat, m.lng], { icon, draggable: true, keyboard: false, zIndexOffset: 500 });
+      mk = L.marker([m.lat, m.lng], { icon: BLANK, draggable: true, keyboard: false, zIndexOffset: 500 });
       mk.on('dragend', () => { const ll = mk.getLatLng(); S.updateModel3d(m.id, { lat: ll.lat, lng: ll.lng }); });
       mk.addTo(L2); markers.set(m.id, mk);
-    } else { mk.setIcon(icon); mk.setLatLng([m.lat, m.lng]); }
+    }
+    mk.setLatLng([m.lat, m.lng]);
+    const url = await billboard(m.id, m.rotZ);
+    if (markers.get(m.id) !== mk || !url) return;   // deleted/replaced while rendering
+    const s = px(m);
+    mk.setIcon(L.icon({ iconUrl: url, iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)], className: 'm3d-billboard' }));
   }
   function sync2D() {
     const live = models().filter(m => m.on !== false && m.mode !== '3d');
@@ -127,7 +151,7 @@
     if (!glmap || !layer || !layer.scene) return;
     const scene = layer.scene;
     const want = new Set(models().filter(m => m.on !== false && m.mode !== '2d').map(m => m.id));
-    for (const [id, g] of groups) if (!want.has(id)) { scene.remove(g.group); groups.delete(id); }
+    for (const [id, g] of groups) if (!want.has(id)) { scene.remove(g.group); disposeObject(g.group); groups.delete(id); }
     models().forEach(m => {
       if (m.on === false || m.mode === '2d') return;
       const g = ensureGroup(m, scene);
@@ -150,19 +174,25 @@
     glmap = map;
     if (!map.getLayer('models3d-gl')) { try { map.addLayer(customLayer); } catch (e) { console.warn('Models3D 3D layer', e); return; } }
     layer = customLayer;
-    groups.clear();   // style (re)loaded — the custom-layer scene was rebuilt, so repopulate it
+    groups.forEach(g => disposeObject(g.group));   // style (re)loaded — old scene is gone; free GPU resources
+    groups.clear();
     update3D();
   }
 
   /* ---- wiring ---- */
-  function syncAll() { sync2D(); if (window.Map3D && Map3D.on) update3D(); }
-  S.on((st, evt) => {
-    if (evt === 'models3d' || evt === 'sync') {
-      // a metadata change may invalidate cached billboards (rotation) — drop & rebuild those
-      if (evt === 'models3d') billboards.clear();
-      syncAll();
-    }
-  });
+  let known = new Set();
+  function syncAll() {
+    // fully clean up any model that disappeared (deleted here OR in the other window)
+    const cur = new Set(models().map(m => m.id));
+    for (const id of known) if (!cur.has(id)) purge(id);
+    known = cur;
+    // NOTE: billboards are keyed by id:rotZ, so a rotation change makes a fresh key
+    // automatically and size/position changes reuse the cached PNG — no global clear()
+    // (which used to re-render every model's PNG on every slider tick).
+    sync2D();
+    if (window.Map3D && Map3D.on) update3D();
+  }
+  S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') syncAll(); });
   window.Models3D = {
     attach3D,
     refresh: syncAll,
@@ -171,4 +201,12 @@
     _groups: groups,       // test hook
   };
   syncAll();
+
+  // housekeeping (control window only): delete GLB blobs no longer referenced by any
+  // model, so failed/half uploads don't accumulate in IndexedDB over time.
+  if (window.APP_ROLE === 'control') {
+    setTimeout(async () => {
+      try { const ids = new Set(models().map(m => m.id)); const ks = await window.Assets3D.keys(); ks.forEach(k => { if (!ids.has(k)) window.Assets3D.del(k); }); } catch (e) {}
+    }, 4000);
+  }
 })();

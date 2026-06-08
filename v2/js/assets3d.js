@@ -47,6 +47,9 @@
     if (urlCache.has(id)) { URL.revokeObjectURL(urlCache.get(id)); urlCache.delete(id); }
   }
   async function keys() { const store = await tx('readonly'); return (await req(store.getAllKeys())).map(String); }
+  // drop this window's cached object URL without deleting the blob (used when the
+  // OTHER window deleted a model — frees the URL locally; the blob is already gone)
+  function revoke(id) { if (urlCache.has(id)) { URL.revokeObjectURL(urlCache.get(id)); urlCache.delete(id); } }
 
-  window.Assets3D = { put, get, url, del, keys };
+  window.Assets3D = { put, get, url, del, keys, revoke };
 })();

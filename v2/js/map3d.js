@@ -127,11 +127,11 @@
   ctrls.append(
     cb(I.plus, 'Pitch up', () => map.easeTo({ pitch: Math.min(80, map.getPitch() + 8), duration: 200 })),
     cb(I.minus, 'Pitch down', () => map.easeTo({ pitch: Math.max(0, map.getPitch() - 8), duration: 200 })),
-    cb('⟲', 'Rotate left', () => map.easeTo({ bearing: map.getBearing() - 20, duration: 200 })),
-    cb('⟳', 'Rotate right', () => map.easeTo({ bearing: map.getBearing() + 20, duration: 200 })),
-    cb('▲', 'More terrain height', () => { exaggeration = Math.min(8, exaggeration + 0.5); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
-    cb('▽', 'Less terrain height', () => { exaggeration = Math.max(0.3, exaggeration - 0.5); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
-    cb('N', 'Reset north & flatten pitch', () => map.easeTo({ bearing: 0, duration: 300 })),
+    cb(I.rotL, 'Rotate left', () => map.easeTo({ bearing: map.getBearing() - 20, duration: 200 })),
+    cb(I.rotR, 'Rotate right', () => map.easeTo({ bearing: map.getBearing() + 20, duration: 200 })),
+    cb(I.terrainUp, 'More terrain height', () => { exaggeration = Math.min(8, exaggeration + 0.5); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
+    cb(I.terrainDown, 'Less terrain height', () => { exaggeration = Math.max(0.3, exaggeration - 0.5); try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} }),
+    cb(I.compass, 'Reset north & flatten pitch', () => map.easeTo({ bearing: 0, duration: 300 })),
     cb(I.close, 'Exit 3D', exit),
   );
   document.body.appendChild(ctrls);

@@ -53,6 +53,13 @@ const ICONS = (() => {
     grid:    s('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'),
     folder:  s('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
     flag:    s('<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>'),
+    rotL:    s('<path d="M3 9a9 9 0 1 1 1.6 6.4"/><polyline points="3 4 3 9 8 9"/>'),
+    rotR:    s('<path d="M21 9a9 9 0 1 0-1.6 6.4"/><polyline points="21 4 21 9 16 9"/>'),
+    terrainUp: s('<polyline points="6 14 12 8 18 14"/><polyline points="6 19 12 13 18 19"/>'),
+    terrainDown: s('<polyline points="6 10 12 16 18 10"/><polyline points="6 5 12 11 18 5"/>'),
+    compass: s('<circle cx="12" cy="12" r="9"/><polygon points="12 5 14.5 13 12 11.3 9.5 13" fill="currentColor" stroke="none"/>'),
+    move:    s('<path d="M12 3v18M3 12h18"/><polyline points="9 6 12 3 15 6"/><polyline points="9 18 12 21 15 18"/><polyline points="6 9 3 12 6 15"/><polyline points="18 9 21 12 18 15"/>'),
+    resize:  s('<path d="M21 15v6h-6M3 9V3h6"/><line x1="21" y1="21" x2="14" y2="14"/><line x1="3" y1="3" x2="10" y2="10"/>'),
   };
 })();
 window.ICONS = ICONS;

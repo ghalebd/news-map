@@ -13,7 +13,7 @@ const Store = (() => {
     style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14, sat: 1.7, sheen: 16, shadow: 1, brightness: 105 },
     visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true },
     permissions: {
-      tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, erase: true, asset: true },
+      tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, frontline: true, country: true, erase: true, asset: true },
       canDraw: true, canEditScenes: false, canNavigate: true, canChangeStyle: false, canChangeMapStyle: true, canTrack: true,
     },
     mapStyles: [
