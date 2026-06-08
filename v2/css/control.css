@@ -181,6 +181,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-ovrow2 { display: flex; gap: 6px; }
 .cfg-ovrow2 .cfg-in { flex: 1; padding: 0 9px; }
 .cfg-ovrow2 .cfg-in--n { flex: 0 0 88px; padding: 0 7px; }
+.cfg-m3d { border: 1px solid var(--stroke); border-radius: 10px; padding: 10px; margin-bottom: 8px; background: var(--glass-2); display: flex; flex-direction: column; gap: 8px; }
+.cfg-m3d__hd { display: flex; align-items: center; gap: 6px; }
+.cfg-m3d__nm { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-m3d button.cfg-in--n { cursor: pointer; flex: 0 0 56px; }
 .cfg-in--name { flex: 1; height: 28px; font-weight: 700; background: transparent; border: 1px solid transparent; padding: 0 6px; }
 .cfg-in--name:hover, .cfg-in--name:focus { border-color: var(--stroke); background: var(--glass-2); }
 .cfg-ovtools { display: flex; gap: 5px; flex-wrap: wrap; }

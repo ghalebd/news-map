@@ -412,6 +412,51 @@
     ct.appendChild(sec);
   }
 
+  function tabModels3d(C, ct) {
+    const list = C.models3d || [];
+    const up = section('3D models (GLB)', I.layers, () => { list.forEach(m => { try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} S.removeModel3d(m.id); }); });
+    const file = h('input'); file.type = 'file'; file.accept = '.glb,.gltf,model/gltf-binary'; file.hidden = true;
+    const name = h('input', 'cfg-name'); name.placeholder = 'Name (optional)';
+    const pick = h('button', 'cfg-uploadbtn', `${I.upload}<span>Choose GLB…</span>`); pick.onclick = () => file.click();
+    file.onchange = async () => {
+      const f = file.files[0]; if (!f) return;
+      if (f.size > 40 * 1024 * 1024) { alert('GLB too large (max ~40 MB). Compress it (Draco / meshopt) first.'); file.value = ''; return; }
+      try {
+        const id = S.uid('m3d'); await window.Assets3D.put(id, f);
+        const cv = window.GameMap.currentView();
+        S.addModel3d({ id, name: name.value.trim() || f.name.replace(/\.[^.]+$/, ''), lat: cv.lat, lng: cv.lng, scale: 10, rotZ: 0, alt: 0, mode: 'both', on: true });
+        window.Models3D && Models3D.invalidate(id);
+        name.value = ''; file.value = ''; renderTab();
+      } catch (e) { alert('Could not read GLB.'); file.value = ''; }
+    };
+    const wrap = h('div', 'cfg-up'); wrap.append(pick, name, file); up.bd.appendChild(wrap);
+    up.bd.appendChild(h('div', 'hint', 'Best format: GLB (single file, PBR + animation, compressed). Dropped at the current map centre — drag it on the 2D map, or set coordinates below. Shows on both the flat and 3D maps.'));
+    ct.appendChild(up.sec);
+
+    const lib = section('Placed models', I.folder);
+    if (!list.length) lib.bd.appendChild(h('div', 'hint', 'No models yet. Upload a GLB above.'));
+    list.forEach(m => {
+      const it = h('div', 'cfg-m3d');
+      const hd = h('div', 'cfg-m3d__hd');
+      const ttl = h('div', 'cfg-m3d__nm', esc(m.name || 'Model'));
+      const onb = h('button', 'cfg-ordb' + (m.on !== false ? ' is-on' : ''), m.on !== false ? I.eye : I.eyeOff); onb.title = 'Show / hide'; onb.onclick = () => { S.updateModel3d(m.id, { on: m.on === false }); renderTab(); };
+      const fly = h('button', 'cfg-ordb', I.target); fly.title = 'Fly to'; fly.onclick = () => window.GameMap.flyToView({ lat: m.lat, lng: m.lng, zoom: 9 }, { type: 'flyTo', duration: 1 });
+      const del = h('button', 'cfg-pan__x', I.close); del.title = 'Delete model'; del.onclick = () => { try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} S.removeModel3d(m.id); renderTab(); };
+      hd.append(ttl, fly, onb, del); it.appendChild(hd);
+      it.appendChild(slider('Size (km)', Math.round((m.scale || 1) * 10) / 10, 0.1, 200, 0.1, v => S.updateModel3d(m.id, { scale: v })));
+      it.appendChild(slider('Rotation', Math.round(m.rotZ || 0), 0, 359, 1, v => S.updateModel3d(m.id, { rotZ: v })));
+      it.appendChild(slider('Height (m)', Math.round(m.alt || 0), -500, 8000, 10, v => S.updateModel3d(m.id, { alt: v })));
+      const seg = h('div', 'cfg-seg');
+      [['both', 'Both maps'], ['3d', '3D only'], ['2d', '2D only']].forEach(([id, lab]) => { const bb = h('button', 'cfg-seg__b' + ((m.mode || 'both') === id ? ' on' : ''), lab); bb.onclick = () => { S.updateModel3d(m.id, { mode: id }); renderTab(); }; seg.appendChild(bb); });
+      it.appendChild(seg);
+      const cr = h('div', 'cfg-ovrow2'); const ci = h('input', 'cfg-in'); ci.value = `${(+m.lat).toFixed(4)}, ${(+m.lng).toFixed(4)}`; ci.placeholder = 'lat, lng';
+      const sb = h('button', 'cfg-in cfg-in--n', 'Set'); sb.onclick = () => { const co = parseLatLng(ci.value); if (!co) { alert('Paste coordinates like  25.2048, 55.2708'); return; } S.updateModel3d(m.id, { lat: co[0], lng: co[1] }); };
+      cr.append(ci, sb); it.appendChild(cr);
+      lib.bd.appendChild(it);
+    });
+    ct.appendChild(lib.sec);
+  }
+
   function tabFx(C, ct) {
     const { sec, bd } = section('Grid · sea · clouds', I.grid || I.layers, () => { S.setGrid(cp(S.DEFAULT_CONFIG.grid)); S.setSea(cp(S.DEFAULT_CONFIG.sea)); S.setClouds(cp(S.DEFAULT_CONFIG.clouds)); });
     const g = Object.assign({}, S.DEFAULT_CONFIG.grid, C.grid || {});
@@ -445,7 +490,7 @@
     ct.appendChild(sec);
   }
 
-  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
+  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabModels3d, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
   function applyFilter() {
     const q = search.value.trim().toLowerCase();
     bodyEl.querySelectorAll('.cfg-sec').forEach(sec => {

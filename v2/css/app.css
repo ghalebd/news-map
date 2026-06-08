@@ -473,6 +473,8 @@ body.ui-hidden .geo-pop { display: none !important; }
 body.ui-hidden .fxgrid, body.ui-hidden .fxclouds, body.ui-hidden .seafx { display: none !important; }
 body.mode-3d .seafx { display: none !important; }
 .dnfx { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; transition: opacity .35s var(--ease); }
+.m3d-billboard { filter: drop-shadow(0 6px 9px rgba(0,0,0,.55)); cursor: grab; }
+.m3d-billboard:active { cursor: grabbing; }
 body.ui-hidden .dnfx { display: none !important; }
 body.mode-3d .dnfx { display: none !important; }
 

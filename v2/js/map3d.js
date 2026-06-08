@@ -39,6 +39,7 @@
     } catch (e) {}
     try { map.setSky({ 'sky-color': '#0a1830', 'sky-horizon-blend': 0.6, 'horizon-color': '#16335c', 'horizon-fog-blend': 0.5, 'fog-color': '#0a1322', 'fog-ground-blend': 0.4 }); } catch (e) {}
     addSceneLayers(); mirror(); applyLabels3D();
+    try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
   }
   // make every label (base style + scene) lie on the terrain so names read as 3D when tilted
   function applyLabels3D() {
@@ -143,5 +144,5 @@
     if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();
   });
 
-  window.Map3D = { enter, exit, toggle, get on() { return on; } };
+  window.Map3D = { enter, exit, toggle, get on() { return on; }, get map() { return map; } };
 })();

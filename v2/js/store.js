@@ -38,6 +38,8 @@ const Store = (() => {
     ],
     assetCats: ['ground', 'air', 'naval', 'weapons', 'infra'],
     customAssets: [],   // { id, name, cat, url }
+    models3d: [],       // 3D GLB assets — binary lives in IndexedDB (Assets3D), here is metadata:
+                        // { id, name, lat, lng, alt, scale, rotZ, mode:'both'|'3d'|'2d', on }
     trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
     brand: { logo: null, size: 38, x: 70, y: 30 },   // logo data-URL + height(px) + position(px from top-left; 70 clears the gear)
     touch: false,            // large touch-friendly controls
@@ -195,6 +197,10 @@ const Store = (() => {
   function setCampath(patch) { Object.assign(campath(), patch); emit('config'); }
   function addCampathFrame(v) { campath().frames.push(v); emit('config'); }
   function removeCampathFrame(i) { campath().frames.splice(i, 1); emit('config'); }
+  function models3d() { if (!state.config.models3d) state.config.models3d = []; return state.config.models3d; }
+  function addModel3d(m) { m.id = m.id || uid('m3d'); if (m.on == null) m.on = true; if (m.scale == null) m.scale = 1; if (m.rotZ == null) m.rotZ = 0; if (m.alt == null) m.alt = 0; if (!m.mode) m.mode = 'both'; models3d().push(m); emit('models3d'); return m; }
+  function updateModel3d(id, patch) { const m = models3d().find(x => x.id === id); if (m) { Object.assign(m, patch); emit('models3d'); } }
+  function removeModel3d(id) { state.config.models3d = models3d().filter(x => x.id !== id); emit('models3d'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -212,6 +218,7 @@ const Store = (() => {
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
+    models3d, addModel3d, updateModel3d, removeModel3d,
   };
 })();
 window.Store = Store;
