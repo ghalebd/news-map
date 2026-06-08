@@ -43,19 +43,47 @@
   function select(id) { selId = id; show(); highlight(); renderVals(); }
   function deselect() { selId = null; highlight(); hide(); }
 
-  /* ---- 3D click-to-select (nearest model on screen, Select tool only) ---- */
+  /* ---- 3D: click-to-select + drag-to-move (Select tool only) ---- */
+  let dragId = null;
+  function nearest(point, max) { const g = gl(); if (!g) return null; let best = null, bd = 1e9; models().forEach(m => { if (m.on === false || m.mode === '2d') return; const p = g.project([m.lng, m.lat]); const d = Math.hypot(p.x - point.x, p.y - point.y); if (d < bd) { bd = d; best = m; } }); return (best && bd < max) ? best : null; }
   function bindPick3d() {
     const g = gl(); if (!g || pick3dBound) return; pick3dBound = true;
-    g.on('click', e => {
+    g.on('mousedown', e => {
+      if (routeMode) return;
       const t = window.Draw && Draw.tool; if (t && t !== 'select') return;
-      let best = null, bd = 1e9;
-      models().forEach(m => { if (m.on === false || m.mode === '2d') return; const p = g.project([m.lng, m.lat]); const d = Math.hypot(p.x - e.point.x, p.y - e.point.y); if (d < bd) { bd = d; best = m; } });
-      if (best && bd < 64) select(best.id);
+      const m = nearest(e.point, 60); if (!m) return;
+      select(m.id); dragId = m.id; e.preventDefault();   // grab the model (cancels map pan)
+    });
+    g.on('mousemove', e => { if (dragId) window.Models3D.setPose(dragId, { lat: e.lngLat.lat, lng: e.lngLat.lng }); });
+    g.on('mouseup', e => { if (!dragId) return; const id = dragId; dragId = null; S.updateModel3d(id, { lat: e.lngLat.lat, lng: e.lngLat.lng }); window.Models3D.setPose(id, null); });
+    g.on('click', e => {
+      if (routeMode) { addRoutePoint([e.lngLat.lat, e.lngLat.lng]); return; }
+      const t = window.Draw && Draw.tool; if (t && t !== 'select') return;
+      const m = nearest(e.point, 64); if (m) select(m.id);
     });
   }
 
+  /* ---- route drawing (click points on either map) ---- */
+  let routeMode = null;   // { id, pts:[], line, dots:[] }
+  function on2DClick(e) { if (routeMode) addRoutePoint([e.latlng.lat, e.latlng.lng]); }
+  function onRouteKey(e) { if (!routeMode) return; if (e.key === 'Enter') { finishRoute(); e.preventDefault(); } else if (e.key === 'Escape') { cancelRoute(); e.preventDefault(); } }
+  function drawRoute() { const m = sel(); if (!m) return; cancelRoute(); routeMode = { id: m.id, pts: [], line: null, dots: [] }; L2.on('click', on2DClick); document.addEventListener('keydown', onRouteKey); window.UI && UI.toast && UI.toast('Click path points · Enter to finish · Esc to cancel'); renderVals(); }
+  function addRoutePoint(ll) {
+    if (!routeMode) return; routeMode.pts.push(ll);
+    if (!routeMode.line) routeMode.line = L.polyline(routeMode.pts, { color: '#ffb020', weight: 3, dashArray: '6 5' }).addTo(L2); else routeMode.line.setLatLngs(routeMode.pts);
+    routeMode.dots.push(L.circleMarker(ll, { radius: 4, color: '#fff', weight: 1.5, fillColor: '#ffb020', fillOpacity: 1 }).addTo(L2));
+  }
+  function finishRoute() {
+    if (!routeMode) return; const m = models().find(x => x.id === routeMode.id);
+    if (m && routeMode.pts.length >= 2) { const r = m.route || {}; S.updateModel3d(routeMode.id, { lat: routeMode.pts[0][0], lng: routeMode.pts[0][1], route: { pts: routeMode.pts, dur: r.dur || 20, loop: !!r.loop, heading: r.heading !== false, play: false, t0: 0 } }); }
+    endRouteMode();
+  }
+  function cancelRoute() { endRouteMode(); }
+  function endRouteMode() { if (!routeMode) return; if (routeMode.line) L2.removeLayer(routeMode.line); routeMode.dots.forEach(d => L2.removeLayer(d)); L2.off('click', on2DClick); document.removeEventListener('keydown', onRouteKey); routeMode = null; renderVals(); }
+  function togglePlay() { const m = sel(); if (!m) return; if (!(m.route && (m.route.pts || []).length >= 2)) { drawRoute(); return; } if (window.ModelsAnim) { ModelsAnim.playing(m.id) ? ModelsAnim.stop(m.id) : ModelsAnim.play(m.id); } renderVals(); }
+
   /* ---- HUD ---- */
-  let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt, wireBtn;
+  let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt, wireBtn, routeB, playB;
   function toggleWire() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { style: (m.style === 'wireframe') ? 'solid' : 'wireframe' }); }
   function build() {
     hud = h('div', 'mctl glass'); hud.hidden = true;
@@ -102,15 +130,18 @@
     );
     vHead = rHead.el; vPitch = rPitch.el; vRoll = rRoll.el; vSize = rSize.el; vAlt = rAlt.el;
 
-    const act = h('div', 'mctl__act');
+    const act = h('div', 'mctl__act mctl__act--6');
+    routeB = B(I.sketch + '<span>Path</span>', 'Draw a movement path', drawRoute);
+    playB = B(I.play + '<span>Play</span>', 'Play / stop movement', togglePlay);
     act.append(
       B(I.target + '<span>Fly</span>', 'Fly camera to model', flyTo),
       B(I.layers + '<span>Copy</span>', 'Duplicate model', duplicate),
       B(I.undo + '<span>Reset</span>', 'Reset heading/pitch/roll', resetAttitude),
+      routeB, playB,
       B(I.close + '<span>Delete</span>', 'Delete model', del, 'mctl__b--danger'),
     );
     hud.appendChild(act);
-    hud.appendChild(h('div', 'mctl__hint', 'Arrows move · [ ] turn · +/- size · PgUp/PgDn altitude'));
+    hud.appendChild(h('div', 'mctl__hint', 'Arrows move · [ ] turn · +/- size · PgUp/PgDn altitude · drag in 3D to move'));
 
     document.body.appendChild(hud);
     dragify(hd);
@@ -132,13 +163,16 @@
     vSize.textContent = (Math.round((m.scale || 1) * 10) / 10) + ' km';
     vAlt.textContent = Math.round(m.alt || 0) + ' m';
     if (wireBtn) wireBtn.classList.toggle('on', m.style === 'wireframe');
+    const playing = window.ModelsAnim && ModelsAnim.playing(m.id);
+    if (playB) { playB.innerHTML = (playing ? I.close : I.play) + '<span>' + (playing ? 'Stop' : 'Play') + '</span>'; playB.classList.toggle('on', !!playing); }
+    if (routeB) routeB.classList.toggle('on', !!(routeMode && routeMode.id === m.id));
     // rebuild the picker
     if (picker) { picker.innerHTML = ''; models().forEach(x => { const o = h('option', null, x.name || 'Model'); o.value = x.id; if (x.id === selId) o.selected = true; picker.appendChild(o); }); }
   }
 
   /* ---- keyboard ---- */
   window.addEventListener('keydown', e => {
-    if (!visible || !sel()) return;
+    if (!visible || !sel() || routeMode) return;   // route mode owns Enter/Esc
     const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
     let hit = true;
     switch (e.key) {
@@ -172,5 +206,5 @@
   setInterval(bindPick3d, 1500);
   onStore();
 
-  window.ModelControl = { select, deselect, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); }, get selected() { return selId; } };
+  window.ModelControl = { select, deselect, drawPath: (id) => { select(id); drawRoute(); }, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); }, get selected() { return selId; } };
 })();

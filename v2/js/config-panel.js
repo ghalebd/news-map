@@ -491,6 +491,24 @@
       const cr = h('div', 'cfg-ovrow2'); const ci = h('input', 'cfg-in'); ci.value = `${(+m.lat).toFixed(4)}, ${(+m.lng).toFixed(4)}`; ci.placeholder = 'lat, lng';
       const sb = h('button', 'cfg-in cfg-in--n', 'Set'); sb.onclick = () => { const co = parseLatLng(ci.value); if (!co) { alert('Paste coordinates like  25.2048, 55.2708'); return; } S.updateModel3d(m.id, { lat: co[0], lng: co[1] }); };
       cr.append(ci, sb); it.appendChild(cr);
+      // ---- movement path ----
+      const r = m.route || {}; const hasR = (r.pts || []).length >= 2;
+      const patchRoute = patch => { const cur = (S.models3d().find(x => x.id === m.id) || {}).route || {}; S.updateModel3d(m.id, { route: Object.assign({}, cur, patch) }); };
+      const rrow = h('div', 'cfg-m3drte');
+      const drawB = h('button', 'cfg-btn cfg-btn--sm', `${I.sketch}<span>${hasR ? 'Redraw path' : 'Draw path'}</span>`); drawB.onclick = () => window.ModelControl && ModelControl.drawPath(m.id);
+      rrow.appendChild(drawB);
+      if (hasR) {
+        const playing = window.ModelsAnim && ModelsAnim.playing(m.id);
+        const pb = h('button', 'cfg-btn cfg-btn--sm', playing ? `${I.close}<span>Stop</span>` : `${I.play}<span>Play</span>`); pb.onclick = () => { const A = window.ModelsAnim; if (A) { A.playing(m.id) ? A.stop(m.id) : A.play(m.id); } renderTab(); };
+        const cb = h('button', 'cfg-btn cfg-btn--sm', `${I.undo}<span>Clear</span>`); cb.onclick = () => { S.updateModel3d(m.id, { route: null }); renderTab(); };
+        rrow.append(pb, cb);
+      }
+      it.appendChild(rrow);
+      if (hasR) {
+        it.appendChild(slider('Travel time (s)', Math.round(r.dur || 20), 1, 600, 1, v => patchRoute({ dur: v })));
+        it.appendChild(rowTog('Loop path', !!r.loop, on => patchRoute({ loop: on })));
+        it.appendChild(rowTog('Auto-heading', r.heading !== false, on => patchRoute({ heading: on })));
+      }
       lib.bd.appendChild(it);
     });
     ct.appendChild(lib.sec);

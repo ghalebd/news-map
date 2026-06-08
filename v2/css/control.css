@@ -185,6 +185,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-m3d__hd { display: flex; align-items: center; gap: 6px; }
 .cfg-m3d__nm { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cfg-m3d button.cfg-in--n { cursor: pointer; flex: 0 0 56px; }
+.cfg-m3drte { display: flex; gap: 5px; }
+.cfg-m3drte .cfg-btn--sm { flex: 1; }
+.cfg-btn--sm { height: 30px; font-size: 11px; padding: 0 8px; }
+.cfg-btn--sm svg { width: 14px; height: 14px; }
 /* ---- 3D model library (catalog) ---- */
 .cfg-chip2 { font-size: 11px; padding: 4px 9px; border-radius: 20px; background: var(--glass-2); color: var(--text-2); border: 1px solid var(--stroke); cursor: pointer; transition: all var(--t-fast) var(--ease); }
 .cfg-chip2 b { color: var(--text-3, var(--text-2)); font-weight: 700; opacity: .8; }
@@ -221,6 +225,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .mctl__lab { font-size: 12px; color: var(--text-2); }
 .mctl__val { text-align: center; font-weight: 700; font-size: 12px; }
 .mctl__act { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.mctl__act--6 { grid-template-columns: repeat(3, 1fr); }
+.mctl__b.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .mctl__act .mctl__b { flex-direction: column; height: 44px; font-size: 10px; }
 .mctl__act .mctl__b svg { width: 15px; height: 15px; }
 .mctl__b--danger:hover { color: #ff6b6b; border-color: #ff6b6b; }

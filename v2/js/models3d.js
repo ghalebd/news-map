@@ -19,6 +19,10 @@
   try { if (THREE.DRACOLoader) { const draco = new THREE.DRACOLoader(); draco.setDecoderPath('lib/draco/'); loader.setDRACOLoader(draco); } } catch (e) { console.warn('Models3D: Draco init', e); }
   const D2R = Math.PI / 180;
   const models = () => (S.models3d ? S.models3d() : []);
+  // transient per-instance render override (route playback / 3D drag preview) — does
+  // NOT touch the Store, so animation never spams persistence/sync.
+  const poses = new Map();   // id -> { lat, lng, rotZ?, pitch?, roll?, alt? }
+  const eff = m => { const p = poses.get(m.id); return p ? Object.assign({}, m, p) : m; };
 
   /* ---- shared GLB loading (model -> Promise<THREE.Object3D raw scene>).
      Source is either a bundled catalog file (m.src URL) or an uploaded blob
@@ -126,8 +130,9 @@
       mk.on('click', () => { if (window.ModelControl) window.ModelControl.select(m.id); });
       mk.addTo(L2); markers.set(m.id, mk);
     }
-    mk.setLatLng([m.lat, m.lng]);
-    const url = await billboard(m, m.rotZ);
+    const e = eff(m);
+    mk.setLatLng([e.lat, e.lng]);
+    const url = await billboard(m, e.rotZ);
     if (markers.get(m.id) !== mk || !url) return;   // deleted/replaced while rendering
     const s = px(m);
     mk.setIcon(L.icon({ iconUrl: url, iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)], className: 'm3d-billboard' }));
@@ -186,15 +191,16 @@
       // style change → rebuild the inner from the cached master (no dispose: shared)
       if (g.raw && g.styleVal !== (m.style || 'solid')) { g.group.remove(g.inner); g.inner = buildInner(g.raw, m.style); g.group.add(g.inner); g.styleVal = m.style || 'solid'; }
       try {
-        let ground = 0; try { ground = glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([m.lng, m.lat]) || 0) : 0; } catch (e) {}
-        const mc = maplibregl.MercatorCoordinate.fromLngLat([m.lng, m.lat], ground + (m.alt || 0));
+        const e = eff(m);
+        let ground = 0; try { ground = glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([e.lng, e.lat]) || 0) : 0; } catch (er) {}
+        const mc = maplibregl.MercatorCoordinate.fromLngLat([e.lng, e.lat], ground + (e.alt || 0));
         const mpu = mc.meterInMercatorCoordinateUnits();      // mercator units per metre at this latitude
         const meters = Math.max(10, (m.scale || 1) * 1000);   // scale slider ≈ size in km
         g.group.position.set(mc.x, mc.y, mc.z);
         g.group.scale.set(meters * mpu, meters * mpu, meters * mpu);
         g.group.rotation.x = Math.PI / 2;                     // Y-up model -> Z-up world (stand upright)
         g.inner.rotation.order = 'YXZ';                       // heading → pitch → roll (aircraft attitude)
-        g.inner.rotation.set((m.pitch || 0) * D2R, (m.rotZ || 0) * D2R, (m.roll || 0) * D2R);
+        g.inner.rotation.set((e.pitch || 0) * D2R, (e.rotZ || 0) * D2R, (e.roll || 0) * D2R);
         g.group.visible = true;
       } catch (e) { /* placement guard — never poison the load state */ }
     });
@@ -222,9 +228,21 @@
     if (window.Map3D && Map3D.on) update3D();
   }
   S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') syncAll(); });
+
+  // transient render override for animation / drag (no Store writes).
+  // poseMap: { id: pose|null }. Re-places only the affected models.
+  function tick(poseMap) {
+    for (const id in poseMap) { const p = poseMap[id]; if (p) poses.set(id, p); else poses.delete(id); }
+    for (const id in poseMap) { const m = models().find(x => x.id === id); if (m && m.on !== false && m.mode !== '3d') place2D(m); }
+    if (window.Map3D && Map3D.on) update3D();
+  }
+  function setPose(id, pose) { tick({ [id]: pose }); }
+
   window.Models3D = {
     attach3D,
     setLight,              // sync model lighting to the 3D sun (from map3d)
+    tick, setPose,         // route playback / drag preview
+    project: (lng, lat) => (glmap ? glmap.project([lng, lat]) : null),   // for 3D selection/drag
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id
     has2D: id => markers.has(id),
