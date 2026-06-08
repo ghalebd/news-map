@@ -194,6 +194,7 @@ body.mode-live .qtools { display: flex; }
 .qtool { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen); transition: all var(--t-fast) var(--ease); }
 .qtool svg { width: 20px; height: 20px; }
 .qtool:hover { color: var(--text); border-color: var(--stroke-2); }
+.qtool--danger:hover { color: #ff6b6b; border-color: #ff6b6b; }
 .qtool.is-on { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
 .qtool--color { position: relative; }
 .qtool__dot { width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--stroke-2); }

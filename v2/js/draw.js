@@ -377,6 +377,9 @@ const Draw = (() => {
   qbar.appendChild(qcolor); document.body.appendChild(qpop);
   // undo
   const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.dataset.qid = 'undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
+  const qclear = h('button', 'qtool qtool--danger', I.trash); qclear.title = 'Clear screen'; qclear.dataset.qid = 'clear';
+  qclear.onclick = () => { const sc = S.activeScene(); if (!sc || !sc.elements.length) { window.UI && UI.toast && UI.toast('Nothing to clear'); return; } if (confirm('Clear everything drawn on screen?')) { S.clearElements(); window.UI && UI.toast && UI.toast('Screen cleared'); } };
+  qbar.appendChild(qclear);
   // control-only tools — toggleable/reorderable like any bar button (qbar customiser)
   if (window.APP_ROLE === 'control') {
     const qtl = h('button', 'qtool', I.film); qtl.title = 'Movement timeline'; qtl.dataset.qid = 'timeline'; qtl.onclick = () => window.Timeline && Timeline.toggle(); qbar.appendChild(qtl);
