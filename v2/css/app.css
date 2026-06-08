@@ -492,6 +492,8 @@ body.ui-hidden .d3ctrl { display: none !important; }
 .ov-wipe__grip span { width: 2px; height: 12px; background: #fff; border-radius: 1px; }
 .ov-wipe.is-drag .ov-wipe__line { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
 .ov-wipe.is-drag .ov-wipe__grip { border-color: var(--accent); }
+.ov-handle { display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; color: #fff; background: rgba(91, 157, 255, .92); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, .55); cursor: move; }
+.ov-handle--size { cursor: nesw-resize; border-radius: 7px; }
 /* movable panels position via inline left/top + transform:scale — no transform
    transition, or scaling animates against the old transform and the centre drifts */
 [data-movable] { transition: none !important; }

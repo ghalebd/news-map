@@ -351,6 +351,10 @@
       head.append(nm, onb, del); card.appendChild(head);
       card.appendChild(slider('Opacity', Math.round((o.opacity != null ? o.opacity : 1) * 100), 0, 100, 1, v => S.updateOverlay(o.id, { opacity: v / 100 })));
       card.appendChild(rowTog('Before / after wipe', !!o.wipe, on => { S.updateOverlay(o.id, { wipe: on }); }));
+      const editing = window.Overlays && Overlays.editing === o.id;
+      const align = h('button', 'cfg-btn' + (editing ? ' is-on' : ''), `${I.pan}<span>${editing ? 'Done aligning' : 'Align on map (drag)'}</span>`);
+      align.onclick = () => { if (window.Overlays) Overlays.edit(o.id); renderTab(); };
+      card.appendChild(align);
       // align controls: nudge pad + scale + order
       const tools = h('div', 'cfg-ovtools');
       const nb = (label, fn) => { const b = h('button', 'cfg-ordb', label); b.onclick = fn; return b; };

@@ -73,6 +73,32 @@
     });
     for (const [id, lyr] of layers) if (!seen.has(id)) { map.removeLayer(lyr); layers.delete(id); }
     applyWipe();
+    renderEdit();
+  }
+
+  /* ---- on-map alignment: move + resize handles for the active overlay ---- */
+  let editId = null;
+  const editGrp = L.layerGroup();
+  const handleIcon = (glyph, cls) => L.divIcon({ className: 'ov-handle ' + cls, html: glyph, iconSize: [28, 28], iconAnchor: [14, 14] });
+  function renderEdit() {
+    editGrp.clearLayers();
+    const o = editId && list().find(x => x.id === editId);
+    if (!o || o.on === false || !o.bounds) { if (map.hasLayer(editGrp)) map.removeLayer(editGrp); return; }
+    if (!map.hasLayer(editGrp)) editGrp.addTo(map);
+    const bb = L.latLngBounds(o.bounds);
+    const rect = L.rectangle(bb, { color: '#5b9dff', weight: 1.5, dashArray: '6 5', fill: false, interactive: false });
+    editGrp.addLayer(rect);
+    const live = nb => { const lyr = layers.get(o.id); if (lyr) lyr.setBounds(nb); rect.setBounds(nb); applyWipe(); };
+    let tmp = null;
+    const mv = L.marker(bb.getCenter(), { icon: handleIcon('✛', 'ov-handle--move'), draggable: true, zIndexOffset: 1000 });
+    mv.on('drag', e => { const c = e.latlng, b = o.bounds, hLat = (b[1][0] - b[0][0]) / 2, hLng = (b[1][1] - b[0][1]) / 2; tmp = [[c.lat - hLat, c.lng - hLng], [c.lat + hLat, c.lng + hLng]]; live(tmp); });
+    mv.on('dragend', () => { if (tmp) S.updateOverlay(o.id, { bounds: tmp }); });
+    editGrp.addLayer(mv);
+    let tmp2 = null;
+    const rz = L.marker(bb.getNorthEast(), { icon: handleIcon('⤢', 'ov-handle--size'), draggable: true, zIndexOffset: 1000 });
+    rz.on('drag', e => { const p = e.latlng, s = o.bounds[0]; tmp2 = [[s[0], s[1]], [Math.max(s[0] + 0.0005, p.lat), Math.max(s[1] + 0.0005, p.lng)]]; live(tmp2); });
+    rz.on('dragend', () => { if (tmp2) S.updateOverlay(o.id, { bounds: tmp2 }); });
+    editGrp.addLayer(rz);
   }
 
   map.on('move zoom moveend zoomend viewreset', applyWipe);
@@ -93,5 +119,8 @@
     // nudge an overlay's bounds (pan in deg) or scale it about its centre
     nudge(id, dLat, dLng) { const o = S.overlays().find(x => x.id === id); if (!o) return; o.bounds = o.bounds.map(p => [p[0] + dLat, p[1] + dLng]); S.updateOverlay(id, { bounds: o.bounds }); },
     scale(id, factor) { const o = S.overlays().find(x => x.id === id); if (!o) return; const b = o.bounds, cLat = (b[0][0] + b[1][0]) / 2, cLng = (b[0][1] + b[1][1]) / 2, hLat = (b[1][0] - b[0][0]) / 2 * factor, hLng = (b[1][1] - b[0][1]) / 2 * factor; S.updateOverlay(id, { bounds: [[cLat - hLat, cLng - hLng], [cLat + hLat, cLng + hLng]] }); },
+    // toggle on-map move/resize handles for an overlay
+    edit(id) { editId = (editId === id) ? null : id; renderEdit(); return editId === id; },
+    get editing() { return editId; },
   };
 })();
