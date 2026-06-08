@@ -188,7 +188,8 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .ctxbar__btn:hover { color: var(--accent); border-color: var(--accent); }
 
 /* presenter vertical toolbar */
-.qtools { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: none; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: var(--r); }
+.qtools { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: none; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: var(--r); max-height: calc(100vh - 130px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+.qtools::-webkit-scrollbar { width: 0; }
 body.mode-live .qtools { display: flex; }
 .qtools__sep { width: 24px; height: 1px; background: var(--stroke); margin: 2px 0; }
 .qtool { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen); transition: all var(--t-fast) var(--ease); }

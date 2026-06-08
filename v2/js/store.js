@@ -60,7 +60,7 @@ const Store = (() => {
     overlayWipe: 0.5,        // global before/after wipe position (0..1)
     overlayWipeDir: 'v',     // wipe direction: v (vertical) | h (horizontal) | radial
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
-    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
+    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
@@ -101,6 +101,7 @@ const Store = (() => {
     // the expanded tool-bar library: keep the new extra buttons hidden by default once
     if (!c._mig.qbar2) { c.qbar = c.qbar || { order: [], hidden: [] }; const def = ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure']; const set = new Set(c.qbar.hidden || []); def.forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar2 = true; }
     if (!c._mig.qbar3) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); set.add('flags'); c.qbar.hidden = [...set]; c._mig.qbar3 = true; }
+    if (!c._mig.qbar4) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); ['redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight'].forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar4 = true; }   // new extras off the bar by default; add them via the customiser
     // drop the rejected darkened-satellite / low-res NASA night styles; enable real dark vector maps
     if (!c._mig.nightClean) { const bad = ['satellite-night', 'satellite-dark', 'night-lights']; if (c.mapStyles) c.mapStyles = c.mapStyles.filter(m => !bad.includes(m.id)); if (bad.includes(state.mapStyle)) state.mapStyle = 'dataviz-dark'; ['streets-v2-dark', 'basic-v2-dark'].forEach(id => { const m = (c.mapStyles || []).find(x => x.id === id); if (m) m.on = true; }); c._mig.nightClean = true; }
   }
