@@ -49,6 +49,7 @@ const Store = (() => {
     threeD: { exaggeration: 2.6, pitch: 62, labels3d: true, globe: false },   // 3D terrain defaults (MapLibre); globe = planet projection
     light3d: { on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55, tshadow: 55 },   // 3D sun: terrain hillshade + terrain shadow + GLB models + ground shadows
     timeline: { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} },   // keyframe choreography (camera + models), synced
+    track3d: { on: true, shipKm: 5, planeKm: 4, realAlt: true },   // live ships/planes as lightweight 3D in the 3D map
     grid: { on: false, size: 60, color: '#7fb0ff', opacity: 16, weight: 1 },   // aesthetic square grid overlay
     sea: { on: false, intensity: 55, wave: 36, speed: 26, color: '#2c7fd6' },   // masked water caustics (wave = size %)
     clouds: { on: false, amount: 32, size: 50, softness: 55, speed: 70 },        // drifting clouds (size %, softness %)
@@ -193,6 +194,7 @@ const Store = (() => {
   function setLight3d(patch) { if (!state.config.light3d) state.config.light3d = {}; Object.assign(state.config.light3d, patch); emit('light3d'); }
   function timeline() { if (!state.config.timeline) state.config.timeline = { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} }; return state.config.timeline; }
   function setTimeline(patch) { Object.assign(timeline(), patch); emit('timeline'); }
+  function setTrack3d(patch) { if (!state.config.track3d) state.config.track3d = {}; Object.assign(state.config.track3d, patch); emit('track3d'); }
   function setGrid(patch) { if (!state.config.grid) state.config.grid = {}; Object.assign(state.config.grid, patch); emit('config'); }
   function setSea(patch) { if (!state.config.sea) state.config.sea = {}; Object.assign(state.config.sea, patch); emit('config'); }
   function setClouds(patch) { if (!state.config.clouds) state.config.clouds = {}; Object.assign(state.config.clouds, patch); emit('config'); }
@@ -225,7 +227,7 @@ const Store = (() => {
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
     models3d, addModel3d, updateModel3d, removeModel3d,
-    timeline, setTimeline,
+    timeline, setTimeline, setTrack3d,
   };
 })();
 window.Store = Store;

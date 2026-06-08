@@ -50,6 +50,7 @@
     addHillshade();
     addSceneLayers(); mirror(); applyLabels3D();
     try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
+    try { if (window.Tracking3D) window.Tracking3D.attach3D(map); } catch (e) {}   // live ships/planes as 3D
     applyLight(); applyProjection();
   }
   // globe ↔ flat projection (MapLibre v5). Models are mercator-projected, so they

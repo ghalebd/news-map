@@ -240,6 +240,16 @@
       rowTog('Travelled trails', T.showHistory !== false, on => S.setTrackStyle({ showHistory: on })),
       rowTog('Destination routes', T.showRoutes !== false, on => S.setTrackStyle({ showRoutes: on })));
     ct.appendChild(t2.sec);
+    // live ships/planes as lightweight 3D in the 3D map
+    const L3 = Object.assign({ on: true, shipKm: 5, planeKm: 4, realAlt: true }, C.track3d || {});
+    const t3 = section('Live 3D tracking', I.ship, () => S.setTrack3d(cp(S.DEFAULT_CONFIG.track3d)));
+    t3.bd.appendChild(rowTog('Show ships & planes in 3D', L3.on !== false, on => S.setTrack3d({ on })));
+    t3.bd.append(
+      slider('Ship size (km)', Math.round(L3.shipKm * 10) / 10, 0.5, 40, 0.5, v => S.setTrack3d({ shipKm: v })),
+      slider('Plane size (km)', Math.round(L3.planeKm * 10) / 10, 0.5, 40, 0.5, v => S.setTrack3d({ planeKm: v })));
+    t3.bd.appendChild(rowTog('Planes at real altitude', L3.realAlt !== false, on => S.setTrack3d({ realAlt: on })));
+    t3.bd.appendChild(h('div', 'hint', 'In the 3D map, live ships and flights are drawn as fast, low-poly 3D shapes (instanced — hundreds render cheaply), coloured by the tracking colours and pointed along their heading. Planes can sit at their real altitude.'));
+    ct.appendChild(t3.sec);
   }
   function tabBroadcast(C, ct) {
     const bc = S.state.broadcast;
