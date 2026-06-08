@@ -42,8 +42,19 @@ const Draw = (() => {
     blink:  mk('<circle class="mkfx-blink" cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9" opacity=".4"/>'),
     locked: mk('<g class="mkfx-pulse"><path d="M4 8V4h4"/><path d="M20 8V4h-4"/><path d="M4 16v4h4"/><path d="M20 16v4h-4"/></g><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>'),
     spinner: mk('<g class="mkfx-spin"><circle cx="12" cy="12" r="8" stroke-dasharray="3 5"/></g><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
+    // --- NATO / military unit symbols (APP-6 style; tinted by marker colour) ---
+    mil_inf: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 7l16 10M20 7L4 17"/>'),
+    mil_armor: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><ellipse cx="12" cy="12" rx="5" ry="2.6"/>'),
+    mil_mech: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 7l16 10M20 7L4 17"/><ellipse cx="12" cy="12" rx="4.6" ry="2.4"/>'),
+    mil_arty: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/>'),
+    mil_ad: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M6.5 17a5.5 5.5 0 0 1 11 0"/>'),
+    mil_hq: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 17V22"/>'),
+    mil_recon: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 17 20 7"/>'),
+    mil_med: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M12 8.5v7M8.5 12h7"/>'),
+    mil_supply: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 12h16"/>'),
+    mil_air: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M12 7c-2 2-2 3 0 5 2-2 2-3 0-5z" fill="currentColor"/>'),
   };
-  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target', 'pulse', 'radar', 'reticle', 'blink', 'locked', 'spinner'];
+  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target', 'pulse', 'radar', 'reticle', 'blink', 'locked', 'spinner', 'mil_inf', 'mil_armor', 'mil_mech', 'mil_arty', 'mil_ad', 'mil_hq', 'mil_recon', 'mil_med', 'mil_supply', 'mil_air'];
 
   /* ---------------- render the active scene ---------------- */
   let lastScene = null, lastN = 0;
@@ -147,7 +158,7 @@ const Draw = (() => {
   const FREE = ['sketch', 'tarrow'];   // freehand: collect points while dragging
   function setTool(t) {
     tool = t;
-    if (t !== 'asset') assetPending = null; deselect(); closePalette(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));
+    if (t !== 'asset') assetPending = null; deselect(); closePalette(); closeFlags(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));
   }
   /* smoothing for freehand strokes — drop near-duplicate points then Chaikin-round corners */
   function decimate(pts, minM) { if (pts.length < 3) return pts; const out = [pts[0]]; for (let i = 1; i < pts.length; i++) { if (map.distance(L.latLng(out[out.length - 1][0], out[out.length - 1][1]), L.latLng(pts[i][0], pts[i][1])) >= minM) out.push(pts[i]); } if (out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]); return out; }
@@ -277,12 +288,26 @@ const Draw = (() => {
   function togglePalette() { apal.hidden ? openPalette() : closePalette(); }
   document.addEventListener('click', e => { if (!apal.hidden && !apal.contains(e.target) && !e.target.closest('.qtool,.qa__tool')) closePalette(); });
 
+  /* ---------------- country flags library ---------------- */
+  const fpal = h('div', 'qa qa--assets qa--flags'); fpal.hidden = true; document.body.appendChild(fpal);
+  function buildFlags() {
+    fpal.innerHTML = '';
+    fpal.appendChild(h('div', 'qa__title', 'PLACE FLAG'));
+    const grid = h('div', 'qa-asset__grid');
+    (window.FLAGS || []).forEach(fl => { const b = h('button', 'qa-asset__item' + (assetPending && assetPending.id === 'flag_' + fl.c ? ' is-on' : ''), `<img src="${esc(fl.s)}" alt=""><span>${esc(fl.n)}</span>`); b.title = fl.n; b.onclick = () => { assetPending = { id: 'flag_' + fl.c, url: fl.s, name: fl.n }; setTool('asset'); closeFlags(); }; grid.appendChild(b); });
+    fpal.appendChild(grid);
+  }
+  function openFlags() { buildFlags(); fpal.hidden = false; }
+  function closeFlags() { fpal.hidden = true; }
+  function toggleFlags() { fpal.hidden ? openFlags() : closeFlags(); }
+  document.addEventListener('click', e => { if (!fpal.hidden && !fpal.contains(e.target) && !e.target.closest('.qtool,.qa__tool')) closeFlags(); });
+
   /* ---------------- quick-add launcher (+ FAB) + menu + arm chip ---------------- */
   const TOOLS = [
     ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['tarrow', I.arrowZig, 'Freehand arrow'], ['curve', I.curve, 'Curved arrow'],
     ['ring', I.target, 'Range ring'], ['circle', I.circle, 'Circle'], ['polygon', I.polygon, 'Area'], ['sketch', I.sketch, 'Freehand'],
     ['frontline', I.frontline, 'Front line'], ['country', I.country, 'Highlight country'],
-    ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['erase', I.erase, 'Erase'],
+    ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['flags', I.flag, 'Flag'], ['erase', I.erase, 'Erase'],
   ];
   const COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
 
@@ -295,7 +320,7 @@ const Draw = (() => {
     const cRow = h('div', 'qa__colors');
     COLORS.forEach(c => { const s = h('button', 'qa__sw' + (c === S.state.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.setColor(c); cRow.querySelectorAll('.qa__sw').forEach(x => x.classList.remove('is-on')); s.classList.add('is-on'); }; cRow.appendChild(s); });
     const grid = h('div', 'qa__tools');
-    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else setTool(id); }; grid.appendChild(b); });
+    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else if (id === 'flags') { e.stopPropagation(); openFlags(); } else setTool(id); }; grid.appendChild(b); });
     menu.append(h('div', 'qa__title', 'ADD'), cRow, grid);
     if (permits('marker')) {
       const iconRow = h('div', 'qa__icons');
@@ -334,10 +359,11 @@ const Draw = (() => {
     ['text', I.text, 'Label'],
     ['measure', I.ruler, 'Measure'],
     ['asset', I.asset, 'Image'],
+    ['flags', I.flag, 'Flags'],
     ['erase', I.erase, 'Erase'],
   ];
   const qbar = h('div', 'qtools');
-  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.dataset.qid = id; b.onclick = e => { if (id === 'asset') { e.stopPropagation(); togglePalette(); } else setTool(id); }; qbar.appendChild(b); qbtns[id] = b; });
+  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.dataset.qid = id; b.onclick = e => { if (id === 'asset') { e.stopPropagation(); togglePalette(); } else if (id === 'flags') { e.stopPropagation(); toggleFlags(); } else setTool(id); }; qbar.appendChild(b); qbtns[id] = b; });
   qbar.appendChild(h('div', 'qtools__sep'));
   // colour button + popover
   const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour'; qcolor.dataset.qid = 'color';
@@ -360,6 +386,6 @@ const Draw = (() => {
     if (noDraw && tool !== 'select') setTool('select');
   }
 
-  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, deselect, applyPerms, get tool() { return tool; } };
+  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, openFlags, toggleFlags, deselect, applyPerms, get tool() { return tool; } };
 })();
 window.Draw = Draw;

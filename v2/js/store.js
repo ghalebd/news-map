@@ -49,7 +49,7 @@ const Store = (() => {
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
     overlayWipe: 0.5,        // global before/after wipe line (0..1 of the map width)
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
-    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
+    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
@@ -89,6 +89,7 @@ const Store = (() => {
     if (!c._mig.logoX) { if (c.brand && c.brand.x != null && c.brand.x < 64) c.brand.x = 70; c._mig.logoX = true; }
     // the expanded tool-bar library: keep the new extra buttons hidden by default once
     if (!c._mig.qbar2) { c.qbar = c.qbar || { order: [], hidden: [] }; const def = ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure']; const set = new Set(c.qbar.hidden || []); def.forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar2 = true; }
+    if (!c._mig.qbar3) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); set.add('flags'); c.qbar.hidden = [...set]; c._mig.qbar3 = true; }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }

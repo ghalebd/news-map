@@ -11,7 +11,7 @@
     select: 'Select / Pan', arrow: 'Arrow', tarrow: 'Freehand arrow', curve: 'Curved arrow',
     marker: 'Marker', ring: 'Range ring', circle: 'Circle', polygon: 'Area', sketch: 'Freehand',
     frontline: 'Front line', country: 'Highlight country', text: 'Label', measure: 'Measure',
-    asset: 'Image', erase: 'Erase', color: 'Colour', undo: 'Undo',
+    asset: 'Image', flags: 'Flags', erase: 'Erase', color: 'Colour', undo: 'Undo',
     mapstyle: 'Base map', ships: 'Live ships', flights: 'Live flights', trails: 'Trails',
   };
   const bar = () => document.querySelector('.qtools');
