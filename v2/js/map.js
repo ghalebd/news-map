@@ -1,6 +1,9 @@
 /* ============================================================
    MAP — Leaflet + MapTiler. Style swap in place, fly-to scenes.
    ============================================================ */
+/* expected aborts from cancelled fetches (MapLibre style swap, AbortSignal.timeout
+   in tracking) are benign — keep them out of the console */
+window.addEventListener('unhandledrejection', e => { const r = e.reason; if (r && (r.name === 'AbortError' || /abort/i.test(r.message || ''))) e.preventDefault(); });
 const GameMap = (() => {
   const KEY = 'tnFJbEP9ELhQqkA6rPY2';
   const tile = id => `https://api.maptiler.com/maps/${id}/{z}/{x}/{y}.png?key=${KEY}`;

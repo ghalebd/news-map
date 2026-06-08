@@ -10,7 +10,7 @@
   const cont = map.getContainer();
   const cv = document.createElement('canvas'); cv.className = 'dnfx'; cont.appendChild(cv);
   const ctx = cv.getContext('2d');
-  let raf = null, timer = null;
+  let timer = null;
   const cfg = () => S.cfg().dayNight || {};
   const on = () => cfg().on && !document.body.classList.contains('mode-3d');
 
@@ -47,7 +47,6 @@
       }
     }
   }
-  function loop() { raf = requestAnimationFrame(loop); }   // (kept for parity; we redraw on events/timer)
   function refresh() { if (!on()) { cv.style.display = 'none'; return; } cv.style.display = ''; draw(); }
 
   map.on('move zoom moveend zoomend resize', () => { if (on()) draw(); });

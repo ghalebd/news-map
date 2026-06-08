@@ -15,7 +15,7 @@
 
   const cont = h('div'); cont.id = 'map3d'; document.body.appendChild(cont);
   const cfg3 = () => (S.cfg().threeD) || { exaggeration: 2.6, pitch: 62 };
-  let map = null, on = false, exaggeration = cfg3().exaggeration;   // clearly-3D default; tune in Settings or with ▲/▽
+  let map = null, on = false, builtStyle = null, exaggeration = cfg3().exaggeration;   // clearly-3D default; tune in Settings or with ▲/▽
 
   /* ---- build the MapLibre map lazily on first use ---- */
   function ensure() {
@@ -27,7 +27,8 @@
       minZoom: 3, maxPitch: 75, attributionControl: false, antialias: true, dragRotate: true, renderWorldCopies: true,
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
-    window.__m3 = map;   // debug/inspection hook
+    window.__m3 = map; builtStyle = S.state.mapStyle || 'satellite';   // debug/inspection hook
+    map.on('error', e => { const err = e && e.error; if (err && (err.name === 'AbortError' || /abort/i.test(err.message || ''))) return; });   // swallow benign style-swap aborts
     map.on('style.load', onStyle);
     bridgeDrawing();
   }
@@ -106,6 +107,7 @@
 
   function enter() {
     ensure(); on = true; document.body.classList.add('mode-3d'); cont.classList.add('on');
+    const cur = S.state.mapStyle || 'satellite'; if (builtStyle !== cur) { try { map.setStyle(styleUrl(cur)); builtStyle = cur; } catch (e) {} }   // pick up a style changed since last 3D session (on enter only — avoids mid-session aborts)
     map.resize(); syncTo3D(false);
     if (map.isStyleLoaded()) { addSceneLayers(); mirror(); }
     btn.classList.add('is-on'); ctrls.hidden = false;
@@ -137,7 +139,6 @@
   S.on((st, evt) => {
     if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); } return; }
     if (!on || !map) return;
-    if (evt === 'mapstyle' || evt === 'sync') { map.setStyle(styleUrl(S.state.mapStyle)); }   // style.load re-adds terrain/sky/layers
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
     if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();
   });

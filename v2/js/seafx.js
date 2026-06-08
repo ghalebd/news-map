@@ -12,7 +12,7 @@
   const cv = document.createElement('canvas'); cv.className = 'seafx'; cont.appendChild(cv);
   const ctx = cv.getContext('2d');
   const mask = document.createElement('canvas'); const mctx = mask.getContext('2d');
-  let tile = null, pat = null, off = 0, raf = null, paused = false, ready = false;
+  let tile = null, pat = null, off = 0, raf = null, ready = false;
 
   const cfg = () => S.cfg().sea || {};
   const on = () => cfg().on && !document.body.classList.contains('mode-3d');
@@ -57,7 +57,7 @@
 
   function frame() {
     raf = requestAnimationFrame(frame);
-    if (!ready || !on() || paused) return;
+    if (!ready || !on()) return;
     const s = cfg(), W = cv.width, H = cv.height, I = (s.intensity == null ? 45 : s.intensity) / 100;
     off += 0.18 * Math.max(0.2, 60 / (s.speed || 26));
     if (!pat) pat = ctx.createPattern(tile, 'repeat');
