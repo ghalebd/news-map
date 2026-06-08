@@ -96,11 +96,14 @@
     if (flyoutEl && flyoutEl._title === title) { closeFlyout(); return; }   // toggle off
     closeFlyout();
     const sec = buildOne(title); if (!sec) return; sec.classList.add('open');
-    const fly = h('div', 'cfg-flyout glass cfg-panel'); fly._title = title;
+    const fly = h('div', 'cfg-flyout glass'); fly._title = title;   // NOT cfg-panel (that carries the drawer's slide transform)
     const x = h('button', 'cfg-flyout__x', I.close); x.title = 'Close'; x.onclick = closeFlyout;
     fly.append(x, sec); document.body.appendChild(fly); flyoutEl = fly;
-    const a = anchor.getBoundingClientRect();
-    fly.style.left = Math.round(Math.min(a.right + 10, window.innerWidth - fly.offsetWidth - 12)) + 'px';
+    const a = anchor.getBoundingClientRect(), w = fly.offsetWidth;
+    // open to the right of the bar, or to the left if the bar sits on the right half
+    let left = (a.left > window.innerWidth / 2) ? (a.left - w - 10) : (a.right + 10);
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    fly.style.left = Math.round(left) + 'px';
     fly.style.top = Math.round(Math.max(12, Math.min(a.top, window.innerHeight - fly.offsetHeight - 12))) + 'px';
     setTimeout(() => { document.addEventListener('pointerdown', onFlyOut, true); document.addEventListener('keydown', onFlyKey); }, 0);
   }
