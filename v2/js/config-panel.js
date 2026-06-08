@@ -426,7 +426,7 @@
     ct.appendChild(lt.sec);
   }
 
-  let m3dCat = 'All';   // persisted catalog filter across re-renders
+  let m3dCat = 'All', m3dSearch = '';   // persisted catalog filter/search across re-renders
   // sensible default on-map size (km) by type so a carrier ≠ a missile
   const m3dScale = (cat, file) => { const f = file || ''; if (/carrier|lincoln|eisenhower|cvn/.test(f)) return 12; if (cat === 'Naval') return 6; if (cat === 'Aircraft') return /c-130|hercules|a-3|707|boein|awacs|e-3|sentry|b-2|spirit|b21|tu160|legacy|embraer/.test(f) ? 4.5 : 2.2; if (cat === 'Drones / UAV') return 1.4; if (cat === 'Air defense / Radar') return 2; if (cat === 'Missiles / Rockets') return 1; if (cat === 'Armor / Vehicles') return 1.4; return 2.5; };
   function tabModels3d(C, ct) {
@@ -437,18 +437,26 @@
     if (CAT.length) {
       const cats = ['All']; CAT.forEach(m => { if (!cats.includes(m.cat)) cats.push(m.cat); });
       const lb = section('3D model library', I.folder);
+      const srch = h('input', 'cfg-in'); srch.placeholder = 'Search ' + CAT.length + ' models…'; srch.value = m3dSearch;
+      lb.bd.appendChild(srch);
       const chips = h('div', 'cfg-chips');
-      cats.forEach(c => { const n = c === 'All' ? CAT.length : CAT.filter(x => x.cat === c).length; const ch = h('button', 'cfg-chip2' + (m3dCat === c ? ' on' : ''), `${c} <b>${n}</b>`); ch.onclick = () => { m3dCat = c; renderTab(); }; chips.appendChild(ch); });
+      const chipEls = {};
+      cats.forEach(c => { const n = c === 'All' ? CAT.length : CAT.filter(x => x.cat === c).length; const ch = h('button', 'cfg-chip2' + (m3dCat === c ? ' on' : ''), `${c} <b>${n}</b>`); ch.onclick = () => { m3dCat = c; Object.values(chipEls).forEach(x => x.classList.remove('on')); ch.classList.add('on'); filterGrid(); }; chipEls[c] = ch; chips.appendChild(ch); });
       lb.bd.appendChild(chips);
+      // build ALL items once; category chip + search filter them in place (keeps focus, no rebuild)
       const grid = h('div', 'cfg-cat3d');
-      CAT.filter(m => m3dCat === 'All' || m.cat === m3dCat).forEach(m => {
+      CAT.forEach(m => {
         const b = h('button', 'cfg-cat3d__i', `<span>${esc(m.name)}</span><small>${esc(m.cat)}</small>`);
+        b.dataset.cat = m.cat; b.dataset.q = (m.name + ' ' + m.cat + ' ' + m.file).toLowerCase().replace(/[^a-z0-9]/g, '');
         b.title = 'Add “' + m.name + '” at the current map centre';
         b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: m3dScale(m.cat, m.file), rotZ: 0, pitch: 0, roll: 0, alt: 0, mode: 'both', style: 'solid', on: true }); renderTab(); };
         grid.appendChild(b);
       });
+      function filterGrid() { const q = m3dSearch.toLowerCase().replace(/[^a-z0-9]/g, ''); grid.querySelectorAll('.cfg-cat3d__i').forEach(it => { const ok = (m3dCat === 'All' || it.dataset.cat === m3dCat) && (!q || it.dataset.q.indexOf(q) >= 0); it.style.display = ok ? '' : 'none'; }); }
+      srch.oninput = () => { m3dSearch = srch.value; filterGrid(); };
+      filterGrid();
       lb.bd.appendChild(grid);
-      lb.bd.appendChild(h('div', 'hint', CAT.length + ' built-in military models (aircraft, naval, armour, missiles, air-defence, drones). Click one to drop it at the map centre, then steer it with the on-screen control HUD.'));
+      lb.bd.appendChild(h('div', 'hint', CAT.length + ' built-in military models (aircraft, naval, armour, missiles, air-defence, drones). Search or filter, then click one to drop it at the map centre and steer it with the control HUD.'));
       ct.appendChild(lb.sec);
     }
 

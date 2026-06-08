@@ -377,6 +377,11 @@ const Draw = (() => {
   qbar.appendChild(qcolor); document.body.appendChild(qpop);
   // undo
   const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.dataset.qid = 'undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
+  // control-only tools — toggleable/reorderable like any bar button (qbar customiser)
+  if (window.APP_ROLE === 'control') {
+    const qtl = h('button', 'qtool', I.film); qtl.title = 'Movement timeline'; qtl.dataset.qid = 'timeline'; qtl.onclick = () => window.Timeline && Timeline.toggle(); qbar.appendChild(qtl);
+    const qmc = h('button', 'qtool', I.move); qmc.title = 'Model control HUD'; qmc.dataset.qid = 'mctl'; qmc.onclick = () => window.ModelControl && ModelControl.toggle(); qbar.appendChild(qmc);
+  }
   document.body.appendChild(qbar);
 
   /* hide presenter toolbar buttons the operator has disallowed (no-op for the control console) */

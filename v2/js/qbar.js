@@ -13,6 +13,7 @@
     frontline: 'Front line', country: 'Highlight country', text: 'Label', measure: 'Measure',
     asset: 'Image', flags: 'Flags', erase: 'Erase', color: 'Colour', undo: 'Undo',
     mapstyle: 'Base map', ships: 'Live ships', flights: 'Live flights', trails: 'Trails',
+    timeline: 'Movement timeline', mctl: 'Model control',
   };
   const bar = () => document.querySelector('.qtools');
   const btns = () => { const b = bar(); return b ? [...b.querySelectorAll('.qtool[data-qid]')] : []; };
