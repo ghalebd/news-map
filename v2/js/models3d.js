@@ -35,17 +35,32 @@
     rawCache.set(id, p);
     return p;
   }
-  // a unit-sized, origin-centred, Y-up clone of the model
-  function normalized(raw) {
+  // apply a render style by swapping in per-instance materials (so the shared
+  // master is never mutated). 'wireframe' draws the mesh as a glowing wireframe.
+  function applyStyle(obj, style) {
+    const wire = style === 'wireframe';
+    obj.traverse(o => {
+      if (o.isMesh && o.material) {
+        const conv = mm => { const c = mm.clone(); c.wireframe = wire; return c; };
+        o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
+      }
+    });
+    return obj;
+  }
+  // a unit-sized, origin-centred, Y-up clone of the model, styled.
+  // NOTE: clone(true) SHARES geometry/material/textures with the master, so this
+  // clone must NEVER be disposed — only the master (rawCache) owns GPU resources.
+  function buildInner(raw, style) {
     const obj = raw.clone(true);
     const box = new THREE.Box3().setFromObject(obj);
     const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
     const maxd = Math.max(sz.x, sz.y, sz.z) || 1;
     obj.position.sub(c);
     const wrap = new THREE.Group(); wrap.add(obj); wrap.scale.setScalar(1 / maxd);
-    return wrap;
+    return applyStyle(wrap, style);
   }
-  // free three.js GPU resources of an object tree (geometries, materials, textures)
+  // free three.js GPU resources of a MASTER scene (geometries, materials, textures).
+  // Only ever call on rawCache masters — clones share these references.
   function disposeObject(obj) {
     if (!obj || !obj.traverse) return;
     obj.traverse(o => {
@@ -59,8 +74,8 @@
   // marker, 3D group, cached scene + billboards, and free the object URL.
   function purge(id) {
     const mk = markers.get(id); if (mk) { L2.removeLayer(mk); markers.delete(id); }
-    const g = groups.get(id); if (g) { if (layer && layer.scene) layer.scene.remove(g.group); disposeObject(g.group); groups.delete(id); }
-    if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }
+    const g = groups.get(id); if (g) { if (layer && layer.scene) layer.scene.remove(g.group); groups.delete(id); }   // clone — not disposed
+    if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }   // master owns the GPU resources
     dropBillboards(id);
     if (window.Assets3D && Assets3D.revoke) Assets3D.revoke(id);
   }
@@ -81,13 +96,13 @@
     } catch (e) { console.warn('Models3D offscreen failed', e); return false; }
     return true;
   }
-  const billboards = new Map();   // `${id}:${rotZ}` -> Promise<dataURL>
+  const billboards = new Map();   // `${id}:${rotZ}:${style}` -> Promise<dataURL>
   function billboard(m, rotZ) {
-    const key = m.id + ':' + Math.round(rotZ || 0);
+    const key = m.id + ':' + Math.round(rotZ || 0) + ':' + (m.style || 'solid');
     if (billboards.has(key)) return billboards.get(key);
     const p = (async () => {
       if (!ensureOffscreen()) return null;
-      const raw = await loadRaw(m); const obj = normalized(raw);
+      const raw = await loadRaw(m); const obj = buildInner(raw, m.style);
       obj.rotation.y = (rotZ || 0) * D2R;
       const root = new THREE.Group(); root.add(obj); bscene.add(root);
       try { rdr.render(bscene, bcam); return rdr.domElement.toDataURL('image/png'); }
@@ -153,9 +168,9 @@
   function ensureGroup(m, scene) {
     let g = groups.get(m.id);
     if (g) return g;
-    g = { group: new THREE.Group(), inner: null, loading: true };
+    g = { group: new THREE.Group(), inner: null, raw: null, styleVal: m.style || 'solid', loading: true };
     g.group.visible = false; scene.add(g.group); groups.set(m.id, g);
-    loadRaw(m).then(raw => { g.inner = normalized(raw); g.group.add(g.inner); g.loading = false; update3D(); })
+    loadRaw(m).then(raw => { g.raw = raw; g.inner = buildInner(raw, m.style); g.group.add(g.inner); g.loading = false; update3D(); })
       .catch(() => { g.failed = true; g.loading = false; });
     return g;
   }
@@ -163,11 +178,13 @@
     if (!glmap || !layer || !layer.scene) return;
     const scene = layer.scene;
     const want = new Set(models().filter(m => m.on !== false && m.mode !== '2d').map(m => m.id));
-    for (const [id, g] of groups) if (!want.has(id)) { scene.remove(g.group); disposeObject(g.group); groups.delete(id); }
+    for (const [id, g] of groups) if (!want.has(id)) { scene.remove(g.group); groups.delete(id); }   // clone — never dispose (shares the master's GPU resources)
     models().forEach(m => {
       if (m.on === false || m.mode === '2d') return;
       const g = ensureGroup(m, scene);
       if (!g.inner) return;
+      // style change → rebuild the inner from the cached master (no dispose: shared)
+      if (g.raw && g.styleVal !== (m.style || 'solid')) { g.group.remove(g.inner); g.inner = buildInner(g.raw, m.style); g.group.add(g.inner); g.styleVal = m.style || 'solid'; }
       try {
         let ground = 0; try { ground = glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([m.lng, m.lat]) || 0) : 0; } catch (e) {}
         const mc = maplibregl.MercatorCoordinate.fromLngLat([m.lng, m.lat], ground + (m.alt || 0));
@@ -187,8 +204,7 @@
     glmap = map;
     if (!map.getLayer('models3d-gl')) { try { map.addLayer(customLayer); } catch (e) { console.warn('Models3D 3D layer', e); return; } }
     layer = customLayer;
-    groups.forEach(g => disposeObject(g.group));   // style (re)loaded — old scene is gone; free GPU resources
-    groups.clear();
+    groups.clear();   // style (re)loaded — drop stale clone refs; masters stay cached and re-clone on rebuild
     update3D();
   }
 

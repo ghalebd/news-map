@@ -30,6 +30,13 @@
     window.__m3 = map; builtStyle = S.state.mapStyle || 'satellite';   // debug/inspection hook
     map.on('error', e => { const err = e && e.error; if (err && (err.name === 'AbortError' || /abort/i.test(err.message || ''))) return; });   // swallow benign style-swap aborts
     map.on('style.load', onStyle);
+    // re-seat 3D models on the terrain once elevation tiles load / after camera moves
+    // (queryTerrainElevation returns 0 until tiles arrive). Loop-safe: only re-ground
+    // once per movement/idle cycle, so update3D's repaint can't re-trigger us.
+    let regroundPending = true;
+    map.on('movestart', () => { regroundPending = true; });
+    map.on('sourcedata', e => { if (e.sourceId === 'dem' && e.isSourceLoaded) regroundPending = true; });
+    map.on('idle', () => { if (on && regroundPending) { regroundPending = false; try { if (window.Models3D) Models3D.refresh(); } catch (e) {} } });
     bridgeDrawing();
   }
   function onStyle() {

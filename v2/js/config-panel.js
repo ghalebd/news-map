@@ -425,6 +425,8 @@
   }
 
   let m3dCat = 'All';   // persisted catalog filter across re-renders
+  // sensible default on-map size (km) by type so a carrier ≠ a missile
+  const m3dScale = (cat, file) => { const f = file || ''; if (/carrier|lincoln|eisenhower|cvn/.test(f)) return 12; if (cat === 'Naval') return 6; if (cat === 'Aircraft') return /c-130|hercules|a-3|707|boein|awacs|e-3|sentry|b-2|spirit|b21|tu160|legacy|embraer/.test(f) ? 4.5 : 2.2; if (cat === 'Drones / UAV') return 1.4; if (cat === 'Air defense / Radar') return 2; if (cat === 'Missiles / Rockets') return 1; if (cat === 'Armor / Vehicles') return 1.4; return 2.5; };
   function tabModels3d(C, ct) {
     const list = C.models3d || [];
 
@@ -440,7 +442,7 @@
       CAT.filter(m => m3dCat === 'All' || m.cat === m3dCat).forEach(m => {
         const b = h('button', 'cfg-cat3d__i', `<span>${esc(m.name)}</span><small>${esc(m.cat)}</small>`);
         b.title = 'Add “' + m.name + '” at the current map centre';
-        b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: 4, rotZ: 0, pitch: 0, roll: 0, alt: 0, mode: 'both', on: true }); renderTab(); };
+        b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: m3dScale(m.cat, m.file), rotZ: 0, pitch: 0, roll: 0, alt: 0, mode: 'both', style: 'solid', on: true }); renderTab(); };
         grid.appendChild(b);
       });
       lb.bd.appendChild(grid);
@@ -458,7 +460,7 @@
       try {
         const id = S.uid('m3d'); await window.Assets3D.put(id, f);
         const cv = window.GameMap.currentView();
-        S.addModel3d({ id, name: name.value.trim() || f.name.replace(/\.[^.]+$/, ''), lat: cv.lat, lng: cv.lng, scale: 10, rotZ: 0, alt: 0, mode: 'both', on: true });
+        S.addModel3d({ id, name: name.value.trim() || f.name.replace(/\.[^.]+$/, ''), lat: cv.lat, lng: cv.lng, scale: 3, rotZ: 0, alt: 0, mode: 'both', style: 'solid', on: true });
         name.value = ''; file.value = ''; renderTab();
       } catch (e) { alert('Could not read GLB.'); file.value = ''; }
     };
@@ -483,6 +485,9 @@
       const seg = h('div', 'cfg-seg');
       [['both', 'Both maps'], ['3d', '3D only'], ['2d', '2D only']].forEach(([id, lab]) => { const bb = h('button', 'cfg-seg__b' + ((m.mode || 'both') === id ? ' on' : ''), lab); bb.onclick = () => { S.updateModel3d(m.id, { mode: id }); renderTab(); }; seg.appendChild(bb); });
       it.appendChild(seg);
+      const sseg = h('div', 'cfg-seg');
+      [['solid', 'Solid'], ['wireframe', 'Wireframe']].forEach(([id, lab]) => { const bb = h('button', 'cfg-seg__b' + ((m.style || 'solid') === id ? ' on' : ''), lab); bb.onclick = () => { S.updateModel3d(m.id, { style: id }); renderTab(); }; sseg.appendChild(bb); });
+      it.appendChild(sseg);
       const cr = h('div', 'cfg-ovrow2'); const ci = h('input', 'cfg-in'); ci.value = `${(+m.lat).toFixed(4)}, ${(+m.lng).toFixed(4)}`; ci.placeholder = 'lat, lng';
       const sb = h('button', 'cfg-in cfg-in--n', 'Set'); sb.onclick = () => { const co = parseLatLng(ci.value); if (!co) { alert('Paste coordinates like  25.2048, 55.2708'); return; } S.updateModel3d(m.id, { lat: co[0], lng: co[1] }); };
       cr.append(ci, sb); it.appendChild(cr);

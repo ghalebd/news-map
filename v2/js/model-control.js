@@ -55,16 +55,18 @@
   }
 
   /* ---- HUD ---- */
-  let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt;
+  let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt, wireBtn;
+  function toggleWire() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { style: (m.style === 'wireframe') ? 'solid' : 'wireframe' }); }
   function build() {
     hud = h('div', 'mctl glass'); hud.hidden = true;
     const hd = h('div', 'mctl__hd');
     const grip = h('span', 'mctl__grip', I.move);
     nameEl = h('span', 'mctl__nm', 'Model');
+    wireBtn = h('button', 'mctl__x', I.grid); wireBtn.title = 'Wireframe on/off'; wireBtn.onclick = toggleWire;
     const prev = h('button', 'mctl__x', I.navL); prev.title = 'Previous model'; prev.onclick = () => step(-1);
     const next = h('button', 'mctl__x', I.navR); next.title = 'Next model'; next.onclick = () => step(1);
     const cls = h('button', 'mctl__x', I.close); cls.title = 'Close (Esc)'; cls.onclick = deselect;
-    hd.append(grip, nameEl, prev, next, cls); hud.appendChild(hd);
+    hd.append(grip, nameEl, wireBtn, prev, next, cls); hud.appendChild(hd);
 
     picker = h('select', 'mctl__sel'); picker.onchange = () => select(picker.value); hud.appendChild(picker);
 
@@ -129,6 +131,7 @@
     vRoll.textContent = Math.round(m.roll || 0) + '°';
     vSize.textContent = (Math.round((m.scale || 1) * 10) / 10) + ' km';
     vAlt.textContent = Math.round(m.alt || 0) + ' m';
+    if (wireBtn) wireBtn.classList.toggle('on', m.style === 'wireframe');
     // rebuild the picker
     if (picker) { picker.innerHTML = ''; models().forEach(x => { const o = h('option', null, x.name || 'Model'); o.value = x.id; if (x.id === selId) o.selected = true; picker.appendChild(o); }); }
   }

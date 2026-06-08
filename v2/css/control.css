@@ -206,6 +206,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .mctl__x { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; }
 .mctl__x svg { width: 14px; height: 14px; }
 .mctl__x:hover { color: var(--accent); border-color: var(--accent); }
+.mctl__x.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .mctl__sel { width: 100%; height: 30px; border-radius: 8px; background: var(--glass-2); color: var(--text); border: 1px solid var(--stroke); padding: 0 8px; }
 .mctl__pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .mctl__b { height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 8px; color: var(--text); background: var(--glass-2); border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); cursor: pointer; }
