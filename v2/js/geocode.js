@@ -18,10 +18,13 @@
 
   const triggers = [btn];
   function anchorTo(el) {
-    const r = el.getBoundingClientRect(), ph = pop.offsetHeight || 300;
+    const r = el.getBoundingClientRect();
     if (r.left < window.innerWidth / 2) { pop.style.left = Math.round(r.left) + 'px'; pop.style.right = 'auto'; }
     else { pop.style.right = Math.round(window.innerWidth - r.right) + 'px'; pop.style.left = 'auto'; }
-    pop.style.top = (r.top > window.innerHeight / 2 ? Math.max(12, Math.round(r.top - ph - 8)) : Math.round(Math.min(r.top, window.innerHeight - ph - 12))) + 'px';
+    // bottom-of-screen trigger → pin the popup's BOTTOM just above it so it grows upward
+    // (never expands down over the bar as results load); otherwise pin its top
+    if (r.top > window.innerHeight / 2) { pop.style.bottom = Math.round(window.innerHeight - r.top + 8) + 'px'; pop.style.top = 'auto'; }
+    else { pop.style.top = Math.round(Math.min(r.top, window.innerHeight - 332)) + 'px'; pop.style.bottom = 'auto'; }
   }
   function zoomForBbox(b) { if (!b) return 11; const ext = Math.max(b[2] - b[0], b[3] - b[1]) || 0.1; return Math.max(3, Math.min(13, Math.round(Math.log2(360 / ext)))); }
   function parseCoords(q) { const m = q.trim().match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/); if (!m) return null; const lat = +m[1], lng = +m[2]; return (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) ? [lat, lng] : null; }
