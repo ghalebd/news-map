@@ -364,7 +364,7 @@
   }
 
   function tabFx(C, ct) {
-    const { sec, bd } = section('Grid & sea FX', I.grid || I.layers, () => { S.setGrid(cp(S.DEFAULT_CONFIG.grid)); S.setSea(cp(S.DEFAULT_CONFIG.sea)); });
+    const { sec, bd } = section('Grid · sea · clouds', I.grid || I.layers, () => { S.setGrid(cp(S.DEFAULT_CONFIG.grid)); S.setSea(cp(S.DEFAULT_CONFIG.sea)); S.setClouds(cp(S.DEFAULT_CONFIG.clouds)); });
     const g = Object.assign({}, S.DEFAULT_CONFIG.grid, C.grid || {});
     bd.appendChild(rowTog('Square grid', !!g.on, on => { S.setGrid({ on }); }));
     bd.append(
@@ -373,11 +373,16 @@
       slider('Line opacity', g.opacity, 0, 60, 1, v => S.setGrid({ opacity: v })),
       slider('Line weight', g.weight, 1, 4, 1, v => S.setGrid({ weight: v })));
     const s = Object.assign({}, S.DEFAULT_CONFIG.sea, C.sea || {});
-    bd.appendChild(rowTog('Animated sea', !!s.on, on => { S.setSea({ on }); }));
+    bd.appendChild(rowTog('Water caustics', !!s.on, on => { S.setSea({ on }); }));
     bd.append(
-      slider('Sea intensity', s.intensity, 0, 80, 1, v => S.setSea({ intensity: v })),
-      slider('Sea speed (s)', s.speed, 3, 30, 1, v => S.setSea({ speed: v })),
-      h('div', 'hint', 'The animated sea is an ambient shimmer across the whole map (raster tiles can’t isolate water); keep it subtle for broadcast.'));
+      slider('Water intensity', s.intensity, 0, 80, 1, v => S.setSea({ intensity: v })),
+      slider('Water speed (s)', s.speed, 8, 60, 1, v => S.setSea({ speed: v })));
+    const cl = Object.assign({}, S.DEFAULT_CONFIG.clouds, C.clouds || {});
+    bd.appendChild(rowTog('Drifting clouds', !!cl.on, on => { S.setClouds({ on }); }));
+    bd.append(
+      slider('Cloud amount', cl.amount, 0, 80, 1, v => S.setClouds({ amount: v })),
+      slider('Cloud speed (s)', cl.speed, 20, 160, 1, v => S.setClouds({ speed: v })),
+      h('div', 'hint', 'Water & clouds are ambient overlays across the whole map (raster tiles can’t isolate sea). Keep them subtle for broadcast; toggle off anytime.'));
     ct.appendChild(sec);
   }
 
