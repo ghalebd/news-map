@@ -137,8 +137,18 @@
     map.addLayer({ id: 'sc-line', type: 'line', source: SRC, filter: ['==', ['get', 'kind'], 'line'], paint: { 'line-color': ['get', 'color'], 'line-width': 3 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
     map.addLayer({ id: 'sc-pt', type: 'circle', source: SRC, filter: ['==', ['get', 'kind'], 'pt'], paint: { 'circle-radius': 6, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
     map.addLayer({ id: 'sc-lbl', type: 'symbol', source: SRC, filter: ['in', ['get', 'kind'], ['literal', ['pt', 'txt']]], layout: { 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.1], 'text-anchor': 'top' }, paint: { 'text-color': '#fff', 'text-halo-color': '#0a0e16', 'text-halo-width': 1.4 } });
+    if (!map.getSource('routes')) {
+      map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'routes-l', type: 'line', source: 'routes', paint: { 'line-color': '#ffb020', 'line-width': 2, 'line-opacity': 0.8, 'line-dasharray': [2, 2] }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    }
   }
-  function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); }
+  function mirrorRoutes() {
+    if (!map) return; const s = map.getSource('routes'); if (!s) return;
+    const F = [];
+    ((S.models3d && S.models3d()) || []).forEach(m => { const r = m.route; if (m.on !== false && m.mode !== '2d' && r && (r.pts || []).length >= 2) F.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: r.pts.map(p => [p[1], p[0]]) }, properties: {} }); });
+    s.setData({ type: 'FeatureCollection', features: F });
+  }
+  function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); mirrorRoutes(); }
 
   /* ---- draw in 3D: forward terrain clicks/drags to the 2D tools (full reuse) ----
      The Leaflet map is hidden behind, so we unproject the cursor to lng/lat and
@@ -200,6 +210,7 @@
     if (evt === 'light3d') { if (on && map) applyLight(); return; }
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
+    if (evt === 'models3d') { mirrorRoutes(); return; }
     if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();
   });
 

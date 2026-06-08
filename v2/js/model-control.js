@@ -64,22 +64,46 @@
   }
 
   /* ---- route drawing (click points on either map) ---- */
-  let routeMode = null;   // { id, pts:[], line, dots:[] }
+  let routeMode = null, rbar = null;   // { id, pts:[], line, dots:[] } + on-screen toolbar
   function on2DClick(e) { if (routeMode) addRoutePoint([e.latlng.lat, e.latlng.lng]); }
-  function onRouteKey(e) { if (!routeMode) return; if (e.key === 'Enter') { finishRoute(); e.preventDefault(); } else if (e.key === 'Escape') { cancelRoute(); e.preventDefault(); } }
-  function drawRoute() { const m = sel(); if (!m) return; cancelRoute(); routeMode = { id: m.id, pts: [], line: null, dots: [] }; L2.on('click', on2DClick); document.addEventListener('keydown', onRouteKey); window.UI && UI.toast && UI.toast('Click path points · Enter to finish · Esc to cancel'); renderVals(); }
+  function onRouteKey(e) { if (!routeMode) return; if (e.key === 'Enter') finishRoute(); else if (e.key === 'Escape') cancelRoute(); }
+  function routeBar() {
+    if (rbar) return rbar;
+    rbar = h('div', 'rdraw glass'); rbar.hidden = true;
+    rbar.innerHTML = '<span class="rdraw__t">Click points on the map to draw the flight path</span><span class="rdraw__n">0</span>';
+    const undo = h('button', 'rdraw__b', I.undo); undo.title = 'Undo last point'; undo.onclick = undoRoutePoint;
+    const ok = h('button', 'rdraw__b rdraw__b--go', I.target + '<span>Finish</span>'); ok.title = 'Finish (need ≥ 2 points)'; ok.onclick = finishRoute;
+    const cancel = h('button', 'rdraw__b rdraw__b--x', I.close + '<span>Cancel</span>'); cancel.title = 'Cancel'; cancel.onclick = cancelRoute;
+    rbar.append(undo, ok, cancel); document.body.appendChild(rbar);
+    return rbar;
+  }
+  function updateRouteBar() { if (!rbar) return; const n = routeMode ? routeMode.pts.length : 0; const c = rbar.querySelector('.rdraw__n'); if (c) c.textContent = n; }
+  function drawRoute() {
+    const m = sel(); if (!m) return; cancelRoute();
+    routeMode = { id: m.id, pts: [], line: null, dots: [] };
+    L2.on('click', on2DClick); document.addEventListener('keydown', onRouteKey);
+    document.body.classList.add('rdrawing'); routeBar().hidden = false; updateRouteBar(); renderVals();
+  }
   function addRoutePoint(ll) {
     if (!routeMode) return; routeMode.pts.push(ll);
     if (!routeMode.line) routeMode.line = L.polyline(routeMode.pts, { color: '#ffb020', weight: 3, dashArray: '6 5' }).addTo(L2); else routeMode.line.setLatLngs(routeMode.pts);
     routeMode.dots.push(L.circleMarker(ll, { radius: 4, color: '#fff', weight: 1.5, fillColor: '#ffb020', fillOpacity: 1 }).addTo(L2));
+    updateRouteBar();
+  }
+  function undoRoutePoint() {
+    if (!routeMode || !routeMode.pts.length) return;
+    routeMode.pts.pop(); const d = routeMode.dots.pop(); if (d) L2.removeLayer(d);
+    if (routeMode.line) routeMode.line.setLatLngs(routeMode.pts);
+    updateRouteBar();
   }
   function finishRoute() {
     if (!routeMode) return; const m = models().find(x => x.id === routeMode.id);
-    if (m && routeMode.pts.length >= 2) { const r = m.route || {}; S.updateModel3d(routeMode.id, { lat: routeMode.pts[0][0], lng: routeMode.pts[0][1], route: { pts: routeMode.pts, dur: r.dur || 20, loop: !!r.loop, heading: r.heading !== false, play: false, t0: 0 } }); }
+    if (!m || routeMode.pts.length < 2) { window.UI && UI.toast && UI.toast('Add at least 2 points'); return; }
+    const r = m.route || {}; S.updateModel3d(routeMode.id, { lat: routeMode.pts[0][0], lng: routeMode.pts[0][1], route: { pts: routeMode.pts, dur: r.dur || 20, loop: !!r.loop, heading: r.heading !== false, play: false, t0: 0 } });
     endRouteMode();
   }
   function cancelRoute() { endRouteMode(); }
-  function endRouteMode() { if (!routeMode) return; if (routeMode.line) L2.removeLayer(routeMode.line); routeMode.dots.forEach(d => L2.removeLayer(d)); L2.off('click', on2DClick); document.removeEventListener('keydown', onRouteKey); routeMode = null; renderVals(); }
+  function endRouteMode() { if (!routeMode) return; if (routeMode.line) L2.removeLayer(routeMode.line); routeMode.dots.forEach(d => L2.removeLayer(d)); L2.off('click', on2DClick); document.removeEventListener('keydown', onRouteKey); document.body.classList.remove('rdrawing'); if (rbar) rbar.hidden = true; routeMode = null; renderVals(); }
   function togglePlay() { const m = sel(); if (!m) return; if (!(m.route && (m.route.pts || []).length >= 2)) { drawRoute(); return; } if (window.ModelsAnim) { ModelsAnim.playing(m.id) ? ModelsAnim.stop(m.id) : ModelsAnim.play(m.id); } renderVals(); }
 
   /* ---- HUD ---- */

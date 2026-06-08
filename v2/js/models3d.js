@@ -116,8 +116,13 @@
     return p;
   }
 
-  /* ============ 2D Leaflet markers ============ */
+  /* ============ 2D Leaflet markers + route lines ============ */
   const markers = new Map();   // id -> L.marker
+  const routeLayer = L.layerGroup().addTo(L2);
+  function syncRoutes2D() {
+    routeLayer.clearLayers();
+    models().forEach(m => { const r = m.route; if (m.on !== false && m.mode !== '3d' && r && (r.pts || []).length >= 2) { L.polyline(r.pts, { color: '#ffb020', weight: 2, opacity: 0.75, dashArray: '5 5', interactive: false }).addTo(routeLayer); r.pts.forEach(p => L.circleMarker(p, { radius: 2.5, color: '#ffb020', weight: 0, fillColor: '#ffb020', fillOpacity: 0.9, interactive: false }).addTo(routeLayer)); } });
+  }
   function px(m) { return Math.max(28, Math.min(200, Math.round(60 * ((m.scale || 1) / 10 + 0.4)))); }
   const BLANK = L.divIcon({ className: 'm3d-billboard', html: '', iconSize: [1, 1] });
   async function place2D(m) {
@@ -253,7 +258,7 @@
     // NOTE: billboards are keyed by id:rotZ, so a rotation change makes a fresh key
     // automatically and size/position changes reuse the cached PNG — no global clear()
     // (which used to re-render every model's PNG on every slider tick).
-    sync2D();
+    sync2D(); syncRoutes2D();
     if (window.Map3D && Map3D.on) update3D();
   }
   S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') syncAll(); });

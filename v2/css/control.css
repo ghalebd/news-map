@@ -221,6 +221,16 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .tl__tickx { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #ff6b6b; display: none; }
 .tl__tick:hover .tl__tickx { display: block; }
 body.touch .tl__b { width: 32px; height: 32px; } body.touch .tl__key { width: 28px; height: 28px; }
+/* ---- Route drawing bar (top-center) ---- */
+.rdraw { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 100001; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 12px; }
+.rdraw__t { font-size: 12px; font-weight: 600; color: var(--text); }
+.rdraw__n { min-width: 22px; height: 22px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 12px; }
+.rdraw__b { height: 30px; display: inline-flex; align-items: center; gap: 5px; padding: 0 11px; border-radius: 8px; color: var(--text); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; font-size: 12px; font-weight: 700; }
+.rdraw__b svg { width: 14px; height: 14px; }
+.rdraw__b:hover { border-color: var(--stroke-2); }
+.rdraw__b--go { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.rdraw__b--x:hover { color: #ff6b6b; border-color: #ff6b6b; }
+body.rdrawing #map, body.rdrawing #map3d { cursor: crosshair; }
 /* ---- Model control HUD ---- */
 .mctl { position: fixed; right: 16px; bottom: 96px; z-index: var(--z-flyout, 60); width: 236px; padding: 10px; display: flex; flex-direction: column; gap: 8px; border-radius: var(--r); user-select: none; }
 .mctl__hd { display: flex; align-items: center; gap: 6px; cursor: grab; }
