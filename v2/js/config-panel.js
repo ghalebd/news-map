@@ -210,6 +210,9 @@
     m2.bd.append(list, add); ct.appendChild(m2.sec);
     const m3 = section('Places & locator', I.target);
     m3.bd.appendChild(rowTog('Locator inset map', !!C.locator, on => S.setLocator(on)));
+    const uiC = C.ui || {};
+    m3.bd.appendChild(rowTog('Scale bar', !!uiC.scaleBar, on => S.setUI({ scaleBar: on })));
+    m3.bd.appendChild(rowTog('Compass (rotates in 3D)', !!uiC.compass, on => S.setUI({ compass: on })));
     const pl = h('div', 'cfg-list');
     (C.places || []).forEach(p => { const li = h('div', 'cfg-li'); li.style.cursor = 'pointer'; li.innerHTML = `<div class="nm">${esc(p.name)} <small>${(+p.lat).toFixed(1)}, ${(+p.lng).toFixed(1)}</small></div>`; li.onclick = () => window.GameMap.flyToView({ lat: p.lat, lng: p.lng, zoom: p.zoom }, { type: 'flyTo', duration: 1 }); const del = h('button', 'cfg-aset__x', I.close); del.style.position = 'static'; del.style.opacity = '1'; del.onclick = e => { e.stopPropagation(); S.removePlace(p.id); renderTab(); }; li.appendChild(del); pl.appendChild(li); });
     const pa = h('div', 'cfg-add', '<input placeholder="Name this view">'); const pab = h('button', null, 'Add'); pa.appendChild(pab);

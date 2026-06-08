@@ -48,7 +48,7 @@
     } catch (e) {}
     try { map.setSky({ 'sky-color': '#0a1830', 'sky-horizon-blend': 0.6, 'horizon-color': '#16335c', 'horizon-fog-blend': 0.5, 'fog-color': '#0a1322', 'fog-ground-blend': 0.4 }); } catch (e) {}
     addHillshade();
-    addSceneLayers(); mirror(); applyLabels3D();
+    addSceneLayers(); mirror(); mirrorOverlays(); applyLabels3D();
     try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
     try { if (window.Tracking3D) window.Tracking3D.attach3D(map); } catch (e) {}   // live ships/planes as 3D
     applyLight(); applyProjection();
@@ -151,6 +151,23 @@
     s.setData({ type: 'FeatureCollection', features: F });
   }
   function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); mirrorRoutes(); }
+  // drape the satellite/image overlays onto the 3D terrain (image sources + raster layers)
+  function mirrorOverlays() {
+    if (!map) return;
+    const ovs = (S.overlays && S.overlays()) || [], want = new Set();
+    const before = map.getLayer('sc-area') ? 'sc-area' : undefined;
+    ovs.forEach(o => {
+      if (o.on === false || !o.url || !o.bounds) return;
+      const id = 'ov-' + o.id, b = o.bounds;
+      const coords = [[b[0][1], b[1][0]], [b[1][1], b[1][0]], [b[1][1], b[0][0]], [b[0][1], b[0][0]]];   // TL,TR,BR,BL
+      want.add(id);
+      const src = map.getSource(id);
+      if (src) { try { src.updateImage({ url: o.url, coordinates: coords }); } catch (e) {} }
+      else { try { map.addSource(id, { type: 'image', url: o.url, coordinates: coords }); map.addLayer({ id: id + '-l', type: 'raster', source: id, paint: { 'raster-opacity': o.opacity == null ? 1 : o.opacity, 'raster-fade-duration': 0 } }, before); } catch (e) {} }
+      try { map.setPaintProperty(id + '-l', 'raster-opacity', o.opacity == null ? 1 : o.opacity); } catch (e) {}
+    });
+    try { map.getStyle().layers.filter(l => l.id.indexOf('ov-') === 0 && /-l$/.test(l.id)).forEach(l => { const sid = l.id.slice(0, -2); if (!want.has(sid)) { try { map.removeLayer(l.id); } catch (e) {} try { map.removeSource(sid); } catch (e) {} } }); } catch (e) {}
+  }
 
   /* ---- draw in 3D: forward terrain clicks/drags to the 2D tools (full reuse) ----
      The Leaflet map is hidden behind, so we unproject the cursor to lng/lat and
@@ -221,6 +238,7 @@
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
     if (evt === 'models3d') { mirrorRoutes(); return; }
+    if (evt === 'overlays') { mirrorOverlays(); return; }
     if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();
   });
 

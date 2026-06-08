@@ -406,6 +406,7 @@ const Draw = (() => {
   const qsea = h('button', 'qtool', I.waves); qsea.title = 'Sea on/off'; qsea.dataset.qid = 'sea'; qsea.onclick = () => S.setSea({ on: !(S.cfg().sea || {}).on }); qbar.appendChild(qsea);
   const qcloud = h('button', 'qtool', I.cloud); qcloud.title = 'Clouds on/off'; qcloud.dataset.qid = 'clouds'; qcloud.onclick = () => S.setClouds({ on: !(S.cfg().clouds || {}).on }); qbar.appendChild(qcloud);
   const qdn = h('button', 'qtool', I.daynight); qdn.title = 'Day / night shading on/off'; qdn.dataset.qid = 'daynight'; qdn.onclick = () => S.setDayNight({ on: !(S.cfg().dayNight || {}).on }); qbar.appendChild(qdn);
+  const qfs = h('button', 'qtool', I.expand); qfs.title = 'Fullscreen'; qfs.dataset.qid = 'fullscreen'; qfs.onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {} }; qbar.appendChild(qfs);
   function fxState() { qgrid.classList.toggle('is-on', !!(S.cfg().grid || {}).on); qsea.classList.toggle('is-on', !!(S.cfg().sea || {}).on); qcloud.classList.toggle('is-on', !!(S.cfg().clouds || {}).on); qdn.classList.toggle('is-on', !!(S.cfg().dayNight || {}).on); }
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync') fxState(); }); fxState();
   // control-only tools — toggleable/reorderable like any bar button (qbar customiser)

@@ -65,6 +65,7 @@ const ICONS = (() => {
     waves:   s('<path d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>'),
     cloud:   s('<path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 17 18z"/>'),
     daynight: s('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>'),
+    expand:  s('<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/>'),
   };
 })();
 window.ICONS = ICONS;

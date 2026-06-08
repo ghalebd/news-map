@@ -50,6 +50,7 @@ const Store = (() => {
     light3d: { on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55, tshadow: 55 },   // 3D sun: terrain hillshade + terrain shadow + GLB models + ground shadows
     timeline: { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} },   // keyframe choreography (camera + models), synced
     track3d: { on: true, shipKm: 5, planeKm: 4, realAlt: true },   // live ships/planes as lightweight 3D in the 3D map
+    ui: { scaleBar: false, compass: false },   // optional map chrome
     grid: { on: false, size: 60, color: '#7fb0ff', opacity: 16, weight: 1 },   // aesthetic square grid overlay
     sea: { on: false, intensity: 55, wave: 36, speed: 26, color: '#2c7fd6' },   // masked water caustics (wave = size %)
     clouds: { on: false, amount: 32, size: 50, softness: 55, speed: 70 },        // drifting clouds (size %, softness %)
@@ -61,7 +62,7 @@ const Store = (() => {
     overlayWipe: 0.5,        // global before/after wipe position (0..1)
     overlayWipeDir: 'v',     // wipe direction: v (vertical) | h (horizontal) | radial
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
-    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
+    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },
@@ -102,7 +103,7 @@ const Store = (() => {
     // the expanded tool-bar library: keep the new extra buttons hidden by default once
     if (!c._mig.qbar2) { c.qbar = c.qbar || { order: [], hidden: [] }; const def = ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure']; const set = new Set(c.qbar.hidden || []); def.forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar2 = true; }
     if (!c._mig.qbar3) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); set.add('flags'); c.qbar.hidden = [...set]; c._mig.qbar3 = true; }
-    if (!c._mig.qbar4) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); ['redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight'].forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar4 = true; }   // new extras off the bar by default; add them via the customiser
+    if (!c._mig.qbar4) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); ['redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'].forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar4 = true; }   // new extras off the bar by default; add them via the customiser
     // drop the rejected darkened-satellite / low-res NASA night styles; enable real dark vector maps
     if (!c._mig.nightClean) { const bad = ['satellite-night', 'satellite-dark', 'night-lights']; if (c.mapStyles) c.mapStyles = c.mapStyles.filter(m => !bad.includes(m.id)); if (bad.includes(state.mapStyle)) state.mapStyle = 'dataviz-dark'; ['streets-v2-dark', 'basic-v2-dark'].forEach(id => { const m = (c.mapStyles || []).find(x => x.id === id); if (m) m.on = true; }); c._mig.nightClean = true; }
   }
@@ -195,6 +196,7 @@ const Store = (() => {
   function timeline() { if (!state.config.timeline) state.config.timeline = { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} }; return state.config.timeline; }
   function setTimeline(patch) { Object.assign(timeline(), patch); emit('timeline'); }
   function setTrack3d(patch) { if (!state.config.track3d) state.config.track3d = {}; Object.assign(state.config.track3d, patch); emit('track3d'); }
+  function setUI(patch) { if (!state.config.ui) state.config.ui = {}; Object.assign(state.config.ui, patch); emit('config'); }
   function setGrid(patch) { if (!state.config.grid) state.config.grid = {}; Object.assign(state.config.grid, patch); emit('config'); }
   function setSea(patch) { if (!state.config.sea) state.config.sea = {}; Object.assign(state.config.sea, patch); emit('config'); }
   function setClouds(patch) { if (!state.config.clouds) state.config.clouds = {}; Object.assign(state.config.clouds, patch); emit('config'); }
@@ -227,7 +229,7 @@ const Store = (() => {
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
     models3d, addModel3d, updateModel3d, removeModel3d,
-    timeline, setTimeline, setTrack3d,
+    timeline, setTimeline, setTrack3d, setUI,
   };
 })();
 window.Store = Store;
