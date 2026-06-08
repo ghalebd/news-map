@@ -25,6 +25,12 @@
 /* ===== enhanced side panel (LEFT) ===== */
 .cfg-panel { width: min(600px, 96vw); left: 0; right: auto; border-left: 0; border-right: 1px solid var(--stroke); box-shadow: 20px 0 60px rgba(0, 0, 0, 0.5); transform: translateX(-102%); }
 .cfg-panel.open { transform: none; }
+/* interactive resize grip on the drawer's right edge */
+.cfg-resize { position: absolute; top: 0; right: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 6; }
+.cfg-resize::before { content: ''; position: absolute; right: 1px; top: 50%; transform: translateY(-50%); width: 3px; height: 48px; border-radius: 3px; background: var(--stroke-2); transition: all var(--t-fast) var(--ease); }
+.cfg-resize:hover::before { background: var(--accent); box-shadow: var(--accent-glow); height: 70px; }
+body.cfg-resizing { cursor: ew-resize; user-select: none; }
+body.cfg-resizing .cfg-drawer, body.cfg-resizing .brand, body.cfg-resizing .qtools, body.cfg-resizing .status, body.cfg-resizing .modesw, body.cfg-resizing .deck, body.cfg-resizing .nownext { transition: none !important; }
 /* drag-to-reorder grip + drop indicator */
 .cfg-grip { color: var(--text-3); cursor: grab; font-size: 11px; letter-spacing: -2px; line-height: 1; padding: 0 2px; }
 .cfg-sec__hd:active .cfg-grip { cursor: grabbing; }

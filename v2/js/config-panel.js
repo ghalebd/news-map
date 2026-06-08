@@ -38,10 +38,26 @@
   );
   const x = h('button', 'x', I.close); head.append(qa, x);
   const search = h('input', 'cfg-search'); search.type = 'search'; search.placeholder = 'Search settings…';
-  const bodyEl = h('div', 'cfg-body'); drawer.append(head, search, bodyEl); document.body.append(toggle, drawer);
+  const bodyEl = h('div', 'cfg-body'); const resize = h('div', 'cfg-resize'); resize.title = 'Drag to resize'; drawer.append(head, search, bodyEl, resize); document.body.append(toggle, drawer);
+  // restore a saved width
+  const CW_KEY = 'newsmap.v3.cfgW';
+  try { const w = +localStorage.getItem(CW_KEY); if (w >= 360) drawer.style.width = w + 'px'; } catch (e) {}
   const setOpen = o => { drawer.classList.toggle('open', o); toggle.classList.toggle('is-open', o); const w = drawer.getBoundingClientRect().width; document.body.style.setProperty('--cfg-w', w + 'px'); document.body.classList.toggle('cfg-open', o); if (window.Movable) { Movable.setCfgOffset(o ? w : 0); Movable.reflow(); setTimeout(Movable.reflow, 330); } };
   toggle.onclick = () => setOpen(!drawer.classList.contains('open'));
   x.onclick = () => setOpen(false);
+  // interactive resize — widen toward the right; the tool bar + panels shift with it live
+  resize.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.clientX, startW = drawer.getBoundingClientRect().width;
+    document.body.classList.add('cfg-resizing');
+    const mv = ev => {
+      const w = Math.max(360, Math.min(window.innerWidth * 0.96, startW + (ev.clientX - startX)));
+      drawer.style.width = w + 'px'; document.body.style.setProperty('--cfg-w', w + 'px');
+      if (window.Movable) { Movable.setCfgOffset(w); Movable.reflow(); }
+    };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.body.classList.remove('cfg-resizing'); try { localStorage.setItem(CW_KEY, Math.round(drawer.getBoundingClientRect().width)); } catch (e) {} };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
 
   /* ---- builders ---- */
   function section(title, icon, onReset) {
