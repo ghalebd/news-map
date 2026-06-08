@@ -200,7 +200,7 @@ const Store = (() => {
   function addCampathFrame(v) { campath().frames.push(v); emit('config'); }
   function removeCampathFrame(i) { campath().frames.splice(i, 1); emit('config'); }
   function models3d() { if (!state.config.models3d) state.config.models3d = []; return state.config.models3d; }
-  function addModel3d(m) { m.id = m.id || uid('m3d'); if (m.on == null) m.on = true; if (m.scale == null) m.scale = 1; if (m.rotZ == null) m.rotZ = 0; if (m.alt == null) m.alt = 0; if (!m.mode) m.mode = 'both'; models3d().push(m); emit('models3d'); return m; }
+  function addModel3d(m) { m.id = m.id || uid('m3d'); if (m.on == null) m.on = true; if (m.scale == null) m.scale = 1; if (m.rotZ == null) m.rotZ = 0; if (m.pitch == null) m.pitch = 0; if (m.roll == null) m.roll = 0; if (m.alt == null) m.alt = 0; if (!m.mode) m.mode = 'both'; models3d().push(m); emit('models3d'); return m; }
   function updateModel3d(id, patch) { const m = models3d().find(x => x.id === id); if (m) { Object.assign(m, patch); emit('models3d'); } }
   function removeModel3d(id) { state.config.models3d = models3d().filter(x => x.id !== id); emit('models3d'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }

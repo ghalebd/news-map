@@ -103,6 +103,7 @@
     if (!mk) {
       mk = L.marker([m.lat, m.lng], { icon: BLANK, draggable: true, keyboard: false, zIndexOffset: 500 });
       mk.on('dragend', () => { const ll = mk.getLatLng(); S.updateModel3d(m.id, { lat: ll.lat, lng: ll.lng }); });
+      mk.on('click', () => { if (window.ModelControl) window.ModelControl.select(m.id); });
       mk.addTo(L2); markers.set(m.id, mk);
     }
     mk.setLatLng([m.lat, m.lng]);
@@ -170,7 +171,8 @@
         g.group.position.set(mc.x, mc.y, mc.z);
         g.group.scale.set(meters * mpu, meters * mpu, meters * mpu);
         g.group.rotation.x = Math.PI / 2;                     // Y-up model -> Z-up world (stand upright)
-        g.inner.rotation.y = (m.rotZ || 0) * D2R;             // yaw
+        g.inner.rotation.order = 'YXZ';                       // heading → pitch → roll (aircraft attitude)
+        g.inner.rotation.set((m.pitch || 0) * D2R, (m.rotZ || 0) * D2R, (m.roll || 0) * D2R);
         g.group.visible = true;
       } catch (e) { /* placement guard — never poison the load state */ }
     });
@@ -205,6 +207,7 @@
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id
     has2D: id => markers.has(id),
+    marker: id => markers.get(id) || null,   // for the control HUD's selection highlight
     _groups: groups,       // test hook
   };
   syncAll();

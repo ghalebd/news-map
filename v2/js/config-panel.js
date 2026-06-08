@@ -451,9 +451,10 @@
       const hd = h('div', 'cfg-m3d__hd');
       const ttl = h('div', 'cfg-m3d__nm', esc(m.name || 'Model'));
       const onb = h('button', 'cfg-ordb' + (m.on !== false ? ' is-on' : ''), m.on !== false ? I.eye : I.eyeOff); onb.title = 'Show / hide'; onb.onclick = () => { S.updateModel3d(m.id, { on: m.on === false }); renderTab(); };
+      const ctl = h('button', 'cfg-ordb', I.move); ctl.title = 'Control on map (live HUD)'; ctl.onclick = () => window.ModelControl && ModelControl.select(m.id);
       const fly = h('button', 'cfg-ordb', I.target); fly.title = 'Fly to'; fly.onclick = () => window.GameMap.flyToView({ lat: m.lat, lng: m.lng, zoom: 9 }, { type: 'flyTo', duration: 1 });
       const del = h('button', 'cfg-pan__x', I.close); del.title = 'Delete model'; del.onclick = () => { try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} S.removeModel3d(m.id); renderTab(); };
-      hd.append(ttl, fly, onb, del); it.appendChild(hd);
+      hd.append(ttl, ctl, fly, onb, del); it.appendChild(hd);
       it.appendChild(slider('Size (km)', Math.round((m.scale || 1) * 10) / 10, 0.1, 200, 0.1, v => S.updateModel3d(m.id, { scale: v })));
       it.appendChild(slider('Rotation', Math.round(m.rotZ || 0), 0, 359, 1, v => S.updateModel3d(m.id, { rotZ: v })));
       it.appendChild(slider('Height (m)', Math.round(m.alt || 0), -500, 8000, 10, v => S.updateModel3d(m.id, { alt: v })));

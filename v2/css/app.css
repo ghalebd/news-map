@@ -475,6 +475,7 @@ body.mode-3d .seafx, body.mode-3d .fxgrid, body.mode-3d .fxclouds, body.mode-3d 
 .dnfx { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; transition: opacity .35s var(--ease); }
 .m3d-billboard { filter: drop-shadow(0 6px 9px rgba(0,0,0,.55)); cursor: grab; }
 .m3d-billboard:active { cursor: grabbing; }
+.m3d-sel { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; filter: drop-shadow(0 0 7px var(--accent)) drop-shadow(0 6px 9px rgba(0,0,0,.55)); }
 body.ui-hidden .dnfx { display: none !important; }
 body.mode-3d .dnfx { display: none !important; }
 
