@@ -107,7 +107,7 @@ const Draw = (() => {
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
-      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; const tint = el.tint ? `<span class="asset-tint" style="background:${el.tint};opacity:${(el.tintStr == null ? 65 : el.tintStr) / 100};-webkit-mask:url('${esc(el.src)}') center/contain no-repeat;mask:url('${esc(el.src)}') center/contain no-repeat;transform:rotate(${rot}deg)"></span>` : ''; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<span class="asset-im" style="width:${w}px;height:auto"><img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${tint}</span>${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
       case 'frontline': return frontLine(L.latLng(el.a), L.latLng(el.b), { color: el.color });
       case 'country': { const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: el.color, weight: 2, fillColor: el.color, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(el.name, { sticky: true, className: 'trk-tip' }); return lyr; }
     }
@@ -242,8 +242,9 @@ const Draw = (() => {
   function buildCtx(el) {
     ctx.innerHTML = '';
     const COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
-    const colors = h('div', 'ctxbar__colors');
-    COLORS.forEach(c => { const s = h('button', 'ctxbar__sw' + (c === el.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.updateElement(el.id, { color: c }); el.color = c; buildCtx(el); }; colors.appendChild(s); });
+    const colors = h('div', 'ctxbar__colors'); const isAsset = el.type === 'asset';
+    if (isAsset) { const clr = h('button', 'ctxbar__sw ctxbar__sw--none' + (!el.tint ? ' is-on' : '')); clr.title = 'No tint'; clr.onclick = () => { S.updateElement(el.id, { tint: undefined }); el.tint = undefined; buildCtx(el); }; colors.appendChild(clr); }
+    COLORS.forEach(c => { const on = isAsset ? el.tint === c : c === el.color; const s = h('button', 'ctxbar__sw' + (on ? ' is-on' : '')); s.style.background = c; s.title = isAsset ? 'Tint image' : 'Colour'; s.onclick = () => { if (isAsset) { S.updateElement(el.id, { tint: c }); el.tint = c; } else { S.updateElement(el.id, { color: c }); el.color = c; } buildCtx(el); }; colors.appendChild(s); });
     ctx.appendChild(colors);
     if (el.type === 'arrow' || el.type === 'curve') ctx.appendChild(ctxBtn(I.curve, 'Straight ↔ Curved', () => { S.updateElement(el.id, { type: el.type === 'arrow' ? 'curve' : 'arrow' }); el.type = el.type === 'arrow' ? 'curve' : 'arrow'; }));
     if (el.type === 'marker') {

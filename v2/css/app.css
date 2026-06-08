@@ -182,6 +182,7 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .ctxbar__colors { display: flex; gap: 4px; padding-right: 6px; border-right: 1px solid var(--stroke); }
 .ctxbar__sw { width: 15px; height: 15px; border-radius: 4px; cursor: pointer; border: 1px solid var(--stroke); }
 .ctxbar__sw.is-on { border-color: var(--accent); box-shadow: var(--accent-glow); }
+.ctxbar__sw--none { background: linear-gradient(135deg, transparent 44%, #ff453a 44%, #ff453a 56%, transparent 56%), var(--glass-2); }
 .ctxbar__btn { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--stroke); border-radius: 7px; color: var(--text-2); transition: all var(--t-fast) var(--ease); }
 .ctxbar__btn svg { width: 14px; height: 14px; }
 .ctxbar__btn:hover { color: var(--accent); border-color: var(--accent); }
@@ -263,6 +264,8 @@ body.mode-live .qtools { display: flex; }
 .map-label span { display: inline-block; background: rgba(8, 11, 18, 0.78); color: var(--text); padding: 3px 8px; border-radius: 6px;
   font: 600 11px var(--font); letter-spacing: .4px; white-space: nowrap; text-transform: uppercase; border: 1px solid var(--accent); }
 .asset-img { filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.55)); display: block; }
+.asset-im { position: relative; display: inline-block; }
+.asset-tint { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 .map-asset { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .map-asset span { background: rgba(8, 11, 18, 0.78); color: var(--text); padding: 2px 7px; border-radius: 5px; font: 700 10px var(--font); letter-spacing: .4px; white-space: nowrap; text-transform: uppercase; border: 1px solid var(--accent); }
 
