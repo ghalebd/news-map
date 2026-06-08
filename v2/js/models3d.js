@@ -78,7 +78,7 @@
   // marker, 3D group, cached scene + billboards, and free the object URL.
   function purge(id) {
     const mk = markers.get(id); if (mk) { L2.removeLayer(mk); markers.delete(id); }
-    const g = groups.get(id); if (g) { if (layer && layer.scene) layer.scene.remove(g.group); groups.delete(id); }   // clone — not disposed
+    const g = groups.get(id); if (g) { if (layer && layer.scene) { layer.scene.remove(g.group); if (g.shadow) layer.scene.remove(g.shadow); } groups.delete(id); }   // clone — not disposed
     if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }   // master owns the GPU resources
     dropBillboards(id);
     if (window.Assets3D && Assets3D.revoke) Assets3D.revoke(id);
@@ -146,12 +146,23 @@
 
   /* ============ 3D MapLibre custom layer ============ */
   let glmap = null, layer = null;
-  const groups = new Map();   // id -> { group, inner, loading, failed }
+  const groups = new Map();   // id -> { group, inner, shadow, loading, failed }
   // sun (synced from map3d via setLight) — direction the light comes FROM (azimuth/altitude)
-  const lightCfg = { az: 315, alt: 45, intensity: 1.9, ambient: 1.0 };
+  const lightCfg = { az: 315, alt: 45, intensity: 1.9, ambient: 1.0, shadow: 0.55 };
+  // soft round ground-shadow under each model (one shared texture+material+geometry)
+  let shadowMat = null, shadowGeo = null;
+  function ensureShadow() {
+    if (shadowMat) return;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64; const cx = cv.getContext('2d');
+    const gr = cx.createRadialGradient(32, 32, 1, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,0.85)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = gr; cx.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(cv);
+    shadowMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: lightCfg.shadow });
+    shadowGeo = new THREE.PlaneGeometry(1, 1);   // lies in the mercator XY ground plane
+  }
   function sunVec(az, alt) { const a = (alt || 0) * D2R, z = (az || 0) * D2R; return [Math.cos(a) * Math.sin(z), Math.cos(a) * Math.cos(z), Math.sin(a)]; }
   function applyLightTo(lyr) { if (!lyr || !lyr.dir) return; const v = sunVec(lightCfg.az, lightCfg.alt); lyr.dir.position.set(v[0], v[1], v[2]); lyr.dir.intensity = lightCfg.intensity; if (lyr.hemi) lyr.hemi.intensity = lightCfg.ambient; }
-  function setLight(L) { if (!L) return; if (L.az != null) lightCfg.az = L.az; if (L.alt != null) lightCfg.alt = L.alt; if (L.intensity != null) lightCfg.intensity = L.intensity; if (L.ambient != null) lightCfg.ambient = L.ambient; applyLightTo(layer); if (glmap) glmap.triggerRepaint(); }
+  function setLight(L) { if (!L) return; if (L.az != null) lightCfg.az = L.az; if (L.alt != null) lightCfg.alt = L.alt; if (L.intensity != null) lightCfg.intensity = L.intensity; if (L.ambient != null) lightCfg.ambient = L.ambient; if (L.shadow != null) lightCfg.shadow = L.shadow; if (shadowMat) shadowMat.opacity = lightCfg.shadow; applyLightTo(layer); update3D(); if (glmap) glmap.triggerRepaint(); }
   const customLayer = {
     id: 'models3d-gl', type: 'custom', renderingMode: '3d',
     onAdd(map, gl) {
@@ -173,8 +184,9 @@
   function ensureGroup(m, scene) {
     let g = groups.get(m.id);
     if (g) return g;
-    g = { group: new THREE.Group(), inner: null, raw: null, styleVal: m.style || 'solid', loading: true };
-    g.group.visible = false; scene.add(g.group); groups.set(m.id, g);
+    ensureShadow();
+    g = { group: new THREE.Group(), inner: null, raw: null, styleVal: m.style || 'solid', loading: true, shadow: new THREE.Mesh(shadowGeo, shadowMat) };
+    g.shadow.visible = false; g.group.visible = false; scene.add(g.shadow); scene.add(g.group); groups.set(m.id, g);
     loadRaw(m).then(raw => { g.raw = raw; g.inner = buildInner(raw, m.style); g.group.add(g.inner); g.loading = false; update3D(); })
       .catch(() => { g.failed = true; g.loading = false; });
     return g;
@@ -183,7 +195,7 @@
     if (!glmap || !layer || !layer.scene) return;
     const scene = layer.scene;
     const want = new Set(models().filter(m => m.on !== false && m.mode !== '2d').map(m => m.id));
-    for (const [id, g] of groups) if (!want.has(id)) { scene.remove(g.group); groups.delete(id); }   // clone — never dispose (shares the master's GPU resources)
+    for (const [id, g] of groups) if (!want.has(id)) { scene.remove(g.group); if (g.shadow) scene.remove(g.shadow); groups.delete(id); }   // clone — never dispose (shares the master's GPU resources)
     models().forEach(m => {
       if (m.on === false || m.mode === '2d') return;
       const g = ensureGroup(m, scene);
@@ -202,6 +214,20 @@
         g.inner.rotation.order = 'YXZ';                       // heading → pitch → roll (aircraft attitude)
         g.inner.rotation.set((e.pitch || 0) * D2R, (e.rotZ || 0) * D2R, (e.roll || 0) * D2R);
         g.group.visible = true;
+        // ground shadow: a soft blob on the terrain below the model, cast away from
+        // the sun and lengthened when the sun is low (so azimuth/height read visibly)
+        if (g.shadow) {
+          if (lightCfg.shadow > 0.01) {
+            const gmc = maplibregl.MercatorCoordinate.fromLngLat([e.lng, e.lat], ground);
+            const low = 1 + (1 - Math.sin(Math.max(6, lightCfg.alt) * D2R)) * 1.6;   // low sun → longer
+            const fp = meters * mpu * 1.2, az = lightCfg.az * D2R;
+            const off = fp * 0.45 * (low - 1);
+            g.shadow.position.set(gmc.x - Math.sin(az) * off, gmc.y + Math.cos(az) * off, gmc.z);
+            g.shadow.scale.set(fp, fp * low, 1);          // stretch along the sun axis
+            g.shadow.rotation.z = -az;
+            g.shadow.visible = true;
+          } else g.shadow.visible = false;
+        }
       } catch (e) { /* placement guard — never poison the load state */ }
     });
     glmap.triggerRepaint();

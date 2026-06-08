@@ -47,7 +47,7 @@ const Store = (() => {
     tilt: 0,                 // 3D perspective tilt (deg)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
     threeD: { exaggeration: 2.6, pitch: 62, labels3d: true },   // 3D terrain defaults (MapLibre)
-    light3d: { on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5 },   // 3D sun: lights terrain (hillshade) + GLB models from one direction
+    light3d: { on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55 },   // 3D sun: lights terrain (hillshade) + GLB models + ground shadows
     timeline: { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} },   // keyframe choreography (camera + models), synced
     grid: { on: false, size: 60, color: '#7fb0ff', opacity: 16, weight: 1 },   // aesthetic square grid overlay
     sea: { on: false, intensity: 55, wave: 36, speed: 26, color: '#2c7fd6' },   // masked water caustics (wave = size %)

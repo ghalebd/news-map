@@ -412,7 +412,7 @@
     bd.appendChild(h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen rotate buttons.'));
     ct.appendChild(sec);
 
-    const L = Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5 }, C.light3d || {});
+    const L = Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55 }, C.light3d || {});
     const lt = section('3D lighting', I.target, () => S.setLight3d(cp(S.DEFAULT_CONFIG.light3d)));
     lt.bd.appendChild(rowTog('Sun lighting', L.on !== false, on => S.setLight3d({ on })));
     lt.bd.append(
@@ -420,8 +420,9 @@
       slider('Sun height', Math.round(L.alt), 0, 90, 1, v => S.setLight3d({ alt: v })),
       slider('Light intensity', Math.round(L.intensity * 10) / 10, 0, 4, 0.1, v => S.setLight3d({ intensity: v })),
       slider('Ambient fill', Math.round(L.ambient * 10) / 10, 0, 3, 0.1, v => S.setLight3d({ ambient: v })),
-      slider('Terrain relief', Math.round(L.relief * 100) / 100, 0, 1, 0.05, v => S.setLight3d({ relief: v })));
-    lt.bd.appendChild(h('div', 'hint', 'A directional sun shades the terrain relief and lights the 3D equipment/models from the same angle. Lower sun = longer shadows & more drama.'));
+      slider('Terrain relief', Math.round(L.relief * 100) / 100, 0, 1, 0.05, v => S.setLight3d({ relief: v })),
+      slider('Model shadows', Math.round(L.shadow == null ? 55 : L.shadow), 0, 100, 1, v => S.setLight3d({ shadow: v })));
+    lt.bd.appendChild(h('div', 'hint', 'A directional sun shades the terrain relief (relief slider) and lights the 3D models. Model shadows drop a soft ground shadow under each model — cast away from the sun and longer when the sun is low. Sun direction/height steer both the terrain shading and the shadows.'));
     ct.appendChild(lt.sec);
   }
 

@@ -54,7 +54,7 @@
   /* ---- 3D sun lighting: a directional sun that shades the terrain (hillshade)
      and lights the GLB models from the same azimuth/altitude, so relief and
      equipment "pop". config.light3d (synced): { on, az, alt, intensity, ambient, relief } ---- */
-  const cfgL = () => Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5 }, S.cfg().light3d || {});
+  const cfgL = () => Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55 }, S.cfg().light3d || {});
   function firstSymbolId() { try { const ls = map.getStyle().layers; for (const l of ls) if (l.type === 'symbol') return l.id; } catch (e) {} return undefined; }
   function addHillshade() {
     try {
@@ -76,7 +76,7 @@
     } catch (e) {}
     // global light (affects any extrusions + overall model shading anchor)
     try { map.setLight({ anchor: 'map', position: [1.5, L.az, Math.max(0, 90 - L.alt)], color: '#ffffff', intensity: L.on ? 0.5 : 0.2 }); } catch (e) {}
-    try { if (window.Models3D && Models3D.setLight) Models3D.setLight(L.on ? L : Object.assign({}, L, { intensity: 0.9, ambient: 1.4 })); } catch (e) {}
+    try { if (window.Models3D && Models3D.setLight) Models3D.setLight(L.on ? Object.assign({}, L, { shadow: (L.shadow || 0) / 100 }) : Object.assign({}, L, { intensity: 0.9, ambient: 1.4, shadow: 0 })); } catch (e) {}
   }
   // make every label (base style + scene) lie on the terrain so names read as 3D when tilted
   function applyLabels3D() {
