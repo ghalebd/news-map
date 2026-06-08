@@ -466,7 +466,7 @@ body.ui-hidden .geo-pop { display: none !important; }
 /* ---------- ambient FX overlays (grid + masked sea + clouds) ---------- */
 .fxgrid { position: fixed; inset: 0; z-index: 7; pointer-events: none; }
 /* sea caustics: a canvas pinned to the map container, masked to the sea */
-.seafx { position: absolute; left: 0; top: 0; z-index: 250; pointer-events: none; mix-blend-mode: screen;
+.seafx { position: absolute; left: 0; top: 0; z-index: 250; pointer-events: none; mix-blend-mode: normal;
   transition: opacity .35s var(--ease); }
 .fxclouds { position: fixed; inset: -15%; z-index: 8; pointer-events: none; mix-blend-mode: screen;
   background-repeat: repeat; animation: cloudDrift 70s linear infinite; }

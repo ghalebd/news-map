@@ -18,11 +18,11 @@
   const on = () => cfg().on && !document.body.classList.contains('mode-3d');
   const hexRGB = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); const n = m ? parseInt(m[1], 16) : 0x3aa0ff; return { r: (n >> 16 & 255) / 255, g: (n >> 8 & 255) / 255, b: (n & 255) / 255 }; };
 
-  /* seamless caustic tile — smaller waves = higher frequency */
+  /* seamless caustic tile — bright light veins (alpha from noise); smaller waves = higher frequency */
   function makeTile() {
     const s = cfg(), wave = s.wave == null ? 36 : s.wave, bf = (0.02 + (100 - wave) / 100 * 0.09).toFixed(3);
-    const c = hexRGB(s.color || '#3aa0ff');
-    const mtx = `0 0 0 0 ${c.r} 0 0 0 0 ${c.g} 0 0 0 0 ${c.b} 0 0 0 2.4 -1.3`;
+    // light-cyan caustic highlights that ride over the flat water tint drawn in frame()
+    const mtx = `0 0 0 0 0.78  0 0 0 0 0.92  0 0 0 0 1  0 0 0 1.9 -0.78`;
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='${bf}' numOctaves='2' seed='4' stitchTiles='stitch'/><feColorMatrix type='matrix' values='${mtx}'/></filter><rect width='256' height='256' filter='url(#c)'/></svg>`;
     const img = new Image(); img.onload = () => { tile = img; pat = null; ready = true; }; img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
   }
@@ -58,15 +58,18 @@
   function frame() {
     raf = requestAnimationFrame(frame);
     if (!ready || !on() || paused) return;
-    const s = cfg(), W = cv.width, H = cv.height;
+    const s = cfg(), W = cv.width, H = cv.height, I = (s.intensity == null ? 45 : s.intensity) / 100;
     off += 0.18 * Math.max(0.2, 60 / (s.speed || 26));
     if (!pat) pat = ctx.createPattern(tile, 'repeat');
-    const sc = Math.max(0.5, Math.min(2.6, map.getZoom() / 5));   // waves grow with zoom (connected to map)
+    const c = hexRGB(s.color || '#3aa0ff'), sc = Math.max(0.5, Math.min(2.6, map.getZoom() / 5));   // waves grow with zoom
     ctx.clearRect(0, 0, W, H);
-    ctx.globalAlpha = (s.intensity == null ? 34 : s.intensity) / 100;
-    const wrap = 256 * sc, m = new DOMMatrix(); m.translateSelf(off % wrap, (off * 0.6) % wrap); m.scaleSelf(sc, sc);
+    // 1) flat water tint
+    ctx.globalAlpha = I * 0.7; ctx.fillStyle = `rgb(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0})`; ctx.fillRect(0, 0, W, H);
+    // 2) moving caustic light veins
+    ctx.globalAlpha = I; const wrap = 256 * sc, m = new DOMMatrix(); m.translateSelf(off % wrap, (off * 0.6) % wrap); m.scaleSelf(sc, sc);
     try { pat.setTransform(m); } catch (e) {}
     ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
+    // 3) clip to the sea
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'destination-in'; ctx.drawImage(mask, 0, 0); ctx.globalCompositeOperation = 'source-over';
   }
 

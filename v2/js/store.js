@@ -49,7 +49,7 @@ const Store = (() => {
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
     threeD: { exaggeration: 2.6, pitch: 62, labels3d: true },   // 3D terrain defaults (MapLibre)
     grid: { on: false, size: 60, color: '#7fb0ff', opacity: 16, weight: 1 },   // aesthetic square grid overlay
-    sea: { on: false, intensity: 34, wave: 36, speed: 26, color: '#3aa0ff' },   // masked water caustics (wave = size %)
+    sea: { on: false, intensity: 55, wave: 36, speed: 26, color: '#2c7fd6' },   // masked water caustics (wave = size %)
     clouds: { on: false, amount: 32, size: 50, softness: 55, speed: 70 },        // drifting clouds (size %, softness %)
     ltStyle: 'news',         // lower-third template: news | breaking | glass | box | minimal | bold
     thirds: false,           // rule-of-thirds + title-safe composition overlay
