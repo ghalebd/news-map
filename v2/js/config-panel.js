@@ -54,6 +54,7 @@
       const w = Math.max(360, Math.min(window.innerWidth * 0.96, startW + (ev.clientX - startX)));
       drawer.style.width = w + 'px'; document.body.style.setProperty('--cfg-w', w + 'px');
       if (window.Movable) { Movable.setCfgOffset(w); Movable.reflow(); }
+      relayout();   // add/remove columns live as the panel widens/narrows
     };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.body.classList.remove('cfg-resizing'); try { localStorage.setItem(CW_KEY, Math.round(drawer.getBoundingClientRect().width)); } catch (e) {} };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
@@ -473,10 +474,21 @@
     sec.addEventListener('dragleave', () => sec.classList.remove('dragover'));
     sec.addEventListener('drop', e => { e.preventDefault(); sec.classList.remove('dragover'); const from = e.dataTransfer.getData('text/plain'), to = title(sec); if (from && from !== to) reorder(from, to); });
   }
+  // responsive column count from the panel width (~300px per column)
+  function colCount() { const w = bodyEl.clientWidth || drawer.getBoundingClientRect().width || 600; return Math.max(1, Math.min(4, Math.round((w - 24) / 300))); }
+  // re-flow existing sections into the right number of columns when the width changes
+  // (moves the live nodes, so open state + listeners are preserved — no rebuild)
+  function relayout() {
+    const n = colCount(); if (bodyEl.querySelectorAll('.cfg-col').length === n) return;
+    const order = getOrder();
+    const secs = [...bodyEl.querySelectorAll('.cfg-sec')].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+    bodyEl.innerHTML = ''; const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
+    secs.forEach((sec, i) => cols[i % n].appendChild(sec));
+  }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
     bodyEl.innerHTML = '';
-    const colA = h('div', 'cfg-col'), colB = h('div', 'cfg-col'); bodyEl.append(colA, colB);
+    const n = colCount(); const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
     const tmp = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), tmp));
     let secs = [...tmp.children];
     const natural = secs.map(title);
@@ -486,12 +498,13 @@
     // columns by always dropping the next card into the currently-shorter one (masonry).
     if (openT.size) secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
     else if (secs[0]) secs[0].classList.add('open');
-    // stable, deterministic 2-column split by order (interleaved) — sections never
-    // jump columns when you open/close or click a control inside them
-    secs.forEach((sec, i) => { setupDnD(sec); (i % 2 === 0 ? colA : colB).appendChild(sec); });
+    // stable, deterministic interleave across the responsive column count — sections
+    // never jump when you open/close or click controls inside them
+    secs.forEach((sec, i) => { setupDnD(sec); cols[i % n].appendChild(sec); });
     applyFilter();
   }
   renderTab();
+  window.addEventListener('resize', relayout);
 
   S.on((st, evt) => {
     // don't rebuild the panel out from under an input the operator is typing in
