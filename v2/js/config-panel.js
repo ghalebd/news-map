@@ -289,6 +289,7 @@
       mkBtn(I.save, 'Save file', () => window.UI && UI.saveProject(S.state.rundown.title)),
       mkBtn(I.load || I.upload, 'Load file', () => window.UI && UI.loadProject()),
       mkBtn(I.camera || I.eye, 'Export PNG', () => window.UI && UI.exportPNG()),
+      mkBtn(I.save, 'Export PDF', () => window.UI && UI.exportPDF()),
       mkBtn(I.eyeOff || I.eye, 'Hide UI', () => window.UI && UI.hideUI(true)),
       mkBtn(I.erase, 'Clear scene', () => { if (confirm('Clear all elements of the current scene?')) { S.clearElements(); window.UI && UI.toast('Scene cleared'); } }),
     );
@@ -391,8 +392,9 @@
       slider('Cloud amount', cl.amount, 0, 80, 1, v => S.setClouds({ amount: v })),
       slider('Cloud size', cl.size, 20, 120, 1, v => S.setClouds({ size: v })),
       slider('Cloud softness', cl.softness, 0, 100, 1, v => S.setClouds({ softness: v })),
-      slider('Cloud speed (s)', cl.speed, 20, 200, 1, v => S.setClouds({ speed: v })),
-      h('div', 'hint', 'Sea water renders only over the sea (land is masked out) and waves scale with zoom. Clouds drift across everything and also scale with the map. Toggle off anytime.'));
+      slider('Cloud speed (s)', cl.speed, 20, 200, 1, v => S.setClouds({ speed: v })));
+    bd.appendChild(rowTog('Rule of thirds (composition guide)', !!C.thirds, on => S.setThirds(on)));
+    bd.appendChild(h('div', 'hint', 'Sea water renders only over the sea (land masked) and scales with zoom; clouds drift and scale too. Rule-of-thirds adds a composition + title-safe guide (hidden in clean output).'));
     ct.appendChild(sec);
   }
 

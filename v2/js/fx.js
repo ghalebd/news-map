@@ -7,7 +7,7 @@
 (() => {
   const S = window.Store, map = window.GameMap.map;
   const mk = c => { const e = document.createElement('div'); e.className = c; document.body.appendChild(e); return e; };
-  const grid = mk('fxgrid'), clouds = mk('fxclouds');
+  const grid = mk('fxgrid'), clouds = mk('fxclouds'), thirds = mk('fxthirds');
   const hexA = (hex, a) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return `rgba(127,176,255,${a})`; const n = parseInt(m[1], 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
 
   function cloudTile() {
@@ -36,6 +36,7 @@
       grid.style.backgroundImage = `linear-gradient(${col} ${w}px, transparent ${w}px), linear-gradient(90deg, ${col} ${w}px, transparent ${w}px)`;
       grid.style.backgroundSize = `${g.size || 60}px ${g.size || 60}px`;
     } else grid.hidden = true;
+    thirds.hidden = !S.cfg().thirds;
     renderClouds();
   }
   map.on('zoomend', () => { if (!(S.cfg().clouds || {}).on) return; const bs = cloudSize(); clouds.style.backgroundSize = bs + 'px ' + bs + 'px'; });

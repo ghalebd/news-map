@@ -431,6 +431,15 @@ body.ui-hidden .mvh { display: none !important; }
 /* keyboard focus indicator (accessibility) */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* ---------- rule-of-thirds / title-safe composition overlay ---------- */
+.fxthirds { position: fixed; inset: 0; z-index: 9; pointer-events: none;
+  background-image:
+    linear-gradient(90deg, transparent 33.23%, rgba(255,255,255,.45) 33.23% 33.43%, transparent 33.43%, transparent 66.56%, rgba(255,255,255,.45) 66.56% 66.76%, transparent 66.76%),
+    linear-gradient(0deg, transparent 33.23%, rgba(255,255,255,.45) 33.23% 33.43%, transparent 33.43%, transparent 66.56%, rgba(255,255,255,.45) 66.56% 66.76%, transparent 66.76%); }
+.fxthirds::before { content: ''; position: absolute; inset: 5%; border: 1px dashed rgba(255,255,255,.34); }
+.fxthirds::after { content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%,-50%); border: 1px solid rgba(255,255,255,.5); border-radius: 50%; }
+body.ui-hidden .fxthirds { display: none !important; }
+
 /* ---------- place search (geocode) ---------- */
 .geo-btn--float { position: fixed; right: 16px; top: 16px; z-index: var(--z-bar); width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass); border: 1px solid var(--stroke); box-shadow: var(--sheen); }
 .geo-pop { position: fixed; z-index: var(--z-flyout); width: 268px; max-height: 320px; display: flex; flex-direction: column; padding: 8px; border-radius: var(--r); animation: pop var(--t) var(--ease-out); }

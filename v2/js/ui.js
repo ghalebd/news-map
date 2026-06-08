@@ -87,6 +87,22 @@
         }, 'image/png');
       }).catch(() => { t.remove(); toast('Export failed'); });
   }
+  function exportPDF() {
+    if (!window.html2canvas) { toast('Export library not loaded'); return; }
+    const t = toast('Rendering PDF…', 8000);
+    html2canvas(document.body, { useCORS: true, allowTaint: false, backgroundColor: '#0e1622', logging: false, scale: 2 })
+      .then(canvas => {
+        const data = canvas.toDataURL('image/png');
+        const w = window.open('', '_blank');
+        t.remove();
+        if (!w) { toast('Allow pop-ups to export PDF'); return; }
+        const title = esc(S.state.rundown.title || 'news-map');
+        const orient = canvas.width >= canvas.height ? 'landscape' : 'portrait';
+        w.document.write(`<!doctype html><html><head><title>${title}</title><style>@page{size:${orient};margin:0}html,body{margin:0;background:#0e1622}img{width:100%;display:block}</style></head><body><img src="${data}" onload="setTimeout(function(){window.focus();window.print();},200)"></body></html>`);
+        w.document.close();
+        toast('PDF ready — choose “Save as PDF”');
+      }).catch(() => { t.remove(); toast('Export failed'); });
+  }
 
   /* ---------- snapshots (named restore points, local) ---------- */
   const SNAP_KEY = 'newsmap.v3.snapshots';
@@ -99,5 +115,5 @@
   function restoreSnapshot(id) { const s = snaps().find(x => x.id === id); if (s) { S.importState(s.data); toast('Snapshot restored'); } }
   function deleteSnapshot(id) { try { localStorage.setItem(SNAP_KEY, JSON.stringify(snaps().filter(x => x.id !== id))); } catch (e) {} }
 
-  window.UI = { toast, input, hideUI, saveProject, loadProject, exportPNG, snaps, saveSnapshot, restoreSnapshot, deleteSnapshot };
+  window.UI = { toast, input, hideUI, saveProject, loadProject, exportPNG, exportPDF, snaps, saveSnapshot, restoreSnapshot, deleteSnapshot };
 })();
