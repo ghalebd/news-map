@@ -94,7 +94,9 @@
     const prev = h('button', 'mctl__x', I.navL); prev.title = 'Previous model'; prev.onclick = () => step(-1);
     const next = h('button', 'mctl__x', I.navR); next.title = 'Next model'; next.onclick = () => step(1);
     const cls = h('button', 'mctl__x', I.close); cls.title = 'Close (Esc)'; cls.onclick = deselect;
-    hd.append(grip, nameEl, wireBtn, prev, next, cls); hud.appendChild(hd);
+    hd.append(grip, nameEl, wireBtn, prev, next, cls);
+    if (window.Help) hd.appendChild(Help.dot('Model control'));
+    hud.appendChild(hd);
 
     picker = h('select', 'mctl__sel'); picker.onchange = () => select(picker.value); hud.appendChild(picker);
 

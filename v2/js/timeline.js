@@ -81,7 +81,9 @@
     const loop = h('button', 'tl__b', I.redo || I.undo); loop.title = 'Loop'; loop.onclick = () => { S.setTimeline({ loop: !TL().loop }); loop.classList.toggle('on', TL().loop); };
     const clr = h('button', 'tl__b', I.erase); clr.title = 'Clear all keyframes'; clr.onclick = () => { if (confirm('Clear the whole timeline?')) clearAll(); };
     const cls = h('button', 'tl__b', I.chevron); cls.title = 'Hide timeline'; cls.style.marginLeft = 'auto'; cls.onclick = () => toggle(false);
-    hd.append(playB, stopB, timeEl, dur, h('span', 'tl__lab', 's'), loop, clr, cls); panel.appendChild(hd);
+    hd.append(playB, stopB, timeEl, dur, h('span', 'tl__lab', 's'), loop, clr);
+    if (window.Help) hd.appendChild(Help.dot('Timeline'));
+    hd.appendChild(cls); panel.appendChild(hd);
 
     bar = h('div', 'tl__ruler'); headEl = h('div', 'tl__head'); bar.appendChild(headEl);
     bar.onclick = e => { const r = bar.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * TL().dur); };
