@@ -49,7 +49,7 @@ const GameMap = (() => {
   function flyToView(view, t) {
     if (!view) return;
     const type = t && t.type, dur = (t && t.duration) || 1.4;
-    if (type === 'cut') { map.setView([view.lat, view.lng], view.zoom); return; }
+    if (type === 'cut') { map.setView([view.lat, view.lng], view.zoom, { animate: false }); return; }
     // 'ease' = gentle linear glide; default 'flyTo' = cinematic zoom-out-and-in arc
     map.flyTo([view.lat, view.lng], view.zoom, { duration: dur, easeLinearity: type === 'ease' ? 0.45 : 0.18 });
   }

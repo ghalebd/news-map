@@ -48,6 +48,7 @@ const Store = (() => {
     clouds: { on: false, amount: 32, size: 50, softness: 55, speed: 70 },        // drifting clouds (size %, softness %)
     ltStyle: 'news',         // lower-third template: news | breaking | glass | box | minimal | bold
     thirds: false,           // rule-of-thirds + title-safe composition overlay
+    campath: { frames: [], legSec: 3, loop: false, playing: false },   // recorded camera path (record/replay)
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
     overlayWipe: 0.5,        // global before/after wipe line (0..1 of the map width)
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
@@ -182,6 +183,10 @@ const Store = (() => {
   function setClouds(patch) { if (!state.config.clouds) state.config.clouds = {}; Object.assign(state.config.clouds, patch); emit('config'); }
   function setLtStyle(v) { state.config.ltStyle = v; emit('scenes'); }
   function setThirds(on) { state.config.thirds = on; emit('config'); }
+  function campath() { if (!state.config.campath) state.config.campath = { frames: [], legSec: 3, loop: false, playing: false }; return state.config.campath; }
+  function setCampath(patch) { Object.assign(campath(), patch); emit('config'); }
+  function addCampathFrame(v) { campath().frames.push(v); emit('config'); }
+  function removeCampathFrame(i) { campath().frames.splice(i, 1); emit('config'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -198,7 +203,7 @@ const Store = (() => {
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
-    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds,
+    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds, campath, setCampath, addCampathFrame, removeCampathFrame,
   };
 })();
 window.Store = Store;

@@ -240,6 +240,20 @@
     const b3 = section('Auto-tour', I.play);
     b3.bd.append(rowTog('Auto-play scenes', !!bc.tour.playing, on => S.setTour({ playing: on })), slider('Interval (s)', bc.tour.sec || 8, 2, 30, 1, v => S.setTour({ sec: v })));
     ct.appendChild(b3.sec);
+    // camera path record / replay
+    const cpc = S.cfg().campath || { frames: [], legSec: 3, loop: false, playing: false };
+    const cpSec = section('Camera path (record / replay)', I.film, () => S.setCampath({ frames: [], playing: false }));
+    const cap = h('button', 'cfg-btn', `${I.target || I.marker}<span>Capture current view</span>`);
+    cap.onclick = () => { S.addCampathFrame(window.GameMap.currentView()); renderTab(); };
+    cpSec.bd.append(cap, h('div', 'hint', `${cpc.frames.length} keyframe(s) recorded — capture a few views, then play to fly between them.`));
+    if (cpc.frames.length) { const clr = h('button', 'cfg-btn', 'Clear path'); clr.onclick = () => { S.setCampath({ frames: [], playing: false }); renderTab(); }; cpSec.bd.appendChild(clr); }
+    cpSec.bd.append(
+      slider('Leg duration (s)', cpc.legSec || 3, 1, 12, 1, v => S.setCampath({ legSec: v })),
+      rowTog('Loop path', !!cpc.loop, on => S.setCampath({ loop: on })));
+    const cpPlay = h('button', 'cfg-btn', `${cpc.playing ? I.minus : I.play}<span>${cpc.playing ? 'Stop' : 'Play path'}</span>`);
+    cpPlay.onclick = () => { S.setCampath({ playing: !cpc.playing }); renderTab(); };
+    cpSec.bd.appendChild(cpPlay);
+    ct.appendChild(cpSec.sec);
     const sp = bc.spotlight || {};
     const b4 = section('Spotlight', I.target, () => S.setSpotlight({ radiusKm: 400, feather: 40, dim: 66 }));
     b4.bd.appendChild(rowTog('Focus mask', !!sp.on, on => { const cv = window.GameMap.currentView(); S.setSpotlight(on ? { on: true, lat: cv.lat, lng: cv.lng } : { on: false }); }));
