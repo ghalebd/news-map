@@ -145,7 +145,7 @@
   }
 
   /* ============ 3D MapLibre custom layer ============ */
-  let glmap = null, layer = null;
+  let glmap = null, layer = null, hidden = false;   // hidden: suppressed on the globe projection
   const groups = new Map();   // id -> { group, inner, shadow, loading, failed }
   // sun (synced from map3d via setLight) — direction the light comes FROM (azimuth/altitude)
   const lightCfg = { az: 315, alt: 45, intensity: 1.9, ambient: 1.0, shadow: 0.55 };
@@ -174,8 +174,11 @@
       this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
       this.renderer.autoClear = false;
     },
-    render(gl, matrix) {
-      if (!this.scene) return;
+    render(gl, args) {
+      if (!this.scene || hidden) return;
+      // MapLibre v5 passes an args object (mercator matrix in defaultProjectionData);
+      // v4 passed the matrix array directly — support both.
+      const matrix = (args && args.defaultProjectionData) ? args.defaultProjectionData.mainMatrix : args;
       this.cam.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
       this.renderer.resetState();
       this.renderer.render(this.scene, this.cam);
@@ -269,6 +272,7 @@
     attach3D,
     setLight,              // sync model lighting to the 3D sun (from map3d)
     tick, setPose, clearPoses,   // route/timeline playback / drag preview
+    setVisible(v) { hidden = !v; if (glmap) glmap.triggerRepaint(); },   // off on the globe projection
     project: (lng, lat) => (glmap ? glmap.project([lng, lat]) : null),   // for 3D selection/drag
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id

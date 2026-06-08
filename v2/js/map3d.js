@@ -49,7 +49,16 @@
     addHillshade();
     addSceneLayers(); mirror(); applyLabels3D();
     try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
-    applyLight();
+    applyLight(); applyProjection();
+  }
+  // globe ↔ flat projection (MapLibre v5). Models are mercator-projected, so they
+  // are hidden on the globe (the planet view is an establishing/whole-Earth shot).
+  function applyProjection() {
+    if (!map) return;
+    const globe = !!cfg3().globe;
+    try { map.setProjection({ type: globe ? 'globe' : 'mercator' }); } catch (e) {}
+    try { if (window.Models3D && Models3D.setVisible) Models3D.setVisible(!globe); } catch (e) {}
+    try { btn3globe.classList.toggle('is-on', globe); } catch (e) {}
   }
 
   /* ---- 3D sun lighting: a directional sun that shades the terrain (hillshade)
@@ -171,7 +180,9 @@
 
   const ctrls = h('div', 'd3ctrl glass'); ctrls.hidden = true;
   const cb = (label, title, fn) => { const b = h('button', 'd3ctrl__b', label); b.title = title; b.onclick = fn; return b; };
+  const btn3globe = cb(I.globe, 'Globe / flat view', () => S.setThreeD({ globe: !cfg3().globe }));
   ctrls.append(
+    btn3globe,
     cb(I.plus, 'Pitch up', () => map.easeTo({ pitch: Math.min(80, map.getPitch() + 8), duration: 200 })),
     cb(I.minus, 'Pitch down', () => map.easeTo({ pitch: Math.max(0, map.getPitch() - 8), duration: 200 })),
     cb(I.rotL, 'Rotate left', () => map.easeTo({ bearing: map.getBearing() - 20, duration: 200 })),
@@ -185,7 +196,7 @@
 
   /* ---- react to store: keep 3D base in step with the 2D app ---- */
   S.on((st, evt) => {
-    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); } return; }
+    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); } return; }
     if (evt === 'light3d') { if (on && map) applyLight(); return; }
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
