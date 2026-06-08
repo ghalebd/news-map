@@ -8,7 +8,7 @@
 (() => {
   const S = window.Store, map = window.GameMap.map;
   const cont = map.getContainer();
-  const cv = document.createElement('canvas'); cv.className = 'dnfx'; cont.appendChild(cv);
+  const cv = document.createElement('canvas'); cv.className = 'dnfx'; document.body.appendChild(cv);   // body-level: above the tiles (the map pane is z-index 400)
   const ctx = cv.getContext('2d');
   let timer = null;
   const cfg = () => S.cfg().dayNight || {};

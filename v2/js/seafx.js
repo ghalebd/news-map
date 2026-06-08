@@ -9,7 +9,7 @@
 (() => {
   const S = window.Store, map = window.GameMap.map;
   const cont = map.getContainer();
-  const cv = document.createElement('canvas'); cv.className = 'seafx'; cont.appendChild(cv);
+  const cv = document.createElement('canvas'); cv.className = 'seafx'; document.body.appendChild(cv);   // body-level: above the tiles (the map pane is z-index 400)
   const ctx = cv.getContext('2d');
   const mask = document.createElement('canvas'); const mctx = mask.getContext('2d');
   let tile = null, pat = null, off = 0, raf = null, ready = false;
