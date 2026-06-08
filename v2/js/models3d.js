@@ -134,7 +134,7 @@
     mk.setLatLng([e.lat, e.lng]);
     const url = await billboard(m, e.rotZ);
     if (markers.get(m.id) !== mk || !url) return;   // deleted/replaced while rendering
-    const s = px(m);
+    const s = px(e);
     mk.setIcon(L.icon({ iconUrl: url, iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)], className: 'm3d-billboard' }));
   }
   function sync2D() {
@@ -195,7 +195,7 @@
         let ground = 0; try { ground = glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([e.lng, e.lat]) || 0) : 0; } catch (er) {}
         const mc = maplibregl.MercatorCoordinate.fromLngLat([e.lng, e.lat], ground + (e.alt || 0));
         const mpu = mc.meterInMercatorCoordinateUnits();      // mercator units per metre at this latitude
-        const meters = Math.max(10, (m.scale || 1) * 1000);   // scale slider ≈ size in km
+        const meters = Math.max(10, (e.scale || 1) * 1000);   // scale slider ≈ size in km
         g.group.position.set(mc.x, mc.y, mc.z);
         g.group.scale.set(meters * mpu, meters * mpu, meters * mpu);
         g.group.rotation.x = Math.PI / 2;                     // Y-up model -> Z-up world (stand upright)
@@ -237,11 +237,12 @@
     if (window.Map3D && Map3D.on) update3D();
   }
   function setPose(id, pose) { tick({ [id]: pose }); }
+  function clearPoses() { const o = {}; poses.forEach((_, id) => o[id] = null); if (Object.keys(o).length) tick(o); }
 
   window.Models3D = {
     attach3D,
     setLight,              // sync model lighting to the 3D sun (from map3d)
-    tick, setPose,         // route playback / drag preview
+    tick, setPose, clearPoses,   // route/timeline playback / drag preview
     project: (lng, lat) => (glmap ? glmap.project([lng, lat]) : null),   // for 3D selection/drag
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id

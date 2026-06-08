@@ -200,6 +200,30 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-cat3d__i:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
 .cfg-cat3d__i span { font-size: 12px; font-weight: 700; line-height: 1.2; }
 .cfg-cat3d__i small { font-size: 9.5px; color: var(--text-2); opacity: .75; }
+/* ---- Timeline ---- */
+.tl-launch { position: fixed; left: 16px; bottom: 16px; z-index: var(--z-flyout, 60); display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 22px; color: var(--text); cursor: pointer; font-size: 12px; font-weight: 700; }
+.tl-launch svg { width: 16px; height: 16px; color: var(--accent); }
+.tl-launch:hover { color: var(--accent); }
+.tl { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: var(--z-flyout, 60); padding: 10px 12px; border-radius: var(--r); display: flex; flex-direction: column; gap: 8px; }
+.tl__hd { display: flex; align-items: center; gap: 7px; }
+.tl__b { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; transition: all var(--t-fast) var(--ease); }
+.tl__b svg { width: 15px; height: 15px; }
+.tl__b:hover, .tl__b.on { color: var(--accent); border-color: var(--accent); }
+.tl__time { font-weight: 700; font-size: 12px; min-width: 96px; }
+.tl__dur { width: 52px; height: 28px; border-radius: 7px; background: var(--glass-2); border: 1px solid var(--stroke); color: var(--text); text-align: center; }
+.tl__lab { font-size: 11px; color: var(--text-2); margin-left: -4px; }
+.tl__ruler { position: relative; height: 16px; background: var(--glass-2); border: 1px solid var(--stroke); border-radius: 6px; cursor: pointer; }
+.tl__head { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--accent); box-shadow: 0 0 6px var(--accent); pointer-events: none; transform: translateX(-1px); }
+.tl__tracks { display: flex; flex-direction: column; gap: 5px; max-height: 168px; overflow-y: auto; }
+.tl__trk { display: grid; grid-template-columns: 28px 96px 1fr; align-items: center; gap: 7px; }
+.tl__key { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); cursor: pointer; }
+.tl__key svg { width: 13px; height: 13px; }
+.tl__trklab { font-size: 11.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl__lane { position: relative; height: 22px; background: var(--glass-2); border: 1px solid var(--stroke); border-radius: 6px; }
+.tl__tick { position: absolute; top: 3px; width: 13px; height: 13px; margin-left: -6px; border-radius: 50%; background: var(--accent); border: 1.5px solid #fff; cursor: pointer; }
+.tl__tickx { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #ff6b6b; display: none; }
+.tl__tick:hover .tl__tickx { display: block; }
+body.touch .tl__b, body.touch .tl__key { width: 38px; height: 38px; }
 /* ---- Model control HUD ---- */
 .mctl { position: fixed; right: 16px; bottom: 96px; z-index: var(--z-flyout, 60); width: 236px; padding: 10px; display: flex; flex-direction: column; gap: 8px; border-radius: var(--r); user-select: none; }
 .mctl__hd { display: flex; align-items: center; gap: 6px; cursor: grab; }
