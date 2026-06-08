@@ -30,6 +30,7 @@
   const qa = h('div', 'cfg-qa');
   const qbtn = (icon, title, fn) => { const b = h('button', 'cfg-qbtn', icon); b.title = title; b.onclick = fn; return b; };
   qa.append(
+    qbtn(I.grid || I.layers, 'Reset section order & layout', () => { saveOrder([]); bodyEl.querySelectorAll('.cfg-sec.open').forEach(s => s.classList.remove('open')); renderTab(); }),
     qbtn(I.eyeOff || I.eye, 'Hide UI (H)', () => window.UI && UI.hideUI(true)),
     qbtn(I.camera || I.eye, 'Export PNG', () => window.UI && UI.exportPNG()),
     qbtn(I.save, 'Save file', () => window.UI && UI.saveProject(S.state.rundown.title)),
@@ -49,7 +50,7 @@
     if (onReset) { const rb = h('button', 'cfg-sec__rst', I.undo); rb.title = 'Reset this section to defaults'; rb.onclick = e => { e.stopPropagation(); onReset(); renderTab(); }; hd.appendChild(rb); }
     hd.appendChild(h('span', 'chev', I.chevron));
     const bd = h('div', 'cfg-sec__bd');
-    hd.onclick = () => { sec.classList.toggle('open'); rebalance(); };
+    hd.onclick = () => sec.classList.toggle('open');   // toggle only — never reshuffle columns (no jumping)
     sec.append(hd, bd); return { sec, bd };
   }
   const D = S.DEFAULT_CONFIG, cp = o => JSON.parse(JSON.stringify(o));
@@ -447,14 +448,6 @@
     sec.addEventListener('dragleave', () => sec.classList.remove('dragover'));
     sec.addEventListener('drop', e => { e.preventDefault(); sec.classList.remove('dragover'); const from = e.dataTransfer.getData('text/plain'), to = title(sec); if (from && from !== to) reorder(from, to); });
   }
-  // re-balance the two columns by height (keeps them tidy when sections open/close)
-  function rebalance() {
-    const cols = bodyEl.querySelectorAll('.cfg-col'); if (cols.length < 2) return;
-    const colA = cols[0], colB = cols[1];
-    const order = getOrder();
-    const secs = [...bodyEl.querySelectorAll('.cfg-sec')].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-    secs.forEach(sec => { (colA.offsetHeight <= colB.offsetHeight ? colA : colB).appendChild(sec); });
-  }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
     bodyEl.innerHTML = '';
@@ -468,7 +461,9 @@
     // columns by always dropping the next card into the currently-shorter one (masonry).
     if (openT.size) secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
     else if (secs[0]) secs[0].classList.add('open');
-    secs.forEach(sec => { setupDnD(sec); (colA.offsetHeight <= colB.offsetHeight ? colA : colB).appendChild(sec); });
+    // stable, deterministic 2-column split by order (interleaved) — sections never
+    // jump columns when you open/close or click a control inside them
+    secs.forEach((sec, i) => { setupDnD(sec); (i % 2 === 0 ? colA : colB).appendChild(sec); });
     applyFilter();
   }
   renderTab();
