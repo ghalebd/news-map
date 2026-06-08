@@ -38,8 +38,38 @@
       map.setTerrain({ source: 'dem', exaggeration });
     } catch (e) {}
     try { map.setSky({ 'sky-color': '#0a1830', 'sky-horizon-blend': 0.6, 'horizon-color': '#16335c', 'horizon-fog-blend': 0.5, 'fog-color': '#0a1322', 'fog-ground-blend': 0.4 }); } catch (e) {}
+    addHillshade();
     addSceneLayers(); mirror(); applyLabels3D();
     try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
+    applyLight();
+  }
+
+  /* ---- 3D sun lighting: a directional sun that shades the terrain (hillshade)
+     and lights the GLB models from the same azimuth/altitude, so relief and
+     equipment "pop". config.light3d (synced): { on, az, alt, intensity, ambient, relief } ---- */
+  const cfgL = () => Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5 }, S.cfg().light3d || {});
+  function firstSymbolId() { try { const ls = map.getStyle().layers; for (const l of ls) if (l.type === 'symbol') return l.id; } catch (e) {} return undefined; }
+  function addHillshade() {
+    try {
+      if (map.getLayer('hillshade')) return;
+      map.addLayer({ id: 'hillshade', type: 'hillshade', source: 'dem',
+        paint: { 'hillshade-illumination-anchor': 'map', 'hillshade-shadow-color': '#05101f', 'hillshade-highlight-color': '#fff6e6', 'hillshade-accent-color': '#1d3a5f' }
+      }, firstSymbolId());   // under the base map's labels so names stay readable
+    } catch (e) {}
+  }
+  function applyLight() {
+    if (!map) return;
+    const L = cfgL();
+    try {
+      if (map.getLayer('hillshade')) {
+        map.setLayoutProperty('hillshade', 'visibility', L.on ? 'visible' : 'none');
+        map.setPaintProperty('hillshade', 'hillshade-illumination-direction', Math.round(L.az));
+        map.setPaintProperty('hillshade', 'hillshade-exaggeration', L.on ? Math.max(0, Math.min(1, L.relief)) : 0);
+      }
+    } catch (e) {}
+    // global light (affects any extrusions + overall model shading anchor)
+    try { map.setLight({ anchor: 'map', position: [1.5, L.az, Math.max(0, 90 - L.alt)], color: '#ffffff', intensity: L.on ? 0.5 : 0.2 }); } catch (e) {}
+    try { if (window.Models3D && Models3D.setLight) Models3D.setLight(L.on ? L : Object.assign({}, L, { intensity: 0.9, ambient: 1.4 })); } catch (e) {}
   }
   // make every label (base style + scene) lie on the terrain so names read as 3D when tilted
   function applyLabels3D() {
@@ -139,6 +169,7 @@
   /* ---- react to store: keep 3D base in step with the 2D app ---- */
   S.on((st, evt) => {
     if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); } return; }
+    if (evt === 'light3d') { if (on && map) applyLight(); return; }
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
     if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();

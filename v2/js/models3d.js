@@ -121,13 +121,19 @@
   /* ============ 3D MapLibre custom layer ============ */
   let glmap = null, layer = null;
   const groups = new Map();   // id -> { group, inner, loading, failed }
+  // sun (synced from map3d via setLight) — direction the light comes FROM (azimuth/altitude)
+  const lightCfg = { az: 315, alt: 45, intensity: 1.9, ambient: 1.0 };
+  function sunVec(az, alt) { const a = (alt || 0) * D2R, z = (az || 0) * D2R; return [Math.cos(a) * Math.sin(z), Math.cos(a) * Math.cos(z), Math.sin(a)]; }
+  function applyLightTo(lyr) { if (!lyr || !lyr.dir) return; const v = sunVec(lightCfg.az, lightCfg.alt); lyr.dir.position.set(v[0], v[1], v[2]); lyr.dir.intensity = lightCfg.intensity; if (lyr.hemi) lyr.hemi.intensity = lightCfg.ambient; }
+  function setLight(L) { if (!L) return; if (L.az != null) lightCfg.az = L.az; if (L.alt != null) lightCfg.alt = L.alt; if (L.intensity != null) lightCfg.intensity = L.intensity; if (L.ambient != null) lightCfg.ambient = L.ambient; applyLightTo(layer); if (glmap) glmap.triggerRepaint(); }
   const customLayer = {
     id: 'models3d-gl', type: 'custom', renderingMode: '3d',
     onAdd(map, gl) {
       this.cam = new THREE.Camera();
       this.scene = new THREE.Scene();
-      this.scene.add(new THREE.HemisphereLight(0xffffff, 0x223044, 1.1));
-      const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(0.5, -1, 1); this.scene.add(d);
+      this.hemi = new THREE.HemisphereLight(0xffffff, 0x223044, lightCfg.ambient); this.scene.add(this.hemi);
+      this.dir = new THREE.DirectionalLight(0xffffff, lightCfg.intensity); this.scene.add(this.dir);
+      applyLightTo(this);
       this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
       this.renderer.autoClear = false;
     },
@@ -195,6 +201,7 @@
   S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') syncAll(); });
   window.Models3D = {
     attach3D,
+    setLight,              // sync model lighting to the 3D sun (from map3d)
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id
     has2D: id => markers.has(id),

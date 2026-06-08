@@ -408,8 +408,20 @@
       slider('Terrain height', Math.round(t.exaggeration * 10) / 10, 0.3, 8, 0.1, v => S.setThreeD({ exaggeration: v })),
       slider('Camera pitch', Math.round(t.pitch), 0, 80, 1, v => S.setThreeD({ pitch: v })));
     bd.appendChild(rowTog('3D names (lie on terrain)', t.labels3d !== false, on => S.setThreeD({ labels3d: on })));
-    bd.appendChild(h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen ⟲ ⟳.'));
+    bd.appendChild(h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen rotate buttons.'));
     ct.appendChild(sec);
+
+    const L = Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5 }, C.light3d || {});
+    const lt = section('3D lighting', I.target, () => S.setLight3d(cp(S.DEFAULT_CONFIG.light3d)));
+    lt.bd.appendChild(rowTog('Sun lighting', L.on !== false, on => S.setLight3d({ on })));
+    lt.bd.append(
+      slider('Sun direction', Math.round(L.az), 0, 359, 1, v => S.setLight3d({ az: v })),
+      slider('Sun height', Math.round(L.alt), 0, 90, 1, v => S.setLight3d({ alt: v })),
+      slider('Light intensity', Math.round(L.intensity * 10) / 10, 0, 4, 0.1, v => S.setLight3d({ intensity: v })),
+      slider('Ambient fill', Math.round(L.ambient * 10) / 10, 0, 3, 0.1, v => S.setLight3d({ ambient: v })),
+      slider('Terrain relief', Math.round(L.relief * 100) / 100, 0, 1, 0.05, v => S.setLight3d({ relief: v })));
+    lt.bd.appendChild(h('div', 'hint', 'A directional sun shades the terrain relief and lights the 3D equipment/models from the same angle. Lower sun = longer shadows & more drama.'));
+    ct.appendChild(lt.sec);
   }
 
   function tabModels3d(C, ct) {
