@@ -16,12 +16,21 @@
   pop.append(input, list); document.body.appendChild(pop);
   (function place() { const zc = document.querySelector('.zoomctl'); if (zc) zc.insertBefore(btn, zc.firstChild); else { btn.classList.add('geo-btn--float'); document.body.appendChild(btn); } })();
 
-  function anchor() { const r = btn.getBoundingClientRect(); pop.style.right = Math.round(window.innerWidth - r.left + 8) + 'px'; pop.style.top = Math.round(Math.max(12, Math.min(r.top, window.innerHeight - 320))) + 'px'; }
+  const triggers = [btn];
+  function anchorTo(el) {
+    const r = el.getBoundingClientRect(), ph = pop.offsetHeight || 300;
+    if (r.left < window.innerWidth / 2) { pop.style.left = Math.round(r.left) + 'px'; pop.style.right = 'auto'; }
+    else { pop.style.right = Math.round(window.innerWidth - r.right) + 'px'; pop.style.left = 'auto'; }
+    pop.style.top = (r.top > window.innerHeight / 2 ? Math.max(12, Math.round(r.top - ph - 8)) : Math.round(Math.min(r.top, window.innerHeight - ph - 12))) + 'px';
+  }
   function zoomForBbox(b) { if (!b) return 11; const ext = Math.max(b[2] - b[0], b[3] - b[1]) || 0.1; return Math.max(3, Math.min(13, Math.round(Math.log2(360 / ext)))); }
+  function parseCoords(q) { const m = q.trim().match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/); if (!m) return null; const lat = +m[1], lng = +m[2]; return (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) ? [lat, lng] : null; }
 
-  let t = null;
+  let t = null, lastTrigger = btn;
   async function search(q) {
     if (!q.trim()) { list.innerHTML = ''; return; }
+    const co = parseCoords(q);
+    if (co) { list.innerHTML = ''; const it = h('button', 'geo-item', `<b>Go to ${co[0]}, ${co[1]}</b><small>coordinates</small>`); it.onclick = () => { map.flyTo(co, 9, { duration: 1.6 }); pop.hidden = true; }; list.appendChild(it); return; }
     list.innerHTML = '<div class="geo-empty">Searching…</div>';
     try {
       const r = await fetch(`https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json?key=${KEY}&limit=6`);
@@ -37,8 +46,11 @@
       list.appendChild(it);
     });
   }
-  btn.onclick = e => { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) { anchor(); input.focus(); } };
+  function toggle(trigger) { lastTrigger = trigger; if (pop.hidden) { pop.hidden = false; anchorTo(trigger); input.focus(); } else pop.hidden = true; }
+  btn.onclick = e => { e.stopPropagation(); toggle(btn); };
+  const lens = document.querySelector('.status__find'); if (lens) { triggers.push(lens); lens.onclick = e => { e.stopPropagation(); toggle(lens); }; }
   input.oninput = () => { clearTimeout(t); t = setTimeout(() => search(input.value), 350); };
   input.onkeydown = e => { if (e.key === 'Enter') { clearTimeout(t); search(input.value); } else if (e.key === 'Escape') pop.hidden = true; };
-  document.addEventListener('click', e => { if (!pop.hidden && !pop.contains(e.target) && !btn.contains(e.target)) pop.hidden = true; });
+  document.addEventListener('click', e => { if (!pop.hidden && !pop.contains(e.target) && !triggers.some(x => x.contains(e.target))) pop.hidden = true; });
+  input.placeholder = 'Place name or  lat, lng';
 })();

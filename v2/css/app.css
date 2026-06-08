@@ -49,6 +49,12 @@ svg { display: block; }
 }
 .status b { color: var(--accent); }
 .status__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); }
+.status__tx { white-space: nowrap; }
+.status__find { width: 24px; height: 24px; margin-left: 2px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--text-3); border: 1px solid transparent; transition: all var(--t-fast) var(--ease); }
+.status__find svg { width: 14px; height: 14px; }
+.status__find:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+body.touch .status__find { width: 32px; height: 32px; }
+body.touch .status__find svg { width: 18px; height: 18px; }
 
 /* ---------- mode switch ---------- */
 .modesw { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: var(--z-bar); display: flex; padding: 4px; }

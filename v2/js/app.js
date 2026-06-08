@@ -25,8 +25,9 @@
     brand.style.left = (br.x == null ? 16 : br.x) + 'px'; brand.style.top = (br.y == null ? 30 : br.y) + 'px';
     if (br.logo) { img.src = br.logo; img.style.display = 'block'; img.style.height = (br.size || 38) + 'px'; } else { img.removeAttribute('src'); img.style.display = 'none'; }
   }
-  const status = h('div', 'status'); document.body.appendChild(status);
-  function renderStatus() { const v = M.currentView(); status.innerHTML = `<span class="status__dot"></span><span>${v.lat.toFixed(2)} , ${v.lng.toFixed(2)}</span> · <b>Z${v.zoom.toFixed(1)}</b>`; }
+  const status = h('div', 'status'); status.innerHTML = `<span class="status__dot"></span><span class="status__tx"></span><button class="status__find" title="Search place or coordinates">${I.search}</button>`; document.body.appendChild(status);
+  const statusTx = status.querySelector('.status__tx');
+  function renderStatus() { const v = M.currentView(); statusTx.innerHTML = `${v.lat.toFixed(2)} , ${v.lng.toFixed(2)} · <b>Z${v.zoom.toFixed(1)}</b>`; }
   M.map.on('move zoom', renderStatus); renderStatus();
 
   /* ---------- mode switch (top centre) ---------- */
