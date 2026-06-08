@@ -49,7 +49,7 @@
     if (onReset) { const rb = h('button', 'cfg-sec__rst', I.undo); rb.title = 'Reset this section to defaults'; rb.onclick = e => { e.stopPropagation(); onReset(); renderTab(); }; hd.appendChild(rb); }
     hd.appendChild(h('span', 'chev', I.chevron));
     const bd = h('div', 'cfg-sec__bd');
-    hd.onclick = () => sec.classList.toggle('open');
+    hd.onclick = () => { sec.classList.toggle('open'); rebalance(); };
     sec.append(hd, bd); return { sec, bd };
   }
   const D = S.DEFAULT_CONFIG, cp = o => JSON.parse(JSON.stringify(o));
@@ -431,12 +431,25 @@
   const saveOrder = a => { try { localStorage.setItem(ORDER_KEY, JSON.stringify(a)); } catch (e) {} };
   function reorder(from, to) { let o = getOrder().filter(x => x !== from); const i = o.indexOf(to); o.splice(i < 0 ? o.length : i, 0, from); saveOrder(o); renderTab(); }
   function setupDnD(sec) {
-    const hd = sec.querySelector('.cfg-sec__hd'); hd.setAttribute('draggable', 'true');
-    hd.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', title(sec)); e.dataTransfer.effectAllowed = 'move'; sec.classList.add('dragging'); });
-    hd.addEventListener('dragend', () => sec.classList.remove('dragging'));
+    // only the grip drags — so a click anywhere else on the header reliably toggles open/close
+    const grip = sec.querySelector('.cfg-grip');
+    if (grip) {
+      grip.setAttribute('draggable', 'true');
+      grip.addEventListener('click', e => e.stopPropagation());
+      grip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', title(sec)); e.dataTransfer.effectAllowed = 'move'; sec.classList.add('dragging'); });
+      grip.addEventListener('dragend', () => sec.classList.remove('dragging'));
+    }
     sec.addEventListener('dragover', e => { e.preventDefault(); sec.classList.add('dragover'); });
     sec.addEventListener('dragleave', () => sec.classList.remove('dragover'));
     sec.addEventListener('drop', e => { e.preventDefault(); sec.classList.remove('dragover'); const from = e.dataTransfer.getData('text/plain'), to = title(sec); if (from && from !== to) reorder(from, to); });
+  }
+  // re-balance the two columns by height (keeps them tidy when sections open/close)
+  function rebalance() {
+    const cols = bodyEl.querySelectorAll('.cfg-col'); if (cols.length < 2) return;
+    const colA = cols[0], colB = cols[1];
+    const order = getOrder();
+    const secs = [...bodyEl.querySelectorAll('.cfg-sec')].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+    secs.forEach(sec => { (colA.offsetHeight <= colB.offsetHeight ? colA : colB).appendChild(sec); });
   }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
