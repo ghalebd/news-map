@@ -31,6 +31,7 @@
     window.__m3 = map; builtStyle = S.state.mapStyle || 'satellite';   // debug/inspection hook
     map.on('error', e => { const err = e && e.error; if (err && (err.name === 'AbortError' || /abort/i.test(err.message || ''))) return; });   // swallow benign style-swap aborts
     map.on('style.load', onStyle);
+    map.on('move', () => { try { if (window.Draw && Draw.reposition) Draw.reposition(); } catch (e) {} });   // keep the selection context bar following the camera in 3D
     // re-seat 3D models on the terrain once elevation tiles load / after camera moves
     // (queryTerrainElevation returns 0 until tiles arrive). Loop-safe: only re-ground
     // once per movement/idle cycle, so update3D's repaint can't re-trigger us.
@@ -159,11 +160,19 @@
   const CLICK3 = ['marker', 'text', 'asset', 'country'];
   const tool = () => (window.Draw && window.Draw.tool) || 'select';
   const toLL = ll => L.latLng(ll.lat, ll.lng);
-  let drawing = false;
+  let drawing = false, selDrag = null;
   function bridgeDrawing() {
-    map.on('mousedown', e => { if (!on) return; const t = tool(); if (DRAG3.includes(t)) { e.preventDefault(); drawing = true; L2.fire('mousedown', { latlng: toLL(e.lngLat) }); } });
-    map.on('mousemove', e => { if (!on) return; if (drawing || tool() === 'tarrow') L2.fire('mousemove', { latlng: toLL(e.lngLat) }); });
-    map.on('mouseup', e => { if (!on) return; if (drawing) { drawing = false; L2.fire('mouseup', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 30); } });
+    map.on('mousedown', e => {
+      if (!on) return; const t = tool();
+      if (t === 'select') {   // select / move drawn elements in 3D (yield to a model under the cursor)
+        if (window.Models3D && Models3D.nearestId && Models3D.nearestId(e.point, 60)) return;
+        const el = window.Draw && Draw.pickAt(toLL(e.lngLat)); if (el) { e.preventDefault(); selDrag = { prev: e.lngLat }; }
+        return;
+      }
+      if (DRAG3.includes(t)) { e.preventDefault(); drawing = true; L2.fire('mousedown', { latlng: toLL(e.lngLat) }); }
+    });
+    map.on('mousemove', e => { if (!on) return; if (selDrag) { const d = e.lngLat; window.Draw.moveSelected(d.lat - selDrag.prev.lat, d.lng - selDrag.prev.lng); selDrag.prev = d; mirror(); return; } if (drawing || tool() === 'tarrow') L2.fire('mousemove', { latlng: toLL(e.lngLat) }); });
+    map.on('mouseup', e => { if (!on) return; if (selDrag) { window.Draw.commitSelected(); selDrag = null; setTimeout(mirror, 30); return; } if (drawing) { drawing = false; L2.fire('mouseup', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 30); } });
     map.on('click', e => { if (!on) return; const t = tool(); if (CLICK3.includes(t) || t === 'tarrow') { L2.fire('click', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 60); } });
     map.on('dblclick', e => { if (!on || tool() !== 'tarrow') return; e.preventDefault(); L2.fire('dblclick', { latlng: toLL(e.lngLat), originalEvent: e.originalEvent }); setTimeout(mirror, 30); });
   }

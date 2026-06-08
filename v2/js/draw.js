@@ -151,6 +151,25 @@ const Draw = (() => {
     if (layer.eachLayer) layer.eachLayer(wire); else wire(layer);
   }
   function findLayer(id) { let r = null; drawn.eachLayer(l => { if (l.__id === id) r = l; }); return r; }
+  // screen point using whichever map is active (GL in 3D, Leaflet in 2D) so selection
+  // + the context bar work identically in both modes.
+  function screenPt(lat, lng) { if (window.Map3D && Map3D.on && Map3D.map) { try { const p = Map3D.map.project([lng, lat]); return L.point(p.x, p.y); } catch (e) {} } return map.latLngToContainerPoint(L.latLng(lat, lng)); }
+  function geomHit(geom, lng, lat) { if (!geom) return false; if (geom.type === 'Polygon') return pip([lng, lat], geom.coordinates); if (geom.type === 'MultiPolygon') { for (const poly of geom.coordinates) if (pip([lng, lat], poly)) return true; } return false; }
+  // pick the nearest drawn element to a lat/lng (areas via point-in-polygon, others by
+  // screen proximity), select it, or deselect if none. Works in 2D and 3D.
+  function pickAt(latlng, tol) {
+    const sp = screenPt(latlng.lat, latlng.lng), T = tol || 22; let best = null, bd = T;
+    (S.activeScene().elements || []).forEach(el => {
+      const geom = el.geom || (el.pts && (el.type === 'polygon' || el.type === 'country') ? { type: 'Polygon', coordinates: [el.pts.map(p => [p[1], p[0]])] } : null);
+      if ((el.type === 'country' || el.type === 'polygon') && geomHit(geom, latlng.lng, latlng.lat)) { best = el; bd = 0; return; }
+      const pts = []; if (el.ll) pts.push(el.ll); if (el.a) pts.push(el.a); if (el.b) pts.push(el.b); if (el.pts) el.pts.forEach(p => pts.push(p));
+      pts.forEach(p => { const q = screenPt(p[0], p[1]); const d = Math.hypot(q.x - sp.x, q.y - sp.y); if (d < bd) { bd = d; best = el; } });
+    });
+    if (best) { selectEl(best, findLayer(best.id)); return best; }
+    deselect(); return null;
+  }
+  function moveSelected(dLat, dLng) { if (selected) { moveEl(selected, dLat, dLng); render(); positionCtx(selected); } }
+  function commitSelected() { if (!selected) return; const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (selected[k] != null) patch[k] = selected[k]; }); if (Object.keys(patch).length) S.updateElement(selected.id, patch); }
   function highlight(layer, on) { if (!layer) return; const f = lyr => { if (lyr._path) lyr._path.classList.toggle('el-sel', on); if (lyr._icon) lyr._icon.classList.toggle('mk-sel', on); }; if (layer.eachLayer) layer.eachLayer(f); else f(layer); }
 
   /* ---------------- tools ---------------- */
@@ -262,7 +281,7 @@ const Draw = (() => {
     ctx.hidden = false; positionCtx(el);
   }
   function ctxBtn(icon, title, fn) { const b = h('button', 'ctxbar__btn', icon); b.title = title; b.onclick = fn; return b; }
-  function positionCtx(el) { const a = elAnchor(el); if (!a) return; const p = map.latLngToContainerPoint(L.latLng(a[0], a[1])); ctx.style.left = Math.max(10, Math.min(p.x - ctx.offsetWidth / 2, innerWidth - ctx.offsetWidth - 10)) + 'px'; ctx.style.top = Math.max(60, p.y - ctx.offsetHeight - 14) + 'px'; }
+  function positionCtx(el) { const a = elAnchor(el); if (!a) return; const p = screenPt(a[0], a[1]); ctx.style.left = Math.max(10, Math.min(p.x - ctx.offsetWidth / 2, innerWidth - ctx.offsetWidth - 10)) + 'px'; ctx.style.top = Math.max(60, p.y - ctx.offsetHeight - 14) + 'px'; }
   function refreshCtx() { if (!selected) return; const fresh = S.activeScene().elements.find(e => e.id === selected.id); if (!fresh) { deselect(); return; } selected = fresh; selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); }
   map.on('move zoom', () => { if (selected) positionCtx(selected); });
 
@@ -395,6 +414,6 @@ const Draw = (() => {
     if (noDraw && tool !== 'select') setTool('select');
   }
 
-  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, openFlags, toggleFlags, deselect, applyPerms, get tool() { return tool; } };
+  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, openFlags, toggleFlags, deselect, applyPerms, pickAt, moveSelected, commitSelected, reposition() { if (selected) positionCtx(selected); }, get tool() { return tool; }, get hasSelection() { return !!selected; } };
 })();
 window.Draw = Draw;
