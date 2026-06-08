@@ -178,6 +178,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-in:focus { border-color: var(--accent); outline: none; }
 .cfg-ovgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .cfg-ovgrid .cfg-in { padding: 0 7px; }
+.cfg-ovrow2 { display: flex; gap: 6px; }
+.cfg-ovrow2 .cfg-in { flex: 1; padding: 0 9px; }
+.cfg-ovrow2 .cfg-in--n { flex: 0 0 88px; padding: 0 7px; }
 .cfg-in--name { flex: 1; height: 28px; font-weight: 700; background: transparent; border: 1px solid transparent; padding: 0 6px; }
 .cfg-in--name:hover, .cfg-in--name:focus { border-color: var(--stroke); background: var(--glass-2); }
 .cfg-ovtools { display: flex; gap: 5px; flex-wrap: wrap; }
