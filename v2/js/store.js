@@ -53,7 +53,8 @@ const Store = (() => {
     dayNight: { on: false, opacity: 60, live: true, offsetH: 0 },   // real-time day/night terminator shading
     campath: { frames: [], legSec: 3, loop: false, playing: false },   // recorded camera path (record/replay)
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
-    overlayWipe: 0.5,        // global before/after wipe line (0..1 of the map width)
+    overlayWipe: 0.5,        // global before/after wipe position (0..1)
+    overlayWipeDir: 'v',     // wipe direction: v (vertical) | h (horizontal) | radial
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
     qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
@@ -182,6 +183,7 @@ const Store = (() => {
   function removeOverlay(id) { state.config.overlays = overlays().filter(x => x.id !== id); emit('overlays'); }
   function moveOverlay(id, dir) { const a = overlays(), i = a.findIndex(x => x.id === id), j = i + dir; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; emit('overlays'); }
   function setOverlayWipe(f) { state.config.overlayWipe = Math.max(0, Math.min(1, f)); emit('overlays'); }
+  function setOverlayWipeDir(d) { state.config.overlayWipeDir = d; emit('overlays'); }
   function setThreeD(patch) { if (!state.config.threeD) state.config.threeD = {}; Object.assign(state.config.threeD, patch); emit('threed'); }
   function setGrid(patch) { if (!state.config.grid) state.config.grid = {}; Object.assign(state.config.grid, patch); emit('config'); }
   function setSea(patch) { if (!state.config.sea) state.config.sea = {}; Object.assign(state.config.sea, patch); emit('config'); }
@@ -209,7 +211,7 @@ const Store = (() => {
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
-    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
+    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
   };
 })();
 window.Store = Store;

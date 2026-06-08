@@ -17,39 +17,46 @@
   const anyWipe = () => list().some(o => o.wipe && o.on !== false);
 
   /* ---- wipe handle (a draggable vertical line on the map) ---- */
+  const wipeDir = () => S.cfg().overlayWipeDir || 'v';
   const handle = document.createElement('div');
   handle.className = 'ov-wipe';
-  handle.innerHTML = '<div class="ov-wipe__line"></div><div class="ov-wipe__grip"><span></span><span></span></div>';
+  handle.innerHTML = '<div class="ov-wipe__line"></div><div class="ov-wipe__ring"></div><div class="ov-wipe__grip"><span></span><span></span></div>';
   handle.hidden = true;
   document.body.appendChild(handle);
   handle.addEventListener('pointerdown', e => {
     e.preventDefault();
     const rect = map.getContainer().getBoundingClientRect();
     handle.classList.add('is-drag');
-    const mv = ev => S.setOverlayWipe((ev.clientX - rect.left) / rect.width);
+    const mv = ev => {
+      const d = wipeDir();
+      if (d === 'h') S.setOverlayWipe((ev.clientY - rect.top) / rect.height);
+      else if (d === 'radial') { const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2, max = Math.hypot(rect.width, rect.height) / 2; S.setOverlayWipe(Math.hypot(ev.clientX - cx, ev.clientY - cy) / max); }
+      else S.setOverlayWipe((ev.clientX - rect.left) / rect.width);
+    };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); handle.classList.remove('is-drag'); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
 
   function placeHandle() {
     if (!anyWipe()) { handle.hidden = true; return; }
-    const rect = map.getContainer().getBoundingClientRect();
+    const rect = map.getContainer().getBoundingClientRect(), d = wipeDir(), f = wipeFrac();
     handle.hidden = false;
-    handle.style.left = Math.round(rect.left + wipeFrac() * rect.width) + 'px';
-    handle.style.top = Math.round(rect.top) + 'px';
-    handle.style.height = Math.round(rect.height) + 'px';
+    handle.classList.remove('ov-wipe--v', 'ov-wipe--h', 'ov-wipe--radial'); handle.classList.add('ov-wipe--' + d);
+    handle.style.width = handle.style.height = '';
+    if (d === 'h') { handle.style.left = rect.left + 'px'; handle.style.top = Math.round(rect.top + f * rect.height) + 'px'; handle.style.width = rect.width + 'px'; }
+    else if (d === 'radial') { const max = Math.hypot(rect.width, rect.height) / 2, R = f * max; handle.style.left = Math.round(rect.left + rect.width / 2 - R) + 'px'; handle.style.top = Math.round(rect.top + rect.height / 2 - R) + 'px'; handle.style.width = handle.style.height = Math.round(2 * R) + 'px'; }
+    else { handle.style.left = Math.round(rect.left + f * rect.width) + 'px'; handle.style.top = rect.top + 'px'; handle.style.height = rect.height + 'px'; }
   }
 
   function applyWipe() {
-    const rect = map.getContainer().getBoundingClientRect();
-    const lineX = rect.left + wipeFrac() * rect.width;
+    const rect = map.getContainer().getBoundingClientRect(), d = wipeDir(), f = wipeFrac();
     list().forEach(o => {
       const lyr = layers.get(o.id); if (!lyr) return; const img = lyr.getElement(); if (!img) return;
-      if (o.wipe && o.on !== false) {
-        const r = img.getBoundingClientRect();
-        const reveal = Math.max(0, Math.min(r.width, lineX - r.left));   // px of the image revealed from its left
-        img.style.clipPath = `inset(0 ${Math.max(0, r.width - reveal)}px 0 0)`;
-      } else img.style.clipPath = '';
+      if (!(o.wipe && o.on !== false)) { img.style.clipPath = ''; return; }
+      const r = img.getBoundingClientRect();
+      if (d === 'h') { const lineY = rect.top + f * rect.height, reveal = Math.max(0, Math.min(r.height, lineY - r.top)); img.style.clipPath = `inset(0 0 ${Math.max(0, r.height - reveal)}px 0)`; }
+      else if (d === 'radial') { const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2, R = Math.hypot(rect.width, rect.height) / 2 * f; img.style.clipPath = `circle(${Math.round(R)}px at ${Math.round(cx - r.left)}px ${Math.round(cy - r.top)}px)`; }
+      else { const lineX = rect.left + f * rect.width, reveal = Math.max(0, Math.min(r.width, lineX - r.left)); img.style.clipPath = `inset(0 ${Math.max(0, r.width - reveal)}px 0 0)`; }
     });
     placeHandle();
   }

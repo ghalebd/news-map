@@ -388,7 +388,11 @@
       card.appendChild(tools);
       bd.appendChild(card);
     });
-    if (ovs.some(o => o.wipe && o.on !== false)) bd.appendChild(slider('Wipe position', Math.round(((C.overlayWipe == null ? 0.5 : C.overlayWipe)) * 100), 0, 100, 1, v => S.setOverlayWipe(v / 100)));
+    if (ovs.some(o => o.wipe && o.on !== false)) {
+      const dir = C.overlayWipeDir || 'v', dseg = h('div', 'cfg-seg');
+      [['v', 'Vertical'], ['h', 'Horizontal'], ['radial', 'Radial']].forEach(([id, lab]) => { const bb = h('button', 'cfg-seg__b' + (dir === id ? ' on' : ''), lab); bb.onclick = () => { S.setOverlayWipeDir(id); renderTab(); }; dseg.appendChild(bb); });
+      bd.append(field('Wipe direction', dseg), slider('Wipe position', Math.round(((C.overlayWipe == null ? 0.5 : C.overlayWipe)) * 100), 0, 100, 1, v => S.setOverlayWipe(v / 100)));
+    }
     ct.appendChild(sec);
   }
 

@@ -490,10 +490,21 @@ body.ui-hidden .d3ctrl { display: none !important; }
 /* ---------- georeferenced image overlays + before/after wipe ---------- */
 .ov-img { image-rendering: auto; }
 .ov-wipe { position: fixed; z-index: var(--z-bar); pointer-events: none; }
-.ov-wipe__line { position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, .92); box-shadow: 0 0 10px rgba(0, 0, 0, .65); pointer-events: auto; cursor: ew-resize; }
-.ov-wipe__grip { position: absolute; left: -16px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; gap: 3px; cursor: ew-resize; pointer-events: auto; background: var(--glass); border: 1.5px solid #fff; box-shadow: var(--shadow); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.ov-wipe__line, .ov-wipe__ring { display: none; }
+.ov-wipe__grip { position: absolute; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; gap: 3px; pointer-events: auto; background: var(--glass); border: 1.5px solid #fff; box-shadow: var(--shadow); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .ov-wipe__grip span { width: 2px; height: 12px; background: #fff; border-radius: 1px; }
+/* vertical */
+.ov-wipe--v .ov-wipe__line { display: block; position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, .92); box-shadow: 0 0 10px rgba(0, 0, 0, .65); pointer-events: auto; cursor: ew-resize; }
+.ov-wipe--v .ov-wipe__grip { left: -16px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+/* horizontal */
+.ov-wipe--h .ov-wipe__line { display: block; position: absolute; top: -1px; left: 0; right: 0; height: 2px; background: rgba(255, 255, 255, .92); box-shadow: 0 0 10px rgba(0, 0, 0, .65); pointer-events: auto; cursor: ns-resize; }
+.ov-wipe--h .ov-wipe__grip { top: -16px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.ov-wipe--h .ov-wipe__grip span { width: 12px; height: 2px; }
+/* radial */
+.ov-wipe--radial .ov-wipe__ring { display: block; position: absolute; inset: 0; border: 2px solid rgba(255, 255, 255, .9); border-radius: 50%; box-shadow: 0 0 10px rgba(0, 0, 0, .55); pointer-events: auto; cursor: nwse-resize; }
+.ov-wipe--radial .ov-wipe__grip { left: 100%; top: 50%; transform: translate(-50%, -50%); cursor: nwse-resize; }
 .ov-wipe.is-drag .ov-wipe__line { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.ov-wipe.is-drag .ov-wipe__ring { border-color: var(--accent); }
 .ov-wipe.is-drag .ov-wipe__grip { border-color: var(--accent); }
 .ov-handle { display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; color: #fff; background: rgba(91, 157, 255, .92); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, .55); cursor: move; }
 .ov-handle--size { cursor: nesw-resize; border-radius: 7px; }
