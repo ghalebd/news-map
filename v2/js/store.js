@@ -19,8 +19,13 @@ const Store = (() => {
     mapStyles: [
       { id: '019caada-7e48-7379-ba36-e8967f4fcc92', name: 'News', on: true },
       { id: 'satellite', name: 'Satellite', on: true },
+      { id: 'satellite-night', name: 'Satellite night', on: true },
+      { id: 'satellite-dark', name: 'Satellite dark', on: true },
+      { id: 'night-lights', name: 'Night lights (NASA)', on: true },
       { id: 'hybrid', name: 'Hybrid', on: true },
       { id: 'dataviz-dark', name: 'Dark', on: true },
+      { id: 'streets-v2-dark', name: 'Streets dark', on: false },
+      { id: 'basic-v2-dark', name: 'Basic dark', on: false },
       { id: 'streets-v2', name: 'Streets', on: true },
       { id: 'ocean', name: 'Marine', on: true },
       { id: 'topo-v2', name: 'Topo', on: false },
