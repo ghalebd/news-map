@@ -231,6 +231,12 @@
     const tt = h('input', 'cfg-name'); tt.placeholder = 'Ticker text'; tt.value = bc.ticker.text || ''; tt.oninput = () => S.setTicker({ text: tt.value }); b2.bd.appendChild(tt);
     b2.bd.appendChild(slider('Ticker speed', bc.ticker.speed || 60, 20, 160, 5, v => S.setTicker({ speed: v })));
     ct.appendChild(b2.sec);
+    const lt = section('Lower-third style', I.text);
+    const cur = S.cfg().ltStyle || 'news';
+    const seg = h('div', 'cfg-seg');
+    [['news', 'News'], ['breaking', 'Breaking'], ['glass', 'Glass'], ['box', 'Box'], ['minimal', 'Minimal'], ['bold', 'Bold']].forEach(([id, lab]) => { const bb = h('button', 'cfg-seg__b' + (cur === id ? ' on' : ''), lab); bb.onclick = () => { S.setLtStyle(id); renderTab(); }; seg.appendChild(bb); });
+    lt.bd.append(seg, h('div', 'hint', 'Template for the on-air lower-third. Set its text per scene in the Scene inspector (live mode shows it).'));
+    ct.appendChild(lt.sec);
     const b3 = section('Auto-tour', I.play);
     b3.bd.append(rowTog('Auto-play scenes', !!bc.tour.playing, on => S.setTour({ playing: on })), slider('Interval (s)', bc.tour.sec || 8, 2, 30, 1, v => S.setTour({ sec: v })));
     ct.appendChild(b3.sec);

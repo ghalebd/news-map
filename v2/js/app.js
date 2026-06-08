@@ -90,6 +90,7 @@
     const s = S.activeScene(); const lt = s && s.lowerThird;
     const on = S.state.mode === 'live' && lt && (lt.title || lt.subtitle);
     if (!on) { lthird.hidden = true; return; }
+    lthird.className = 'lthird lt-' + (S.cfg().ltStyle || 'news');
     lthird.innerHTML = `<div class="lthird__bar"></div><div class="lthird__tx"><div class="lthird__t">${esc(lt.title)}</div>${lt.subtitle ? `<div class="lthird__s">${esc(lt.subtitle)}</div>` : ''}</div>`;
     lthird.hidden = false;
   }
