@@ -482,13 +482,16 @@
   // (moves the live nodes, so open state + listeners are preserved — no rebuild)
   function relayout() {
     const n = colCount(); if (bodyEl.querySelectorAll('.cfg-col').length === n) return;
+    const sc = bodyEl.scrollTop;
     const order = getOrder();
     const secs = [...bodyEl.querySelectorAll('.cfg-sec')].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
     bodyEl.innerHTML = ''; const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
     secs.forEach((sec, i) => cols[i % n].appendChild(sec));
+    bodyEl.scrollTop = sc;
   }
   function renderTab() {
     const openT = new Set([...bodyEl.querySelectorAll('.cfg-sec.open .cfg-sec__hd .t')].map(t => t.textContent));
+    const sc = bodyEl.scrollTop;   // keep the operator anchored — never yank the list to the top
     bodyEl.innerHTML = '';
     const n = colCount(); const cols = []; for (let i = 0; i < n; i++) { const c = h('div', 'cfg-col'); cols.push(c); bodyEl.appendChild(c); }
     const tmp = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), tmp));
@@ -504,6 +507,7 @@
     // never jump when you open/close or click controls inside them
     secs.forEach((sec, i) => { setupDnD(sec); cols[i % n].appendChild(sec); });
     applyFilter();
+    bodyEl.scrollTop = sc;   // restore scroll after the rebuild (no jump)
   }
   renderTab();
   window.addEventListener('resize', relayout);
