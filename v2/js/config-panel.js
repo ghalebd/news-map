@@ -412,17 +412,18 @@
     bd.appendChild(h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen rotate buttons.'));
     ct.appendChild(sec);
 
-    const L = Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55 }, C.light3d || {});
+    const L = Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55, tshadow: 55 }, C.light3d || {});
     const lt = section('3D lighting', I.target, () => S.setLight3d(cp(S.DEFAULT_CONFIG.light3d)));
     lt.bd.appendChild(rowTog('Sun lighting', L.on !== false, on => S.setLight3d({ on })));
     lt.bd.append(
       slider('Sun direction', Math.round(L.az), 0, 359, 1, v => S.setLight3d({ az: v })),
       slider('Sun height', Math.round(L.alt), 0, 90, 1, v => S.setLight3d({ alt: v })),
-      slider('Light intensity', Math.round(L.intensity * 10) / 10, 0, 4, 0.1, v => S.setLight3d({ intensity: v })),
+      slider('Light brightness', Math.round(L.intensity * 10) / 10, 0, 4, 0.1, v => S.setLight3d({ intensity: v })),
       slider('Ambient fill', Math.round(L.ambient * 10) / 10, 0, 3, 0.1, v => S.setLight3d({ ambient: v })),
       slider('Terrain relief', Math.round(L.relief * 100) / 100, 0, 1, 0.05, v => S.setLight3d({ relief: v })),
+      slider('Terrain shadow', Math.round(L.tshadow == null ? 55 : L.tshadow), 0, 100, 1, v => S.setLight3d({ tshadow: v })),
       slider('Model shadows', Math.round(L.shadow == null ? 55 : L.shadow), 0, 100, 1, v => S.setLight3d({ shadow: v })));
-    lt.bd.appendChild(h('div', 'hint', 'A directional sun shades the terrain relief (relief slider) and lights the 3D models. Model shadows drop a soft ground shadow under each model — cast away from the sun and longer when the sun is low. Sun direction/height steer both the terrain shading and the shadows.'));
+    lt.bd.appendChild(h('div', 'hint', 'Applies in 3D. Every slider changes the map: Sun direction/height set where the light comes from (low sun = deeper, longer shadows); Light brightness lifts the lit slopes; Ambient fill softens the dark side; Terrain relief sets shading strength; Terrain shadow sets how dark the shaded terrain gets; Model shadows drop a soft ground shadow under each model.'));
     ct.appendChild(lt.sec);
   }
 

@@ -97,6 +97,16 @@ windows by the `storage` event). Base map = Leaflet (`js/map.js`); real 3D = Map
 locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
 
 ### PERMANENT RULES (apply to ALL future work — قواعد ثابتة)
+0. **القاعدة الأم — لا تنازلات، لا إهمال، لا تجاوز. كل ما يطلبه المستخدم يُنفَّذ بالكامل.**
+   (ZERO compromises, ZERO neglect, ZERO skipping — EVERYTHING the user asks for is done in
+   full.) Before ending any turn, re-read the user's message(s) and confirm EVERY distinct
+   request was actually implemented and verified — not partially, not "close enough". If a
+   request spans multiple messages, address all of them. If something genuinely can't be
+   done, say so explicitly and propose an alternative — never silently drop it. When the user
+   adds a new tool/panel it MUST be wired into the SAME universal mechanics as the old ones:
+   left tool-bar button (with icon, reorderable/hideable via the qbar customiser) +
+   `js/movable.js` PANELS (drag grip + Panel size & position: move/scale/snap/center/reset) +
+   a settings section + a tiny `Help.dot` "?".
 1. **Every new tool/feature gets a settings control automatically.** When you add any
    tool, mode, or feature, you MUST also add a matching control inside the Control Panel
    (`js/config-panel.js`): a `section(title, icon[, onReset])` card whose inputs read/write

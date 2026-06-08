@@ -8,6 +8,7 @@
    ============================================================ */
 (() => {
   const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
+  const D2R = Math.PI / 180;
   const KEY = 'tnFJbEP9ELhQqkA6rPY2';
   const styleUrl = id => `https://api.maptiler.com/maps/${id}/style.json?key=${KEY}`;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
@@ -54,7 +55,7 @@
   /* ---- 3D sun lighting: a directional sun that shades the terrain (hillshade)
      and lights the GLB models from the same azimuth/altitude, so relief and
      equipment "pop". config.light3d (synced): { on, az, alt, intensity, ambient, relief } ---- */
-  const cfgL = () => Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55 }, S.cfg().light3d || {});
+  const cfgL = () => Object.assign({ on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55, tshadow: 55 }, S.cfg().light3d || {});
   function firstSymbolId() { try { const ls = map.getStyle().layers; for (const l of ls) if (l.type === 'symbol') return l.id; } catch (e) {} return undefined; }
   function addHillshade() {
     try {
@@ -67,11 +68,20 @@
   function applyLight() {
     if (!map) return;
     const L = cfgL();
+    const lowBoost = 1 + (1 - Math.sin(Math.max(6, L.alt) * D2R)) * 0.9;   // low sun → deeper terrain shading
     try {
       if (map.getLayer('hillshade')) {
         map.setLayoutProperty('hillshade', 'visibility', L.on ? 'visible' : 'none');
-        map.setPaintProperty('hillshade', 'hillshade-illumination-direction', Math.round(L.az));
-        map.setPaintProperty('hillshade', 'hillshade-exaggeration', L.on ? Math.max(0, Math.min(1, L.relief)) : 0);
+        if (L.on) {
+          map.setPaintProperty('hillshade', 'hillshade-illumination-direction', Math.round(L.az));
+          map.setPaintProperty('hillshade', 'hillshade-exaggeration', Math.max(0, Math.min(1, L.relief * lowBoost)));
+          const tsh = Math.min(0.95, (L.tshadow == null ? 55 : L.tshadow) / 100 * (0.5 + 0.5 / Math.max(0.35, Math.sin(Math.max(6, L.alt) * D2R))));
+          map.setPaintProperty('hillshade', 'hillshade-shadow-color', `rgba(4,10,22,${(0.25 + tsh * 0.7).toFixed(2)})`);
+          const hi = Math.min(1, 0.45 + (L.intensity / 4) * 0.55);   // sun brightness → highlights
+          map.setPaintProperty('hillshade', 'hillshade-highlight-color', `rgba(255,247,232,${hi.toFixed(2)})`);
+          const amb = Math.min(0.65, 0.18 + (L.ambient / 3) * 0.5);   // ambient fill → cool accent
+          map.setPaintProperty('hillshade', 'hillshade-accent-color', `rgba(38,72,116,${amb.toFixed(2)})`);
+        }
       }
     } catch (e) {}
     // global light (affects any extrusions + overall model shading anchor)
