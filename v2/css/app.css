@@ -469,6 +469,9 @@ body.ui-hidden .geo-pop { display: none !important; }
 @keyframes cloudDrift { from { background-position: 0 0; } to { background-position: 2000px 300px; } }
 body.ui-hidden .fxgrid, body.ui-hidden .fxclouds, body.ui-hidden .seafx { display: none !important; }
 body.mode-3d .seafx { display: none !important; }
+.dnfx { position: absolute; left: 0; top: 0; z-index: 245; pointer-events: none; transition: opacity .35s var(--ease); }
+body.ui-hidden .dnfx { display: none !important; }
+body.mode-3d .dnfx { display: none !important; }
 
 /* ---------- real 3D terrain (MapLibre GL) ---------- */
 #map3d { position: absolute; inset: 0; z-index: 3; display: none; background: linear-gradient(180deg, #0b1a33 0%, #0a1322 48%, #070b13 78%, #05070c 100%); }

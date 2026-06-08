@@ -428,6 +428,11 @@
       slider('Cloud size', cl.size, 20, 120, 1, v => S.setClouds({ size: v })),
       slider('Cloud softness', cl.softness, 0, 100, 1, v => S.setClouds({ softness: v })),
       slider('Cloud speed (s)', cl.speed, 20, 200, 1, v => S.setClouds({ speed: v })));
+    const dn = Object.assign({}, S.DEFAULT_CONFIG.dayNight, C.dayNight || {});
+    bd.appendChild(rowTog('Day / night shading', !!dn.on, on => S.setDayNight({ on })));
+    bd.append(
+      slider('Night darkness', dn.opacity, 0, 100, 1, v => S.setDayNight({ opacity: v })),
+      slider('Time shift (h)', dn.offsetH, -12, 12, 1, v => S.setDayNight({ offsetH: v })));
     bd.appendChild(rowTog('Rule of thirds (composition guide)', !!C.thirds, on => S.setThirds(on)));
     bd.appendChild(h('div', 'hint', 'Sea water renders only over the sea (land masked) and scales with zoom; clouds drift and scale too. Rule-of-thirds adds a composition + title-safe guide (hidden in clean output).'));
     ct.appendChild(sec);

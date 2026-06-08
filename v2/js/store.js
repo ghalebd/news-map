@@ -50,6 +50,7 @@ const Store = (() => {
     clouds: { on: false, amount: 32, size: 50, softness: 55, speed: 70 },        // drifting clouds (size %, softness %)
     ltStyle: 'news',         // lower-third template: news | breaking | glass | box | minimal | bold
     thirds: false,           // rule-of-thirds + title-safe composition overlay
+    dayNight: { on: false, opacity: 60, live: true, offsetH: 0 },   // real-time day/night terminator shading
     campath: { frames: [], legSec: 3, loop: false, playing: false },   // recorded camera path (record/replay)
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
     overlayWipe: 0.5,        // global before/after wipe line (0..1 of the map width)
@@ -187,6 +188,7 @@ const Store = (() => {
   function setClouds(patch) { if (!state.config.clouds) state.config.clouds = {}; Object.assign(state.config.clouds, patch); emit('config'); }
   function setLtStyle(v) { state.config.ltStyle = v; emit('scenes'); }
   function setThirds(on) { state.config.thirds = on; emit('config'); }
+  function setDayNight(patch) { if (!state.config.dayNight) state.config.dayNight = {}; Object.assign(state.config.dayNight, patch); emit('config'); }
   function campath() { if (!state.config.campath) state.config.campath = { frames: [], legSec: 3, loop: false, playing: false }; return state.config.campath; }
   function setCampath(patch) { Object.assign(campath(), patch); emit('config'); }
   function addCampathFrame(v) { campath().frames.push(v); emit('config'); }
@@ -207,7 +209,7 @@ const Store = (() => {
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
-    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds, campath, setCampath, addCampathFrame, removeCampathFrame,
+    overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setThreeD, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
   };
 })();
 window.Store = Store;
