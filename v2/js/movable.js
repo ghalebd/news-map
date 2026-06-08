@@ -104,14 +104,21 @@
       if (sel === '.brand') continue;            // handled by applyBrand
       const el = els[sel]; if (!el) continue;
       const p = lay[sel];
-      if (p && (p.x != null || p.s)) {
-        const w = el.offsetWidth, hh = el.offsetHeight;
+      if (p && (p.x != null || p.y != null)) {
+        // moved (absolute) — position + optional scale. Clamp against the SCALED size
+        // (top-left origin) so a shrunk panel isn't pushed up/left off its spot.
+        const sc = p.s || 1, w = el.offsetWidth * sc, hh = el.offsetHeight * sc;
         let x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
         const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
-        // moved panels carry an inline transform (which overrides the CSS open-shift),
-        // so we push them clear of the settings panel here instead (display only)
         x = Math.min(x + shiftFor(sel), window.innerWidth - w);
         styleAt(el, x, y, p.s || 1);
+      } else if (p && p.s && p.s !== 1) {
+        // scale ONLY (never moved) — keep the panel's CSS position, just scale around
+        // its centre, composing the centring + open-shift transforms so it doesn't jump.
+        el.style.left = el.style.top = el.style.right = el.style.bottom = '';
+        el.style.transformOrigin = 'center';
+        const sh = shiftFor(sel);
+        el.style.transform = (sh ? `translateX(${sh}px) ` : '') + (meta[sel].axis === 'y' ? 'translateY(-50%) ' : '') + `scale(${p.s})`;
       } else clearStyle(el);
     }
     reflow();
@@ -131,9 +138,14 @@
       const el = els[sel]; const cur = (S.cfg().layout || {})[sel] || {};
       const s0 = cur.s || 1;
       let x = cur.x, y = cur.y;
-      if (x == null && el) { const r = el.getBoundingClientRect(); x = Math.round(r.left - shiftFor(sel)); y = Math.round(r.top); }
-      // grow/shrink around the panel's centre (top-left origin → compensate x/y)
-      if (el) { const w = el.offsetWidth, hh = el.offsetHeight; x = Math.round(x - w * (s - s0) / 2); y = Math.round(y - hh * (s - s0) / 2); }
+      const w = el ? el.offsetWidth : 0, hh = el ? el.offsetHeight : 0;
+      // only convert to absolute coords from a VISIBLE panel; if it's hidden (size 0,
+      // e.g. the tool bar in build mode) keep x/y unset so it stays CSS-centred — never
+      // snap it to 0,0 (which made it stick to the top).
+      if (w || hh) {
+        if (x == null) { const r = el.getBoundingClientRect(); x = Math.round(r.left - shiftFor(sel)); y = Math.round(r.top); }
+        x = Math.round(x - w * (s - s0) / 2); y = Math.round(y - hh * (s - s0) / 2);   // grow/shrink around centre
+      }
       S.setLayout(sel, { x, y, s });
     },
     // snap a panel to a screen anchor — code is V+H: t/m/b  +  l/c/r
