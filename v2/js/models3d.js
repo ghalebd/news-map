@@ -15,15 +15,20 @@
   const THREE = window.THREE;
   if (!S || !L2 || !THREE || !THREE.GLTFLoader) { console.warn('Models3D: deps missing'); return; }
   const loader = new THREE.GLTFLoader();
+  // Draco decoder — the bundled catalog models are Draco-compressed (≈20–50× smaller)
+  try { if (THREE.DRACOLoader) { const draco = new THREE.DRACOLoader(); draco.setDecoderPath('lib/draco/'); loader.setDRACOLoader(draco); } } catch (e) { console.warn('Models3D: Draco init', e); }
   const D2R = Math.PI / 180;
   const models = () => (S.models3d ? S.models3d() : []);
 
-  /* ---- shared GLB loading (id -> Promise<THREE.Object3D raw scene>) ---- */
+  /* ---- shared GLB loading (model -> Promise<THREE.Object3D raw scene>).
+     Source is either a bundled catalog file (m.src URL) or an uploaded blob
+     in IndexedDB (m.id). Cached per instance id. ---- */
   const rawCache = new Map();
-  function loadRaw(id) {
+  function loadRaw(m) {
+    const id = m.id;
     if (rawCache.has(id)) return rawCache.get(id);
     const p = (async () => {
-      const url = await window.Assets3D.url(id);
+      const url = m.src ? m.src : await window.Assets3D.url(id);
       if (!url) throw new Error('no-glb');
       return new Promise((res, rej) => loader.load(url, g => res(g.scene), undefined, rej));
     })();
@@ -77,12 +82,12 @@
     return true;
   }
   const billboards = new Map();   // `${id}:${rotZ}` -> Promise<dataURL>
-  function billboard(id, rotZ) {
-    const key = id + ':' + Math.round(rotZ || 0);
+  function billboard(m, rotZ) {
+    const key = m.id + ':' + Math.round(rotZ || 0);
     if (billboards.has(key)) return billboards.get(key);
     const p = (async () => {
       if (!ensureOffscreen()) return null;
-      const raw = await loadRaw(id); const obj = normalized(raw);
+      const raw = await loadRaw(m); const obj = normalized(raw);
       obj.rotation.y = (rotZ || 0) * D2R;
       const root = new THREE.Group(); root.add(obj); bscene.add(root);
       try { rdr.render(bscene, bcam); return rdr.domElement.toDataURL('image/png'); }
@@ -107,7 +112,7 @@
       mk.addTo(L2); markers.set(m.id, mk);
     }
     mk.setLatLng([m.lat, m.lng]);
-    const url = await billboard(m.id, m.rotZ);
+    const url = await billboard(m, m.rotZ);
     if (markers.get(m.id) !== mk || !url) return;   // deleted/replaced while rendering
     const s = px(m);
     mk.setIcon(L.icon({ iconUrl: url, iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)], className: 'm3d-billboard' }));
@@ -150,7 +155,7 @@
     if (g) return g;
     g = { group: new THREE.Group(), inner: null, loading: true };
     g.group.visible = false; scene.add(g.group); groups.set(m.id, g);
-    loadRaw(m.id).then(raw => { g.inner = normalized(raw); g.group.add(g.inner); g.loading = false; update3D(); })
+    loadRaw(m).then(raw => { g.inner = normalized(raw); g.group.add(g.inner); g.loading = false; update3D(); })
       .catch(() => { g.failed = true; g.loading = false; });
     return g;
   }

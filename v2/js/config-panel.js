@@ -424,9 +424,31 @@
     ct.appendChild(lt.sec);
   }
 
+  let m3dCat = 'All';   // persisted catalog filter across re-renders
   function tabModels3d(C, ct) {
     const list = C.models3d || [];
-    const up = section('3D models (GLB)', I.layers, () => { list.forEach(m => { try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} S.removeModel3d(m.id); }); });
+
+    // ---- built-in, broadcast-optimized model library (Draco GLB catalog) ----
+    const CAT = window.MODELS3D_CATALOG || [];
+    if (CAT.length) {
+      const cats = ['All']; CAT.forEach(m => { if (!cats.includes(m.cat)) cats.push(m.cat); });
+      const lb = section('3D model library', I.folder);
+      const chips = h('div', 'cfg-chips');
+      cats.forEach(c => { const n = c === 'All' ? CAT.length : CAT.filter(x => x.cat === c).length; const ch = h('button', 'cfg-chip2' + (m3dCat === c ? ' on' : ''), `${c} <b>${n}</b>`); ch.onclick = () => { m3dCat = c; renderTab(); }; chips.appendChild(ch); });
+      lb.bd.appendChild(chips);
+      const grid = h('div', 'cfg-cat3d');
+      CAT.filter(m => m3dCat === 'All' || m.cat === m3dCat).forEach(m => {
+        const b = h('button', 'cfg-cat3d__i', `<span>${esc(m.name)}</span><small>${esc(m.cat)}</small>`);
+        b.title = 'Add “' + m.name + '” at the current map centre';
+        b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: 4, rotZ: 0, pitch: 0, roll: 0, alt: 0, mode: 'both', on: true }); renderTab(); };
+        grid.appendChild(b);
+      });
+      lb.bd.appendChild(grid);
+      lb.bd.appendChild(h('div', 'hint', CAT.length + ' built-in military models (aircraft, naval, armour, missiles, air-defence, drones). Click one to drop it at the map centre, then steer it with the on-screen control HUD.'));
+      ct.appendChild(lb.sec);
+    }
+
+    const up = section('Upload your own GLB', I.upload, () => { list.forEach(m => { try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} S.removeModel3d(m.id); }); });
     const file = h('input'); file.type = 'file'; file.accept = '.glb,.gltf,model/gltf-binary'; file.hidden = true;
     const name = h('input', 'cfg-name'); name.placeholder = 'Name (optional)';
     const pick = h('button', 'cfg-uploadbtn', `${I.upload}<span>Choose GLB…</span>`); pick.onclick = () => file.click();
