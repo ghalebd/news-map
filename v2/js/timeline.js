@@ -122,8 +122,15 @@
     document.body.appendChild(launch);
   }
 
+  // only re-apply when the playhead actually moved (seek/scrub) — NOT on every
+  // unrelated cross-window 'sync', which would otherwise yank the camera/models.
+  let lastApplied = -1;
   S.on((st, evt) => {
-    if (evt === 'timeline' || evt === 'sync') { const tl = TL(); if (!tl.playing) applyAt(tl.head || 0); if (isCtrl && open) renderUI(); }
+    if (evt === 'timeline' || evt === 'sync') {
+      const tl = TL();
+      if (!tl.playing && tl.head !== lastApplied) { lastApplied = tl.head; applyAt(tl.head || 0); }
+      if (isCtrl && open) renderUI();
+    }
     if (evt === 'models3d' && isCtrl && open) renderUI();   // model added/removed → refresh tracks
   });
 
