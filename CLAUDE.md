@@ -107,6 +107,11 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    left tool-bar button (with icon, reorderable/hideable via the qbar customiser) +
    `js/movable.js` PANELS (drag grip + Panel size & position: move/scale/snap/center/reset) +
    a settings section + a tiny `Help.dot` "?".
+   **Every settings section AUTOMATICALLY gets a "pin to tool bar" button** (the shared
+   `section()` helper in `js/config-panel.js` adds it — `I.pin`, toggles
+   `config.qbar.pinned`). Pinning drops a `cfg:<slug>` quick-button on the vertical bar
+   that opens the drawer to that section. This is wired in `section()` so it applies to
+   ALL current and future sections with zero extra work — never special-case it.
 1. **Every new tool/feature gets a settings control automatically.** When you add any
    tool, mode, or feature, you MUST also add a matching control inside the Control Panel
    (`js/config-panel.js`): a `section(title, icon[, onReset])` card whose inputs read/write

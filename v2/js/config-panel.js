@@ -63,15 +63,47 @@
   });
 
   /* ---- builders ---- */
+  // every settings section can be "pinned" as a quick jump-button on the vertical tool
+  // bar. This is wired into the shared section() helper, so EVERY current and FUTURE
+  // section gets it automatically — no per-section work.
+  const slugOf = t => 'cfg:' + String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const sectionMeta = {};   // qid -> { title, icon }
+  const pinnedSet = () => new Set(((S.cfg().qbar || {}).pinned) || []);
+  function togglePin(title, icon) {
+    const id = slugOf(title); const cur = ((S.cfg().qbar || {}).pinned) || [];
+    const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+    sectionMeta[id] = { title, icon }; S.setQbar({ pinned: next }); renderBarButtons();
+  }
   function section(title, icon, onReset) {
+    sectionMeta[slugOf(title)] = { title, icon };
     const sec = h('div', 'cfg-sec');
     const hd = h('div', 'cfg-sec__hd', `<span class="cfg-grip" title="Drag to reorder">${I.grip || '⋮⋮'}</span><span class="i">${icon}</span><span class="t">${title}</span>`);
     if (window.Help) hd.appendChild(Help.dot(title));   // tiny "?" explainer for every section
+    const pin = h('button', 'cfg-sec__pin' + (pinnedSet().has(slugOf(title)) ? ' on' : ''), I.pin); pin.title = 'Add a quick button for this on the tool bar';
+    pin.onclick = e => { e.stopPropagation(); togglePin(title, icon); pin.classList.toggle('on'); }; hd.appendChild(pin);
     if (onReset) { const rb = h('button', 'cfg-sec__rst', I.undo); rb.title = 'Reset this section to defaults'; rb.onclick = e => { e.stopPropagation(); onReset(); renderTab(); }; hd.appendChild(rb); }
     hd.appendChild(h('span', 'chev', I.chevron));
     const bd = h('div', 'cfg-sec__bd');
     hd.onclick = () => sec.classList.toggle('open');   // toggle only — never reshuffle columns (no jumping)
     sec.append(hd, bd); return { sec, bd };
+  }
+  // open the drawer and reveal a section by title (used by the pinned bar buttons)
+  function openSection(title) {
+    setOpen(true);
+    const s = [...bodyEl.querySelectorAll('.cfg-sec')].find(x => x.querySelector('.t') && x.querySelector('.t').textContent === title);
+    if (s) { s.classList.add('open'); s.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+  // sync the cfg:* quick-buttons on the tool bar to match config.qbar.pinned
+  function renderBarButtons() {
+    const bar = document.querySelector('.qtools'); if (!bar) return;
+    const pinned = ((S.cfg().qbar || {}).pinned) || [];
+    bar.querySelectorAll('.qtool[data-qid^="cfg:"]').forEach(b => { if (!pinned.includes(b.dataset.qid)) b.remove(); });
+    pinned.forEach(id => {
+      if (bar.querySelector('.qtool[data-qid="' + id + '"]')) return;
+      const meta = sectionMeta[id] || { title: id.slice(4), icon: I.sliders };
+      const b = h('button', 'qtool', meta.icon); b.title = meta.title; b.dataset.qid = id; b.onclick = () => openSection(meta.title); bar.appendChild(b);
+    });
+    if (window.QBar) QBar.apply();
   }
   const D = S.DEFAULT_CONFIG, cp = o => JSON.parse(JSON.stringify(o));
   function tog(on, fn) { const t = h('div', 'tog' + (on ? ' on' : '')); t.onclick = () => { const nv = !t.classList.contains('on'); t.classList.toggle('on', nv); fn(nv); }; return t; }
@@ -637,9 +669,11 @@
     bodyEl.scrollTop = sc;   // restore scroll after the rebuild (no jump)
   }
   renderTab();
+  renderBarButtons();   // place any pinned section buttons on the tool bar
   window.addEventListener('resize', relayout);
 
   S.on((st, evt) => {
+    if (evt === 'config' || evt === 'sync') renderBarButtons();   // keep pinned bar buttons in step (cross-window too)
     // don't rebuild the panel out from under an input the operator is typing in
     if (evt === 'sync') { const f = document.activeElement; if (!(f && drawer.contains(f) && /INPUT|TEXTAREA|SELECT/.test(f.tagName))) renderTab(); }
     if (evt === 'tracking' || evt === 'sync') {

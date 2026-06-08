@@ -62,7 +62,7 @@ const Store = (() => {
     overlayWipe: 0.5,        // global before/after wipe position (0..1)
     overlayWipeDir: 'v',     // wipe direction: v (vertical) | h (horizontal) | radial
     layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
-    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'] },   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
+    qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'], pinned: [] },   // pinned = settings sections shown as quick "jump" buttons on the bar   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
       { id: 'pl2', name: 'Gaza', lat: 31.5, lng: 34.47, zoom: 11 },

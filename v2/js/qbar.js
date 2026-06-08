@@ -40,7 +40,7 @@
 
   window.QBar = {
     apply,
-    list() { const m = map(); return ordered(m).map(id => ({ id, label: LABELS[id] || (m[id] && m[id].title) || id, hidden: (cfg().hidden || []).includes(id) })); },
+    list() { const m = map(); return ordered(m).filter(id => id.indexOf('cfg:') !== 0).map(id => ({ id, label: LABELS[id] || (m[id] && m[id].title) || id, hidden: (cfg().hidden || []).includes(id) })); },   // cfg:* (pinned sections) are managed by their section pin, not here
     setOrder(order) { S.setQbar({ order: order.slice() }); },
     move(id, dir) { const ord = ordered(map()); const i = ord.indexOf(id), j = i + dir; if (i < 0 || j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.setQbar({ order: ord }); },
     toggle(id) { const hid = (cfg().hidden || []).slice(); const i = hid.indexOf(id); if (i >= 0) hid.splice(i, 1); else hid.push(id); S.setQbar({ hidden: hid }); },
