@@ -19,13 +19,10 @@ const Store = (() => {
     mapStyles: [
       { id: '019caada-7e48-7379-ba36-e8967f4fcc92', name: 'News', on: true },
       { id: 'satellite', name: 'Satellite', on: true },
-      { id: 'satellite-night', name: 'Satellite night', on: true },
-      { id: 'satellite-dark', name: 'Satellite dark', on: true },
-      { id: 'night-lights', name: 'Night lights (NASA)', on: true },
       { id: 'hybrid', name: 'Hybrid', on: true },
       { id: 'dataviz-dark', name: 'Dark', on: true },
-      { id: 'streets-v2-dark', name: 'Streets dark', on: false },
-      { id: 'basic-v2-dark', name: 'Basic dark', on: false },
+      { id: 'streets-v2-dark', name: 'Night streets', on: true },
+      { id: 'basic-v2-dark', name: 'Night basic', on: true },
       { id: 'streets-v2', name: 'Streets', on: true },
       { id: 'ocean', name: 'Marine', on: true },
       { id: 'topo-v2', name: 'Topo', on: false },
@@ -98,6 +95,8 @@ const Store = (() => {
     // the expanded tool-bar library: keep the new extra buttons hidden by default once
     if (!c._mig.qbar2) { c.qbar = c.qbar || { order: [], hidden: [] }; const def = ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure']; const set = new Set(c.qbar.hidden || []); def.forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar2 = true; }
     if (!c._mig.qbar3) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); set.add('flags'); c.qbar.hidden = [...set]; c._mig.qbar3 = true; }
+    // drop the rejected darkened-satellite / low-res NASA night styles; enable real dark vector maps
+    if (!c._mig.nightClean) { const bad = ['satellite-night', 'satellite-dark', 'night-lights']; if (c.mapStyles) c.mapStyles = c.mapStyles.filter(m => !bad.includes(m.id)); if (bad.includes(state.mapStyle)) state.mapStyle = 'dataviz-dark'; ['streets-v2-dark', 'basic-v2-dark'].forEach(id => { const m = (c.mapStyles || []).find(x => x.id === id); if (m) m.on = true; }); c._mig.nightClean = true; }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }

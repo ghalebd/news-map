@@ -9,8 +9,7 @@
 (() => {
   const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
   const KEY = 'tnFJbEP9ELhQqkA6rPY2';
-  // map raster-only / filtered styles to a vector base for the 3D GL view
-  const styleUrl = id => { const real = ({ 'night-lights': 'satellite', 'satellite-night': 'satellite', 'satellite-dark': 'satellite' })[id] || id; return `https://api.maptiler.com/maps/${real}/style.json?key=${KEY}`; };
+  const styleUrl = id => `https://api.maptiler.com/maps/${id}/style.json?key=${KEY}`;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
 

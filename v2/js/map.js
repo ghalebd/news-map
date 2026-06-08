@@ -44,19 +44,7 @@ const GameMap = (() => {
 
   const drawn = L.layerGroup().addTo(map);   // rendered elements of the active scene live here
 
-  // real night city-lights imagery (NASA GIBS VIIRS, free, max native z8)
-  const NIGHT = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg';
-  function setStyle(id) {
-    let url, filt = '', native = 20;
-    if (id === 'night-lights') { url = NIGHT; native = 8; }
-    else if (id === 'satellite-night') { url = tile('satellite'); filt = 'night'; }
-    else if (id === 'satellite-dark') { url = tile('satellite'); filt = 'dark'; }
-    else url = tile(id);
-    base.options.maxNativeZoom = native; base.setUrl(url);
-    underlay.options.maxNativeZoom = Math.min(3, native); underlay.setUrl(url);
-    document.body.classList.toggle('map-night', filt === 'night');
-    document.body.classList.toggle('map-dark', filt === 'dark');
-  }
+  function setStyle(id) { base.options.maxNativeZoom = 20; underlay.options.maxNativeZoom = 3; base.setUrl(tile(id)); underlay.setUrl(tile(id)); }
   function currentView() { const c = map.getCenter(); return { lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), zoom: +map.getZoom().toFixed(2) }; }
   function flyToView(view, t) {
     if (!view) return;
