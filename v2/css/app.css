@@ -439,6 +439,11 @@ body.mv-dragging .leaflet-container { pointer-events: none; }
 body.ui-hidden .mvh { display: none !important; }
 /* keyboard focus indicator (accessibility) */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* …but never on map vector shapes/markers — the browser draws the focus outline as
+   the path's bounding box, which looked like a stray square around a selected
+   country. The selection is shown by the animated dashed border (.el-sel) instead. */
+.leaflet-interactive:focus, .leaflet-interactive:focus-visible,
+.leaflet-container svg path:focus, .leaflet-marker-icon:focus { outline: none !important; }
 
 /* ---------- rule-of-thirds / title-safe composition overlay ---------- */
 .fxthirds { position: fixed; inset: 0; z-index: 9; pointer-events: none;
