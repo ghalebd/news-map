@@ -373,16 +373,20 @@
       slider('Line opacity', g.opacity, 0, 60, 1, v => S.setGrid({ opacity: v })),
       slider('Line weight', g.weight, 1, 4, 1, v => S.setGrid({ weight: v })));
     const s = Object.assign({}, S.DEFAULT_CONFIG.sea, C.sea || {});
-    bd.appendChild(rowTog('Water caustics', !!s.on, on => { S.setSea({ on }); }));
+    bd.appendChild(rowTog('Sea water (masked to sea)', !!s.on, on => { S.setSea({ on }); }));
     bd.append(
-      slider('Water intensity', s.intensity, 0, 80, 1, v => S.setSea({ intensity: v })),
+      field('Water colour', swatches(['#3aa0ff', '#46d8ff', '#1d7fd6', '#2bd0c0', '#5b9dff'], s.color, c => S.setSea({ color: c }))),
+      slider('Wave size', s.wave, 5, 100, 1, v => S.setSea({ wave: v })),
+      slider('Water intensity', s.intensity, 0, 90, 1, v => S.setSea({ intensity: v })),
       slider('Water speed (s)', s.speed, 8, 60, 1, v => S.setSea({ speed: v })));
     const cl = Object.assign({}, S.DEFAULT_CONFIG.clouds, C.clouds || {});
     bd.appendChild(rowTog('Drifting clouds', !!cl.on, on => { S.setClouds({ on }); }));
     bd.append(
       slider('Cloud amount', cl.amount, 0, 80, 1, v => S.setClouds({ amount: v })),
-      slider('Cloud speed (s)', cl.speed, 20, 160, 1, v => S.setClouds({ speed: v })),
-      h('div', 'hint', 'Water & clouds are ambient overlays across the whole map (raster tiles can’t isolate sea). Keep them subtle for broadcast; toggle off anytime.'));
+      slider('Cloud size', cl.size, 20, 120, 1, v => S.setClouds({ size: v })),
+      slider('Cloud softness', cl.softness, 0, 100, 1, v => S.setClouds({ softness: v })),
+      slider('Cloud speed (s)', cl.speed, 20, 200, 1, v => S.setClouds({ speed: v })),
+      h('div', 'hint', 'Sea water renders only over the sea (land is masked out) and waves scale with zoom. Clouds drift across everything and also scale with the map. Toggle off anytime.'));
     ct.appendChild(sec);
   }
 
