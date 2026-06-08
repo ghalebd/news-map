@@ -56,11 +56,7 @@
     });
     g.on('mousemove', e => { if (dragId) window.Models3D.setPose(dragId, { lat: e.lngLat.lat, lng: e.lngLat.lng }); });
     g.on('mouseup', e => { if (!dragId) return; const id = dragId; dragId = null; S.updateModel3d(id, { lat: e.lngLat.lat, lng: e.lngLat.lng }); window.Models3D.setPose(id, null); });
-    g.on('click', e => {
-      if (routeMode) { addRoutePoint([e.lngLat.lat, e.lngLat.lng]); return; }
-      const t = window.Draw && Draw.tool; if (t && t !== 'select') return;
-      const m = nearest(e.point, 64); if (m) select(m.id);
-    });
+    g.on('click', e => { if (routeMode) addRoutePoint([e.lngLat.lat, e.lngLat.lng]); });   // selection handled on mousedown (no double-select)
   }
 
   /* ---- route drawing (click points on either map) ---- */
@@ -223,8 +219,8 @@
     if (visible) { renderVals(); highlight(); }
   }
   S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync' || evt === 'threed') onStore(); });
-  // keep trying to bind the 3D picker once the GL map exists
-  setInterval(bindPick3d, 1500);
+  // bind the 3D picker once the GL map exists, then stop polling
+  const _piv = setInterval(() => { bindPick3d(); if (pick3dBound) clearInterval(_piv); }, 1500);
   onStore();
 
   window.ModelControl = { select, deselect, drawPath: (id) => { select(id); drawRoute(); }, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); }, get selected() { return selId; } };

@@ -166,7 +166,8 @@
       else { try { map.addSource(id, { type: 'image', url: o.url, coordinates: coords }); map.addLayer({ id: id + '-l', type: 'raster', source: id, paint: { 'raster-opacity': o.opacity == null ? 1 : o.opacity, 'raster-fade-duration': 0 } }, before); } catch (e) {} }
       try { map.setPaintProperty(id + '-l', 'raster-opacity', o.opacity == null ? 1 : o.opacity); } catch (e) {}
     });
-    try { map.getStyle().layers.filter(l => l.id.indexOf('ov-') === 0 && /-l$/.test(l.id)).forEach(l => { const sid = l.id.slice(0, -2); if (!want.has(sid)) { try { map.removeLayer(l.id); } catch (e) {} try { map.removeSource(sid); } catch (e) {} } }); } catch (e) {}
+    // sweep by SOURCE so an orphaned ov-* source (add-layer-failed) is also cleaned
+    try { Object.keys(map.getStyle().sources || {}).forEach(sid => { if (sid.indexOf('ov-') === 0 && !want.has(sid)) { try { if (map.getLayer(sid + '-l')) map.removeLayer(sid + '-l'); } catch (e) {} try { map.removeSource(sid); } catch (e) {} } }); } catch (e) {}
   }
 
   /* ---- draw in 3D: forward terrain clicks/drags to the 2D tools (full reuse) ----

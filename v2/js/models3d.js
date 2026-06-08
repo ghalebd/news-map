@@ -171,13 +171,15 @@
   const customLayer = {
     id: 'models3d-gl', type: 'custom', renderingMode: '3d',
     onAdd(map, gl) {
-      this.cam = new THREE.Camera();
-      this.scene = new THREE.Scene();
-      this.hemi = new THREE.HemisphereLight(0xffffff, 0x223044, lightCfg.ambient); this.scene.add(this.hemi);
-      this.dir = new THREE.DirectionalLight(0xffffff, lightCfg.intensity); this.scene.add(this.dir);
-      applyLightTo(this);
-      this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
-      this.renderer.autoClear = false;
+      // build once + reuse across style swaps (no renderer/scene churn)
+      if (!this.scene) {
+        this.cam = new THREE.Camera();
+        this.scene = new THREE.Scene();
+        this.hemi = new THREE.HemisphereLight(0xffffff, 0x223044, lightCfg.ambient); this.scene.add(this.hemi);
+        this.dir = new THREE.DirectionalLight(0xffffff, lightCfg.intensity); this.scene.add(this.dir);
+        applyLightTo(this);
+      }
+      if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
     },
     render(gl, args) {
       if (!this.scene || hidden) return;
@@ -244,7 +246,9 @@
     glmap = map;
     if (!map.getLayer('models3d-gl')) { try { map.addLayer(customLayer); } catch (e) { console.warn('Models3D 3D layer', e); return; } }
     layer = customLayer;
-    groups.clear();   // style (re)loaded — drop stale clone refs; masters stay cached and re-clone on rebuild
+    // scene is reused across style swaps — detach the previous groups before rebuilding
+    if (customLayer.scene) groups.forEach(g => { customLayer.scene.remove(g.group); if (g.shadow) customLayer.scene.remove(g.shadow); });
+    groups.clear();   // drop stale clone refs; masters stay cached and re-clone on rebuild
     update3D();
   }
 

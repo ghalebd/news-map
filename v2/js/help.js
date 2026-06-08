@@ -23,6 +23,7 @@
     // tracking
     'Live ships & flights': 'Turn live ship (AIS) and flight feeds on/off, and their motion trails.',
     'Tracking style': 'Colours, line weight, opacity, heading vectors, history length and route lines for the live ship/flight markers.',
+    'Live 3D tracking': 'In the 3D map, live ships and flights are drawn as fast low-poly 3D shapes (instanced — hundreds render cheaply), coloured by the tracking colours and pointed along their heading. Set their size and whether planes sit at real altitude.',
     // broadcast
     'Breaking banner': 'A full-width breaking-news banner on the presenter — toggle and set its text.',
     'News ticker': 'The scrolling headline strip — toggle, text and scroll speed.',

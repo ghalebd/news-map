@@ -19,7 +19,7 @@
     const ui = S.cfg().ui || {};
     // 2D Leaflet scale
     if (ui.scaleBar) { if (!lscale) lscale = L.control.scale({ metric: true, imperial: false, position: 'bottomleft', maxWidth: 130 }); if (!lscale._map) lscale.addTo(L2); }
-    else if (lscale && lscale._map) L2.removeControl(lscale);
+    else if (lscale && lscale._map) { try { L2.removeControl(lscale); } catch (e) {} }
     // 3D MapLibre scale (only once the GL map exists)
     const gm = (window.Map3D && Map3D.map) || null;
     if (ui.scaleBar && gm) { if (!glscale) { try { glscale = new maplibregl.ScaleControl({ maxWidth: 130, unit: 'metric' }); } catch (e) {} } if (glscale && glscaleMap !== gm) { try { gm.addControl(glscale, 'bottom-left'); glscaleMap = gm; } catch (e) {} } }

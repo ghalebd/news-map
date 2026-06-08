@@ -34,7 +34,7 @@
     const sz = map.getSize(); if (cv.width !== sz.x || cv.height !== sz.y) { cv.width = sz.x; cv.height = sz.y; }
     ctx.clearRect(0, 0, cv.width, cv.height);
     const c = cfg(), maxA = (c.opacity == null ? 60 : c.opacity) / 100;
-    const date = new Date(Date.now() + (c.live === false ? 0 : 0) + (c.offsetH || 0) * 3600000);
+    const date = new Date((c.live === false && c.frozenAt ? c.frozenAt : Date.now()) + (c.offsetH || 0) * 3600000);
     const step = 12;
     for (let x = 0; x < cv.width + step; x += step) {
       for (let y = 0; y < cv.height + step; y += step) {
@@ -49,7 +49,7 @@
   }
   function refresh() { if (!on()) { cv.style.display = 'none'; return; } cv.style.display = ''; draw(); }
 
-  map.on('move zoom moveend zoomend resize', () => { if (on()) draw(); });
+  map.on('moveend zoomend resize', () => { if (on()) draw(); });   // redraw at rest only — the terminator is a heavy per-cell trig loop, not needed every frame
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync') refresh(); });
   clearInterval(timer); timer = setInterval(() => { if (on()) draw(); }, 60000);
   refresh();

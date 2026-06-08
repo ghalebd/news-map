@@ -25,16 +25,18 @@
   const customLayer = {
     id: 'tracking3d', type: 'custom', renderingMode: '3d',
     onAdd(map, gl) {
-      this.cam = new THREE.Camera(); this.scene = new THREE.Scene();
-      // unlit, always-visible flat colour (fast + clear on air); the 3D shape reads
-      // from its silhouette under the tilted camera
-      this.shipMat = new THREE.MeshBasicMaterial({ color: 0x3ad6ff });
-      this.planeMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
-      this.ships = new THREE.InstancedMesh(shipGeo(), this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0;
-      this.planes = new THREE.InstancedMesh(planeGeo(), this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0;
-      this.scene.add(this.ships, this.planes);
-      this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
-      this.renderer.autoClear = false;
+      // build the scene/meshes ONCE and reuse across style swaps (MapLibre re-adds the
+      // custom layer on style.load) so we never leak InstancedMeshes/geometry/materials
+      if (!this.scene) {
+        this.cam = new THREE.Camera(); this.scene = new THREE.Scene();
+        // unlit, always-visible flat colour (fast + clear on air)
+        this.shipMat = new THREE.MeshBasicMaterial({ color: 0x3ad6ff });
+        this.planeMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+        this.ships = new THREE.InstancedMesh(shipGeo(), this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0;
+        this.planes = new THREE.InstancedMesh(planeGeo(), this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0;
+        this.scene.add(this.ships, this.planes);
+      }
+      if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
       layer = this; update();
     },
     render(gl, args) {
@@ -68,7 +70,8 @@
     }
     layer.ships.count = i; layer.ships.instanceMatrix.needsUpdate = true;
     layer.planes.count = j; layer.planes.instanceMatrix.needsUpdate = true;
-    glmap.triggerRepaint();
+    if (i || j || layer._lastN) glmap.triggerRepaint();   // skip the repaint when there's nothing (and nothing was) shown
+    layer._lastN = i + j;
   }
 
   function attach3D(map) {
