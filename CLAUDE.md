@@ -143,9 +143,18 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    3D suite (terrain/globe/lighting/shadows/overlays/routes/tracking), timeline, model HUD &
    route playback, broadcast graphics, movable panels, pin→bar→popup, colour/permissions/
    locator/camera-path/animation/snapshots/scale-bar/compass/asset-cats/places/geocode/2D
-   billboard. It must report `PASS == TOTAL` and `PAGE ERRORS: 0`. Map-tile abort/404 network
-   noise is filtered out (not a real failure). Add a check here whenever you add a feature —
-   this is the systematic "no exceptions" review (مراجعة شاملة بلا استثناءات).
+   billboard, plus all scenes/storyboard (add/remove/move/rename/setActive/next/prev/reveal/
+   advance/retreat/lower-third/transition), visibility/permissions/style tokens, map-style
+   add/toggle/remove, custom assets, logo/brand, touch/tilt/thirds/lt-style, qbar hide/reorder,
+   overlays add/update/wipe/dir/reorder/remove, 3D exaggeration/pitch/light params, day-night
+   solar, camera-path record/replay, 2D live tracking (ships/flights/focus/style) + 3D track
+   params, help "?" dots, theme — **and a full presenter-window (index.html) mirroring phase**
+   (banner/ticker/spotlight/element/overlay reflect the shared Store, 0 presenter page errors).
+   It currently runs **126 checks**. It must report `PASS == TOTAL` and `PAGE ERRORS: 0`.
+   Map-tile abort/404 network noise is filtered out (not a real failure). The presenter page is
+   opened with `domcontentloaded` (live-tracking sockets keep it from ever going network-idle).
+   Add a check here whenever you add a feature — this is the systematic "no exceptions" review
+   (مراجعة شاملة بلا استثناءات).
 5. Git: never push to `main`; work on branch `v2-rebuild`; commit messages end with the
    Co-Authored-By trailer.
 

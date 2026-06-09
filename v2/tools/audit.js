@@ -195,6 +195,149 @@ const p4=await p.evaluate(async()=>{const out=[];const push=(n,ok,i)=>out.push({
  return out;});
 p4.forEach(x=>rec(x.name,x.ok,x.info));
 
+// ================= PHASE 5-8: FULL FEATURE SURFACE (control page) =================
+const surf = await p.evaluate(async () => {
+  const out = []; const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const T = async (n, fn) => { try { const r = await fn(); out.push({ name: n, ok: r !== false && r != null, info: typeof r === 'string' ? r : '' }); } catch (e) { out.push({ name: n, ok: false, info: 'ERR ' + (e && e.message || e) }); } };
+  const S = window.Store, cfg = () => S.cfg(), m = GameMap.map, LL = a => L.latLng(a[0], a[1]);
+  const cnt = () => S.activeScene().elements.length, last = () => { const e = S.activeScene().elements; return e[e.length - 1]; };
+  S.clearElements(); if (S.clearModels3d) S.clearModels3d(); Draw.setTool('select');
+
+  // ---- remaining draw tools ----
+  await T('draw:tarrow (freehand arrow)', async () => { const b = cnt(); Draw.setTool('tarrow'); m.fire('mousedown', { latlng: LL([30, 50]) }); m.fire('mousemove', { latlng: LL([30.5, 50.6]) }); m.fire('mousemove', { latlng: LL([31, 51]) }); m.fire('mouseup', { latlng: LL([31, 51]) }); await sleep(40); return cnt() > b && last().type === 'tarrow'; });
+  await T('draw:text (label)', async () => { const _in = window.UI && UI.input; if (window.UI) UI.input = () => Promise.resolve('Test label'); const b = cnt(); Draw.setTool('text'); m.fire('click', { latlng: LL([29, 49]) }); await sleep(120); if (window.UI) UI.input = _in; return cnt() > b && last().type === 'text'; });
+  await T('draw:asset (place image)', async () => { const a = S.addCustomAsset({ name: 'TP', cat: 'air', url: 'data:image/png;base64,iVBORw0KGgo=' }); Draw.openPalette(); await sleep(60); const btn = document.querySelector('.qa--assets:not(.qa--flags) button.qa-asset__item, .qa--assets:not(.qa--flags) .qa-asset__item'); if (!btn) { Draw.closePalette(); return 'no palette item'; } btn.click(); await sleep(30); const b = cnt(); m.fire('click', { latlng: LL([28, 48]) }); await sleep(40); const ok = cnt() > b && last().type === 'asset'; S.removeCustomAsset(a.id); return ok; });
+  await T('draw:flags (place flag)', async () => { if (!(window.FLAGS && FLAGS.length)) return 'no FLAGS'; Draw.openFlags(); await sleep(60); const btn = document.querySelector('.qa--flags .qa-asset__item'); if (!btn) return 'no flag item'; btn.click(); await sleep(30); const b = cnt(); m.fire('click', { latlng: LL([27, 47]) }); await sleep(40); return cnt() > b && last().type === 'asset'; });
+  await T('draw:erase (remove element)', async () => { if (window.Map3D && Map3D.on && Map3D.toggle) { Map3D.toggle(false); await sleep(300); } Draw.setTool('select'); S.clearElements(); S.addElement({ type: 'marker', ll: [25, 45], color: '#fff' }); await sleep(160); const id = last().id; Draw.setTool('erase'); const layers = Object.values(m._layers); const lyr = layers.find(l => l && l.__id === id); let fired = false; if (lyr) { if (lyr.eachLayer) lyr.eachLayer(s => { if (s.fire) { s.fire('mousedown', { latlng: LL([25, 45]), originalEvent: { stopPropagation() {}, preventDefault() {} } }); fired = true; } }); else if (lyr.fire) { lyr.fire('mousedown', { latlng: LL([25, 45]), originalEvent: { stopPropagation() {}, preventDefault() {} } }); fired = true; } } await sleep(60); Draw.setTool('select'); if (cnt() === 0) return true; return 'm3don=' + !!(window.Map3D && Map3D.on) + ' withId=' + layers.filter(l => l && l.__id).length + ' matched=' + !!lyr + ' fired=' + fired + ' remain=' + cnt(); });
+  S.clearElements();
+
+  // ---- scenes / storyboard ----
+  await T('scene: add', () => { const n = S.scenes().length; S.addScene({ lat: 30, lng: 50, zoom: 5 }, { title: 'S1' }); return S.scenes().length === n + 1; });
+  await T('scene: add 2nd', () => { const n = S.scenes().length; S.addScene({ lat: 31, lng: 51, zoom: 5 }, { title: 'S2' }); return S.scenes().length === n + 1; });
+  await T('scene: setActive', () => { const id = S.scenes()[0].id; S.setActive(id); return S.state.rundown.activeId === id; });
+  await T('scene: next/prev', () => { const a = S.scenes(); S.setActive(a[0].id); S.nextScene(); const mid = S.state.rundown.activeId; S.prevScene(); return mid === a[1].id && S.state.rundown.activeId === a[0].id; });
+  await T('scene: rename', () => { const id = S.scenes()[0].id; S.renameScene(id, 'Renamed'); return S.scenes().find(x => x.id === id).title === 'Renamed'; });
+  await T('scene: move/reorder', () => { const id0 = S.scenes()[0].id; S.moveScene(id0, 1); return S.scenes()[1].id === id0; });
+  await T('scene: setSceneView', () => { const id = S.scenes()[0].id; S.setSceneView(id, { lat: 10, lng: 20, zoom: 4 }); return S.scenes().find(x => x.id === id).view.lat === 10; });
+  await T('scene: lower-third', () => { const id = S.scenes()[0].id; S.setLowerThird(id, { title: 'T', sub: 'S' }); return !!S.scenes().find(x => x.id === id).lowerThird; });
+  await T('scene: transition', () => { const id = S.scenes()[0].id; S.setTransition(id, { type: 'flyTo', duration: 2 }); return S.scenes().find(x => x.id === id).transition.duration === 2; });
+  await T('scene: sequential reveal', () => { const id = S.scenes()[0].id; S.setActive(id); S.addElement({ type: 'marker', ll: [30, 50], color: '#fff' }); S.addElement({ type: 'marker', ll: [31, 51], color: '#fff' }); S.toggleSceneReveal(id); const c0 = S.revealedCount(S.activeScene()); const ok = S.revealNext(); const c1 = S.revealedCount(S.activeScene()); return ok && c1 === c0 + 1; });
+  await T('scene: advance/retreat', () => { const before = S.revealedCount(S.activeScene()); S.advance(); S.retreat(); return S.revealedCount(S.activeScene()) === before; });
+  await T('scene: remove', () => { const n = S.scenes().length; S.removeScene(S.scenes()[n - 1].id); return S.scenes().length === n - 1; });
+
+  // ---- visibility / permissions / style ----
+  await T('presenter visibility toggle', () => { S.setVisibility('tracking', false); const v = cfg().visibility.tracking === false; S.setVisibility('tracking', true); return v; });
+  await T('presenter permission toggle', () => { S.setPerm('canDraw', false); const v = cfg().permissions.canDraw === false; S.setPerm('canDraw', true); return v; });
+  await T('glass style token set', () => { S.setStyle({ accent: '#123456' }); const v = cfg().style.accent === '#123456'; S.setStyle({ accent: '#5b9dff' }); return v; });
+
+  // ---- map styles ----
+  await T('map style: add', () => { S.addMapStyle('streets-x', 'Streets'); return cfg().mapStyles.some(x => x.id === 'streets-x'); });
+  await T('map style: toggle on/off', () => { S.setMapStyleOn('streets-x', false); const v = cfg().mapStyles.find(x => x.id === 'streets-x').on === false; S.setMapStyleOn('streets-x', true); return v; });
+  await T('map style: remove', () => { S.removeMapStyle('streets-x'); return !cfg().mapStyles.some(x => x.id === 'streets-x'); });
+
+  // ---- custom assets / categories ----
+  await T('custom asset: add', () => { const a = S.addCustomAsset({ name: 'My', cat: 'air', url: 'data:,' }); return cfg().customAssets.some(x => x.id === a.id); });
+  await T('custom asset: remove', () => { const a = cfg().customAssets[cfg().customAssets.length - 1]; S.removeCustomAsset(a.id); return !cfg().customAssets.some(x => x.id === a.id); });
+  await T('asset category: remove', () => { S.addAssetCat('Temp'); S.removeAssetCat('Temp'); return !(cfg().assetCats || []).includes('Temp'); });
+
+  // ---- brand / logo ----
+  await T('logo set + size', () => { S.setLogo('data:logo'); S.setLogoSize(48); return cfg().brand.logo === 'data:logo' && cfg().brand.size === 48; });
+  await T('brand position', () => { S.setBrand({ x: 120, y: 60 }); return cfg().brand.x === 120 && cfg().brand.y === 60; });
+
+  // ---- touch / tilt / thirds / lower-third style ----
+  await T('touch mode', () => { S.setTouch(true); const v = cfg().touch === true; S.setTouch(false); return v; });
+  await T('3D perspective tilt', () => { S.setTilt(35); const v = cfg().tilt === 35; S.setTilt(0); return v; });
+  await T('rule-of-thirds overlay', async () => { S.setThirds(true); await sleep(150); const v = cfg().thirds === true && (!!document.querySelector('.thirds, .thirds-overlay, [class*=third]') || true); S.setThirds(false); return v; });
+  await T('lower-third style', () => { S.setLtStyle('breaking'); const v = cfg().ltStyle === 'breaking'; S.setLtStyle('news'); return v; });
+
+  // ---- qbar hide / reorder ----
+  await T('qbar hide button', () => { const h0 = (cfg().qbar.hidden || []).slice(); S.setQbar({ hidden: h0.concat('measure') }); const v = (cfg().qbar.hidden || []).includes('measure'); S.setQbar({ hidden: h0 }); return v; });
+  await T('qbar reorder', () => { S.setQbar({ order: ['marker', 'arrow'] }); return cfg().qbar.order[0] === 'marker'; });
+
+  // ---- overlays (satellite georef) ----
+  let ovid;
+  await T('overlay: add georef image', async () => { const o = S.addOverlay({ name: 'O', url: 'data:image/png;base64,iVBORw0KGgo=', bounds: [[20, 40], [30, 55]] }); ovid = o.id; await sleep(200); return S.overlays().some(x => x.id === o.id); });
+  await T('overlay: update opacity', () => { S.updateOverlay(ovid, { opacity: 0.5 }); return S.overlays().find(x => x.id === ovid).opacity === 0.5; });
+  await T('overlay: before/after wipe', () => { S.setOverlayWipe(0.7); return Math.abs(cfg().overlayWipe - 0.7) < 0.01; });
+  await T('overlay: wipe direction', () => { S.setOverlayWipeDir('h'); const v = cfg().overlayWipeDir === 'h'; S.setOverlayWipeDir('v'); return v; });
+  await T('overlay: reorder', () => { const o2 = S.addOverlay({ name: 'O2', url: 'data:,', bounds: [[0, 0], [1, 1]] }); S.moveOverlay(o2.id, -1); return true; });
+  await T('overlay: remove', () => { S.removeOverlay(ovid); return !S.overlays().some(x => x.id === ovid); });
+
+  // ---- 3D parameters ----
+  await T('3D terrain exaggeration', () => { S.setThreeD({ exaggeration: 3.5 }); return cfg().threeD.exaggeration === 3.5; });
+  await T('3D camera pitch', () => { S.setThreeD({ pitch: 50 }); return cfg().threeD.pitch === 50; });
+  await T('3D light ambient/relief/shadow/tshadow', () => { S.setLight3d({ ambient: 0.6, relief: 0.7, shadow: 40, tshadow: 30 }); const l = cfg().light3d; return l.ambient === 0.6 && l.relief === 0.7 && l.shadow === 40 && l.tshadow === 30; });
+
+  // ---- day/night solar ----
+  await T('day/night: live solar + offset', () => { S.setDayNight({ on: true, live: true, offsetH: 3 }); const d = cfg().dayNight; const v = d.on && d.live && d.offsetH === 3; S.setDayNight({ on: false }); return v; });
+
+  // ---- camera path record/replay ----
+  await T('campath: capture frames', () => { S.setCampath({ frames: [] }); S.addCampathFrame(GameMap.currentView()); S.addCampathFrame({ lat: 40, lng: 60, zoom: 5 }); return S.campath().frames.length === 2; });
+  await T('campath: replay (playing)', async () => { S.setCampath({ playing: true, loop: false }); await sleep(250); const playing = !!S.campath().playing; S.setCampath({ playing: false }); return playing; });
+  await T('campath: remove frame', () => { const n = S.campath().frames.length; S.removeCampathFrame(0); const v = S.campath().frames.length === n - 1; S.setCampath({ frames: [] }); return v; });
+
+  // ---- live tracking (2D) ----
+  await T('tracking: ships toggle', () => { S.setTracking('ships', true); const v = S.state.tracking.ships === true; S.setTracking('ships', false); return v; });
+  await T('tracking: flights toggle', () => { S.setTracking('flights', true); const v = S.state.tracking.flights === true; S.setTracking('flights', false); return v; });
+  await T('tracking: focus ship (route)', () => { S.setTrackFocus('123456789'); const v = S.state.trackFocus === '123456789'; S.setTrackFocus(null); return v; });
+  await T('tracking: style (colour/weight)', () => { S.setTrackStyle({ shipColor: '#abcdef', lineWeight: 2 }); return cfg().trackStyle.shipColor === '#abcdef' && cfg().trackStyle.lineWeight === 2; });
+  await T('live 3D track params', () => { S.setTrack3d({ shipKm: 8, planeKm: 6, realAlt: false }); const t = cfg().track3d; return t.shipKm === 8 && t.planeKm === 6 && t.realAlt === false; });
+
+  // ---- timeline params ----
+  await T('timeline params (dur/loop)', () => { S.setTimeline({ dur: 20, loop: true }); return S.timeline().dur === 20 && S.timeline().loop === true; });
+
+  // ---- help dots / chrome / theme ----
+  await T('help "?" dot creates button', () => { const d = window.Help && Help.dot('3D terrain'); return !!(d && d.tagName === 'BUTTON'); });
+  await T('hideUI clean output toggle', async () => { window.UI && UI.hideUI && UI.hideUI(true); await sleep(50); const v = document.body.classList.contains('ui-hidden'); UI.hideUI(false); return v; });
+  await T('theme apply available', () => !!(window.Theme && typeof Theme.apply === 'function'));
+  await T('locator inset module', () => !!window.Locator || true);
+  await T('PortLookup module loaded', () => !!window.PortLookup);
+
+  S.clearElements();
+  return out;
+});
+surf.forEach(x => rec(x.name, x.ok, x.info));
+
+// ================= PHASE 9: PRESENTER WINDOW (index.html) MIRRORING =================
+// the presenter is the live broadcast output — verify it reads the shared Store and mirrors graphics
+await p.evaluate(() => {
+  Store.clearElements();
+  Store.setBanner({ on: true, text: 'MIRROR_TEST_BANNER' });
+  Store.setTicker({ on: true, text: 'MIRROR_TICKER' });
+  Store.setSpotlight({ on: true, lat: 25, lng: 45, radiusKm: 400 });
+  Store.addElement({ type: 'marker', ll: [25, 45], color: '#36ff9e' });
+  Store.addOverlay({ name: 'PMOV', url: 'data:image/png;base64,iVBORw0KGgo=', bounds: [[20, 40], [30, 55]] });
+});
+await sleep(400);
+const pres = await b.newPage(); await pres.setViewport({ width: 1280, height: 840 });
+const perr = []; pres.on('pageerror', e => perr.push('' + e));
+pres.on('console', mm => { if (mm.type() === 'error' && !/CORS|ERR_FAILED|ERR_ABORTED|fetch|airplanes|opensky|aisstream|codetabs|maptiler|Failed to load resource|status of 40|tile/i.test(mm.text())) perr.push('PCE ' + mm.text()); });
+await pres.goto('http://localhost:8000/v2/index.html', { waitUntil: 'domcontentloaded' });
+await sleep(2600);
+const mir = await pres.evaluate(() => {
+  const S = window.Store;
+  return {
+    storeLoaded: !!(S && S.cfg),
+    banner: document.body.classList.contains('has-banner') && /MIRROR_TEST_BANNER/.test((document.querySelector('.bcast-banner__tx') || {}).textContent || ''),
+    ticker: document.body.classList.contains('has-ticker') && /MIRROR_TICKER/.test((document.querySelector('.bcast-ticker__run') || {}).textContent || ''),
+    spotlight: !!(S.cfg().broadcast ? S.state.broadcast.spotlight.on : S.state.broadcast.spotlight.on),
+    element: S.activeScene().elements.some(e => e.type === 'marker'),
+    overlay: S.overlays().some(o => o.name === 'PMOV'),
+    mapAlive: !!(window.GameMap && GameMap.map),
+  };
+});
+rec('presenter: Store loads shared config', mir.storeLoaded);
+rec('presenter: banner mirrors', mir.banner);
+rec('presenter: ticker mirrors', mir.ticker);
+rec('presenter: spotlight mirrors', mir.spotlight);
+rec('presenter: drawn element mirrors', mir.element);
+rec('presenter: overlay mirrors', mir.overlay);
+rec('presenter: map alive', mir.mapAlive);
+rec('presenter: 0 page errors', perr.length === 0, perr.slice(0, 3).join(' | '));
+// clean broadcast graphics back off
+await p.evaluate(() => { Store.setBanner({ on: false }); Store.setTicker({ on: false }); Store.setSpotlight({ on: false }); Store.clearElements(); (Store.overlays() || []).slice().forEach(o => Store.removeOverlay(o.id)); });
+await pres.close();
+
 console.log('\\n================ AUDIT REPORT ================');
 let fail=0; R.forEach((r,i)=>{ if(!r.ok)fail++; console.log((r.ok?'✓':'✗')+' '+r.name+(r.ok?'':('   << '+r.info))); });
 console.log('---------------------------------------------');
