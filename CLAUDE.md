@@ -136,6 +136,16 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
 4. **Before every commit run the smoke test** `tmp/v3smoke.js` (puppeteer): it must report
    `0 pageerrors / 0 codeErrors / 0 overlaps` for control+presenter × build+live. 3D tests
    need WebGL flags (`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`).
+   **For feature work also run the comprehensive auditor** `v2/tools/audit.js`
+   (`NODE_PATH=$HOME/.npm-global/lib/node_modules node v2/tools/audit.js`, server on :8000):
+   it drives the real app in headless WebGL Chrome and exercises every feature end-to-end —
+   all draw tools, clear-all (incl. 3D objects), undo/redo, FX toggles, map controls, the full
+   3D suite (terrain/globe/lighting/shadows/overlays/routes/tracking), timeline, model HUD &
+   route playback, broadcast graphics, movable panels, pin→bar→popup, colour/permissions/
+   locator/camera-path/animation/snapshots/scale-bar/compass/asset-cats/places/geocode/2D
+   billboard. It must report `PASS == TOTAL` and `PAGE ERRORS: 0`. Map-tile abort/404 network
+   noise is filtered out (not a real failure). Add a check here whenever you add a feature —
+   this is the systematic "no exceptions" review (مراجعة شاملة بلا استثناءات).
 5. Git: never push to `main`; work on branch `v2-rebuild`; commit messages end with the
    Co-Authored-By trailer.
 

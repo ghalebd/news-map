@@ -211,6 +211,7 @@ const Store = (() => {
   function addModel3d(m) { m.id = m.id || uid('m3d'); if (m.on == null) m.on = true; if (m.scale == null) m.scale = 1; if (m.rotZ == null) m.rotZ = 0; if (m.pitch == null) m.pitch = 0; if (m.roll == null) m.roll = 0; if (m.alt == null) m.alt = 0; if (!m.mode) m.mode = 'both'; if (!m.style) m.style = 'solid'; models3d().push(m); emit('models3d'); return m; }
   function updateModel3d(id, patch) { const m = models3d().find(x => x.id === id); if (m) { Object.assign(m, patch); emit('models3d'); } }
   function removeModel3d(id) { state.config.models3d = models3d().filter(x => x.id !== id); emit('models3d'); }
+  function clearModels3d() { state.config.models3d = []; emit('models3d'); }
   function addPlace(p) { p.id = uid('pl'); state.config.places.push(p); emit('config'); return p; }
   function removePlace(id) { state.config.places = state.config.places.filter(x => x.id !== id); emit('config'); }
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
@@ -228,7 +229,7 @@ const Store = (() => {
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
-    models3d, addModel3d, updateModel3d, removeModel3d,
+    models3d, addModel3d, updateModel3d, removeModel3d, clearModels3d,
     timeline, setTimeline, setTrack3d, setUI,
   };
 })();

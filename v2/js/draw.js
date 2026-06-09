@@ -397,7 +397,14 @@ const Draw = (() => {
   // undo
   const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.dataset.qid = 'undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
   const qclear = h('button', 'qtool qtool--danger', I.trash); qclear.title = 'Clear screen'; qclear.dataset.qid = 'clear';
-  qclear.onclick = () => { const sc = S.activeScene(); if (!sc || !sc.elements.length) { window.UI && UI.toast && UI.toast('Nothing to clear'); return; } if (confirm('Clear everything drawn on screen?')) { S.clearElements(); window.UI && UI.toast && UI.toast('Screen cleared'); } };
+  qclear.onclick = () => {
+    const sc = S.activeScene(); const nEl = (sc && sc.elements.length) || 0; const nM = (S.models3d ? S.models3d().length : 0);
+    if (!nEl && !nM) { window.UI && UI.toast && UI.toast('Nothing to clear'); return; }
+    if (!confirm('Clear everything on screen — drawings AND 3D objects?')) return;
+    S.clearElements();
+    if (S.clearModels3d) { try { S.models3d().forEach(m => { if (!m.src && window.Assets3D) try { Assets3D.del(m.id); } catch (e) {} }); } catch (e) {} S.clearModels3d(); }
+    window.UI && UI.toast && UI.toast('Screen cleared');
+  };
   qbar.appendChild(qclear);
   // quick action / FX toggle buttons (reorderable + hideable like any bar button)
   const qredo = h('button', 'qtool', I.redo); qredo.title = 'Redo'; qredo.dataset.qid = 'redo'; qredo.onclick = () => S.redo && S.redo(); qbar.appendChild(qredo);
