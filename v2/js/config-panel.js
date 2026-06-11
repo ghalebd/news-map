@@ -759,7 +759,7 @@
     sec.addEventListener('drop', e => { e.preventDefault(); sec.classList.remove('dragover'); const from = e.dataTransfer.getData('text/plain'), to = title(sec); if (from && from !== to) reorder(from, to); });
   }
   // responsive column count from the panel width (~300px per column)
-  function colCount() { const w = (bodyEl.clientWidth || drawer.getBoundingClientRect().width || 600) - 148; return Math.max(1, Math.min(4, Math.round(w / 270))); }   // -148 = category rail
+  function colCount() { const w = bodyEl.clientWidth || drawer.getBoundingClientRect().width || 600; return Math.max(1, Math.min(4, Math.round((w - 24) / 300))); }
   // responsive column count from the panel width (~300px per column)
   let _lastCols = 0;
   function relayout() { const n = colCount(); if (n === _lastCols) return; renderTab(); }
@@ -772,37 +772,27 @@
     // section order (seed once across ALL sections so within-band reorder is stable)
     let order = getOrder();
     if (!order.length) { const all = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), all)); order = [...all.children].map(title); saveOrder(order); }
-    // RESOLVE-STYLE LAYOUT: category rail on the left, ONE category's sections on the right
-    // (search shows matches across all categories; rail buttons drag to reorder)
-    bodyEl.classList.add('cfg-railmode');
-    const rail = h('div', 'cfg-rail'), content = h('div', 'cfg-content');
-    bodyEl.append(rail, content);
-    const cats = orderedCats();
-    let act = jget(CATACT_KEY, cats[0].key); if (!cats.some(c => c.key === act)) act = cats[0].key;
-    cats.forEach(c => {
-      const rb = h('button', 'cfg-railbtn' + (c.key === act && !searching ? ' on' : ''),
-        `<span class="cfg-bandgrip" title="Drag to reorder">${I.gripH}</span><span class="cfg-raillbl">${c.label}</span>`);
-      rb.onclick = e => { if (e.target.closest('.cfg-bandgrip')) return; jset(CATACT_KEY, c.key); renderTab(); };
-      setupCatDnD(rb, c.key);
-      rail.appendChild(rb);
-    });
-    const shown = searching ? cats : cats.filter(c => c.key === act);
-    shown.forEach(c => {
-      const band = h('div', 'cfg-band open');
-      if (searching) band.appendChild(h('div', 'cfg-bandhd', `<span class="cfg-bandlbl">${c.label}</span>`));
-      const body = h('div', 'cfg-bandbody');
+    // category BANDS stacked vertically (the original layout) + height-balanced masonry inside each
+    bodyEl.classList.remove('cfg-railmode');
+    orderedCats().forEach(c => {
+      const collapsed = !searching && catCollapsed(c.key);
+      const band = h('div', 'cfg-band' + (collapsed ? '' : ' open'));
+      const hd = h('div', 'cfg-bandhd', `<span class="cfg-bandgrip" title="Drag to move this category">${I.gripH}</span><span class="cfg-bandlbl">${c.label}</span><span class="cfg-bandchev">${I.chevron}</span>`);
+      hd.onclick = e => { if (e.target.closest('.cfg-bandgrip')) return; toggleCat(c.key); };
+      band.appendChild(hd);
+      const body = h('div', 'cfg-bandbody'); if (collapsed) body.style.display = 'none';
       const cols = []; for (let i = 0; i < n; i++) { const col = h('div', 'cfg-col'); cols.push(col); body.appendChild(col); }
       const tmp = document.createElement('div'); c.groups.forEach(b => b(S.cfg(), tmp));
       const secs = [...tmp.children].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
       secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
       band.appendChild(body);
-      content.appendChild(band);
+      setupCatDnD(band, c.key);
+      bodyEl.appendChild(band);
       // height-balanced masonry: each section flows into the currently-shortest column
-      // (order preserved; falls back to count-split when the drawer is hidden = heights unmeasurable)
-      const live = !!bodyEl.offsetParent;
+      const live = !!bodyEl.offsetParent && !collapsed;
       const per = Math.max(1, Math.ceil(secs.length / n));
       secs.forEach((sec, i) => {
-        setupDnD(sec); sec._ord = i; autoGroup(sec);   // group dials BEFORE measuring heights
+        setupDnD(sec); sec._ord = i; autoGroup(sec);
         if (live && n > 1) { let best = cols[0]; for (const col of cols) if (col.offsetHeight < best.offsetHeight) best = col; best.appendChild(sec); }
         else cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec);
       });

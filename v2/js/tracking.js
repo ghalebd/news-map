@@ -12,7 +12,7 @@
   const map = M.map;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   const isControl = window.APP_ROLE === 'control';
-  const AIS_KEY = '3da0a878476db856ac5cf273d312875598270404';
+  const AIS_PROXY = 'wss://newsmap-ais-proxy.dida-newsmap.workers.dev';   // key lives server-side in the Worker secret — never in this code
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
   /* all tunables come from config.trackStyle (control panel) */
   const TS = () => Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, S.cfg().trackStyle || {});
@@ -77,7 +77,7 @@
       this.ships.clear();
     },
     connect() {
-      try { this.socket = new WebSocket('wss://stream.aisstream.io/v0/stream'); }
+      try { this.socket = new WebSocket(AIS_PROXY); }
       catch (e) { setStatus('ships', 'err'); return; }
       setStatus('ships', 'wait');
       this.socket.binaryType = 'arraybuffer';
@@ -95,7 +95,7 @@
     subscribe() {
       if (!this.socket || this.socket.readyState !== 1) return;
       const b = map.getBounds();
-      const sub = { APIKey: AIS_KEY, BoundingBoxes: [[[Math.max(-90, b.getSouth()), Math.max(-180, b.getWest())], [Math.min(90, b.getNorth()), Math.min(180, b.getEast())]]] };
+      const sub = { BoundingBoxes: [[[Math.max(-90, b.getSouth()), Math.max(-180, b.getWest())], [Math.min(90, b.getNorth()), Math.min(180, b.getEast())]]] };   // APIKey injected by the proxy, server-side
       this.socket.send(JSON.stringify(sub));
     },
     onView() { if (!this.on || !this.socket || this.socket.readyState !== 1) return; clearTimeout(this.resubT); this.resubT = setTimeout(() => this.subscribe(), 600); },

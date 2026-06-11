@@ -186,7 +186,7 @@ const Draw = (() => {
   // stable arrowhead reference: walk back from the tip until ~16px away on screen
   function headRef(pts) { const n = pts.length, tip = map.latLngToContainerPoint(L.latLng(pts[n - 1][0], pts[n - 1][1])); for (let i = n - 2; i >= 0; i--) { const pt = map.latLngToContainerPoint(L.latLng(pts[i][0], pts[i][1])); if (tip.distanceTo(pt) >= 16) return L.latLng(pts[i][0], pts[i][1]); } return L.latLng(pts[0][0], pts[0][1]); }
 
-  map.on('mousedown', e => { if (!DRAG.includes(tool)) return; dragStart = e.latlng; map.dragging.disable(); sketchPts = FREE.includes(tool) ? [[e.latlng.lat, e.latlng.lng]] : null; });
+  map.on('mousedown', e => { if (!DRAG.includes(tool)) return; if (!permits(tool)) { setTool('select'); return; } dragStart = e.latlng; map.dragging.disable(); sketchPts = FREE.includes(tool) ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => {
     if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
     if (!dragStart) return; if (FREE.includes(tool)) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
@@ -240,6 +240,7 @@ const Draw = (() => {
     return null;
   }
   function commit(t, a, b) {
+    if (!permits(t)) { setTool('select'); return; }   // permission chokepoint: nothing gets created without it
     const c = S.state.color, A = [a.lat, a.lng], B = [b.lat, b.lng];
     if (map.distance(a, b) < 1 && t !== 'sketch') return;
     if (t === 'circle') S.addElement({ type: 'circle', ll: A, radius: map.distance(a, b), color: c });
@@ -415,7 +416,7 @@ const Draw = (() => {
   const qdn = h('button', 'qtool', I.daynight); qdn.title = 'Day / night shading on/off'; qdn.dataset.qid = 'daynight'; qdn.onclick = () => S.setDayNight({ on: !(S.cfg().dayNight || {}).on }); qbar.appendChild(qdn);
   const qfs = h('button', 'qtool', I.expand); qfs.title = 'Fullscreen'; qfs.dataset.qid = 'fullscreen'; qfs.onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {} }; qbar.appendChild(qfs);
   function fxState() { qgrid.classList.toggle('is-on', !!(S.cfg().grid || {}).on); qsea.classList.toggle('is-on', !!(S.cfg().sea || {}).on); qcloud.classList.toggle('is-on', !!(S.cfg().clouds || {}).on); qdn.classList.toggle('is-on', !!(S.cfg().dayNight || {}).on); }
-  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') fxState(); }); fxState();
+  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') { fxState(); if (tool !== 'select' && !permits(tool)) setTool('select'); } }); fxState();   // live revoke: disarm instantly
   // control-only tools — toggleable/reorderable like any bar button (qbar customiser)
   if (window.APP_ROLE === 'control') {
     const qtl = h('button', 'qtool', I.film); qtl.title = 'Movement timeline'; qtl.dataset.qid = 'timeline'; qtl.onclick = () => window.Timeline && Timeline.toggle(); qbar.appendChild(qtl);

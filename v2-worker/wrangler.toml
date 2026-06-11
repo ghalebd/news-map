@@ -1,0 +1,10 @@
+name = "newsmap-ais-proxy"
+main = "worker.js"
+compatibility_date = "2026-05-01"
+
+[durable_objects]
+bindings = [{ name = "HUB", class_name = "AisHub" }]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["AisHub"]
