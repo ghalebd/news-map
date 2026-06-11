@@ -21,6 +21,18 @@
   const showTrails = () => S.state.tracking.trails !== false;   // master route/trail line visibility
 
   /* project a point distM metres along a heading (deg) from lat/lng */
+  /* ---- perf helpers (message-storm protection) ---- */
+  let _vb = null, _vbT = 0;
+  const viewBounds = () => { const n = Date.now(); if (!_vb || n - _vbT > 1000) { _vb = map.getBounds().pad(0.25); _vbT = n; } return _vb; };
+  const _routeCache = new Map();   // origin-cell+dest → searoute geojson (cap 500)
+  /* rotate the existing icon DOM instead of rebuilding it on every message */
+  function setRot(m, kind, rot, focus, focusChanged) {
+    const el = m.getElement && m.getElement();
+    const sp = el && el.querySelector('.trk__rot');
+    if (sp && !focusChanged) { sp.style.transform = 'rotate(' + (rot || 0) + 'deg)'; return; }
+    m.setIcon(icon(kind, rot, focus));
+  }
+
   function project(lat, lng, headingDeg, distM) {
     const r = (headingDeg || 0) * Math.PI / 180;
     return [lat + (distM * Math.cos(r)) / 111320, lng + (distM * Math.sin(r)) / (111320 * Math.cos(lat * Math.PI / 180) || 1e-6)];
@@ -125,7 +137,13 @@
         s.marker.on('click', () => S.setTrackFocus(this.focus === mmsi ? null : mmsi));
         if (this.layer) s.marker.addTo(this.layer);
         this.ships.set(mmsi, s); setCounts();
-      } else { Object.assign(s, info); s.marker.setLatLng([s.lat, s.lng]); s.marker.setIcon(icon('ship', s.course, this.focus === mmsi)); s.marker.setTooltipContent(this.tipHtml(s)); }
+      } else {
+        const focNow = this.focus === mmsi, focChanged = s._foc !== focNow; s._foc = focNow;
+        Object.assign(s, info); s.marker.setLatLng([s.lat, s.lng]);
+        setRot(s.marker, 'ship', s.course, focNow, focChanged);
+        const now = Date.now();
+        if (!s._tt || now - s._tt > 1000) { s._tt = now; s.marker.setTooltipContent(this.tipHtml(s)); }
+      }
       this.trail(s);
       this.ensureRoute(s);
     },
@@ -133,7 +151,7 @@
        that is currently in view (throttled + capped for performance) */
     ensureRoute(s) {
       if (!this.on || !this.route || !window.searoute) return;
-      const inView = map.getBounds().pad(0.25).contains([s.lat, s.lng]);
+      const inView = viewBounds().contains([s.lat, s.lng]);
       if (!s.destPort || !inView || !TS().showRoutes) { if (s.routeLine) { this.route.removeLayer(s.routeLine); s.routeLine = null; } return; }
       const now = Date.now();
       const moved = !s._rp || Math.abs(s._rp[0] - s.lat) > 0.25 || Math.abs(s._rp[1] - s.lng) > 0.25;
@@ -141,7 +159,13 @@
       if (s._rt && now - s._rt < 5000 && !s._destChanged) return;
       if (!s.routeLine && this.route.getLayers().length >= RT_CAP) { if (!this._cap) { console.log('[tracking] route cap ' + RT_CAP + ' reached — extra routes hidden'); this._cap = true; } return; }
       s._rt = now; s._rp = [s.lat, s.lng]; s._destChanged = false;
-      let line = null; try { line = window.searoute([s.lng, s.lat], [s.destPort.lng, s.destPort.lat]); } catch (e) {}
+      const ck = Math.round(s.lat * 4) + ',' + Math.round(s.lng * 4) + '>' + (s.destPort.unloc || s.destPort.name);
+      let line = _routeCache.get(ck);
+      if (line === undefined) {
+        line = null; try { line = window.searoute([s.lng, s.lat], [s.destPort.lng, s.destPort.lat]); } catch (e) {}
+        if (_routeCache.size > 500) _routeCache.clear();
+        _routeCache.set(ck, line);
+      }
       if (s.routeLine) { this.route.removeLayer(s.routeLine); s.routeLine = null; }
       const st = this.focus === s.mmsi ? rtFocus() : rtFaint();
       s.routeLine = line ? L.geoJSON(line, { interactive: false, style: st }) : L.polyline([[s.lat, s.lng], [s.destPort.lat, s.destPort.lng]], st);
@@ -169,6 +193,7 @@
       const last = s.trail[s.trail.length - 1];
       if (!last || Math.abs(last[0] - s.lat) > 1e-4 || Math.abs(last[1] - s.lng) > 1e-4) s.trail.push([s.lat, s.lng]);
       while (s.trail.length > t.trailPoints) s.trail.shift();
+      const _n = Date.now(); if (s._td && _n - s._td < 800) return; s._td = _n;   // throttle line redraws per ship (points still recorded)
       if (!this.trails) return;
       drawVector(s, this.trails, t.shipColor, s.course, (typeof s.speed === 'number' ? s.speed : 0) * 0.5144, t.vectorMins * 60);
       if (!t.showHistory || s.trail.length < 2) { if (s.line) { this.trails.removeLayer(s.line); s.line = null; } if (s.head) { this.trails.removeLayer(s.head); s.head = null; } return; }
@@ -177,6 +202,13 @@
       const hs = { color: '#bdeeff', weight: Math.max(1, lw * 1.6), opacity: Math.min(.85, lo * 1.8), lineCap: 'round', lineJoin: 'round', interactive: false };
       if (!s.line) s.line = L.polyline(s.trail, ls).addTo(this.trails); else { s.line.setLatLngs(s.trail); s.line.setStyle(ls); }
       if (!s.head) s.head = L.polyline(recent, hs).addTo(this.trails); else { s.head.setLatLngs(recent); s.head.setStyle(hs); }
+    },
+    /* spread route rebuilding across frames instead of one giant burst on moveend */
+    routeSweep() {
+      if (this._sweepT) { clearTimeout(this._sweepT); this._sweepT = null; }
+      const list = [...this.ships.values()]; let i = 0;
+      const step = () => { if (!this.on) return; const end = Math.min(i + 8, list.length); for (; i < end; i++) this.ensureRoute(list[i]); if (i < list.length) this._sweepT = setTimeout(step, 50); };
+      step();
     },
     prune() { const now = Date.now(); let n = 0; for (const [k, s] of this.ships) { if (now - s.t > this.STALE) { if (s.marker && this.layer) this.layer.removeLayer(s.marker); if (this.trails) { if (s.line) this.trails.removeLayer(s.line); if (s.head) this.trails.removeLayer(s.head); if (s.vector) this.trails.removeLayer(s.vector); } if (s.routeLine && this.route) this.route.removeLayer(s.routeLine); if (k === this.focus && this.pins) this.pins.clearLayers(); this.ships.delete(k); n++; } } if (n) setCounts(); },
   };
@@ -232,7 +264,7 @@
         f.marker.bindTooltip(tip, { direction: 'top', offset: [0, -12], className: 'trk-tip', sticky: true });
         if (this.layer) f.marker.addTo(this.layer);
         this.flights.set(icao, f);
-      } else { Object.assign(f, info); f.marker.setLatLng([info.lat, info.lng]); f.marker.setIcon(icon('plane', info.heading)); f.marker.setTooltipContent(tip); }
+      } else { Object.assign(f, info); f.marker.setLatLng([info.lat, info.lng]); setRot(f.marker, 'plane', info.heading, false, false); f.marker.setTooltipContent(tip); }
       this.trail(f);
     },
   };
@@ -298,8 +330,8 @@
   }
 
   function restyle() {
-    if (Ships.on) { for (const [, s] of Ships.ships) { Ships.trail(s); Ships.ensureRoute(s); } Ships.applyFocus(Ships.focus); }
-    if (Flights.on) { for (const [, f] of Flights.flights) Flights.trail(f); }
+    if (Ships.on) { for (const [, s] of Ships.ships) { s._td = 0; s._destChanged = true; Ships.trail(s); } Ships.routeSweep(); Ships.applyFocus(Ships.focus); }
+    if (Flights.on) { for (const [, f] of Flights.flights) { f._td = 0; Flights.trail(f); } }
   }
   let reT = null; const restyleDebounced = () => { clearTimeout(reT); reT = setTimeout(restyle, 140); };
   S.on((st, evt) => {
@@ -307,7 +339,7 @@
     if (evt === 'config' || evt === 'sync') restyleDebounced();
     if (evt === 'trackfocus' || evt === 'sync') { if (Ships.on) Ships.applyFocus(S.state.trackFocus); }
   });
-  map.on('moveend', () => { if (Ships.on) { Ships.onView(); for (const [, s] of Ships.ships) Ships.ensureRoute(s); } if (Flights.on) Flights.fetch(); });
+  map.on('moveend', () => { if (Ships.on) { Ships.onView(); Ships.routeSweep(); } if (Flights.on) Flights.fetch(); });
   sync();
   window.Tracking = { Ships, Flights };
 })();

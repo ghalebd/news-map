@@ -23,16 +23,19 @@
 
   function ordered(m) {
     const present = Object.keys(m), c = cfg();
-    const ord = (c.order || []).filter(id => present.includes(id));
+    const ord = (c.order || []).filter(id => present.includes(id) || id.indexOf('sep:') === 0);
     present.forEach(id => { if (!ord.includes(id)) ord.push(id); });
     return ord;
   }
 
   function apply() {
     const b = bar(); if (!b) return;
-    b.querySelectorAll('.qtools__sep').forEach(s => s.remove());   // flat, fully-custom bar
+    b.querySelectorAll('.qtools__sep').forEach(s => s.remove());   // flat bar; user separators re-added below
     const m = map(), hidden = cfg().hidden || [];
-    ordered(m).forEach(id => { const el = m[id]; if (!el) return; el.style.display = hidden.includes(id) ? 'none' : ''; b.appendChild(el); });
+    ordered(m).forEach(id => {
+      if (id.indexOf('sep:') === 0) { const d = document.createElement('div'); d.className = 'qtools__sep'; b.appendChild(d); return; }
+      const el = m[id]; if (!el) return; el.style.display = hidden.includes(id) ? 'none' : ''; b.appendChild(el);
+    });
   }
 
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync') apply(); });
@@ -40,7 +43,10 @@
 
   window.QBar = {
     apply,
-    list() { const m = map(); return ordered(m).filter(id => id.indexOf('cfg:') !== 0).map(id => ({ id, label: LABELS[id] || (m[id] && m[id].title) || id, hidden: (cfg().hidden || []).includes(id) })); },   // cfg:* (pinned sections) are managed by their section pin, not here
+    list() { const m = map(); return ordered(m).filter(id => id.indexOf('cfg:') !== 0).map(id => (id.indexOf('sep:') === 0 ? { id, label: '— Separator —', sep: true, hidden: false } : { id, label: LABELS[id] || (m[id] && m[id].title) || id, hidden: (cfg().hidden || []).includes(id) })); },   // cfg:* (pinned sections) are managed by their section pin, not here
+    addSep() { const ord = ordered(map()); ord.push('sep:' + Date.now()); S.setQbar({ order: ord }); },
+    removeSep(id) { const ord = ordered(map()).filter(x => x !== id); S.setQbar({ order: ord }); },
+    orderFull() { return ordered(map()); },
     setOrder(order) { S.setQbar({ order: order.slice() }); },
     move(id, dir) { const ord = ordered(map()); const i = ord.indexOf(id), j = i + dir; if (i < 0 || j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.setQbar({ order: ord }); },
     toggle(id) { const hid = (cfg().hidden || []).slice(); const i = hid.indexOf(id); if (i >= 0) hid.splice(i, 1); else hid.push(id); S.setQbar({ hidden: hid }); },

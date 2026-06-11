@@ -53,7 +53,7 @@
       card.append(
         h('div', 'card-sc__no', String(i + 1)),
         h('div', 'card-sc__title', sc.title),
-        h('div', 'card-sc__meta', `Z${sc.view.zoom.toFixed(1)} · ${sc.elements.length} elem`),
+        h('div', 'card-sc__meta', `Z${(sc.view && Number.isFinite(sc.view.zoom) ? sc.view.zoom : 0).toFixed(1)} · ${(sc.elements || []).length} elem`),
       );
       const ops = h('div', 'card-sc__ops');
       const op = (icon, title, fn) => { const b = h('button', 'card-sc__op', icon); b.title = title; b.onclick = e => { e.stopPropagation(); fn(); }; return b; };

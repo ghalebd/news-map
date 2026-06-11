@@ -82,7 +82,7 @@
     if (onReset) { const rb = h('button', 'cfg-sec__rst', I.undo); rb.title = 'Reset this section to defaults'; rb.onclick = e => { e.stopPropagation(); onReset(); renderTab(); }; hd.appendChild(rb); }
     hd.appendChild(h('span', 'chev', I.chevron));
     const bd = h('div', 'cfg-sec__bd');
-    hd.onclick = () => sec.classList.toggle('open');   // toggle only — never reshuffle columns (no jumping)
+    hd.onclick = () => { sec.classList.toggle('open'); repack(); };   // re-balance columns with a smooth FLIP slide (no hard jumps)
     sec.append(hd, bd); return { sec, bd };
   }
   // open the drawer and reveal a section by title (used by the pinned bar buttons)
@@ -98,7 +98,7 @@
     const sec = buildOne(title); if (!sec) return; sec.classList.add('open');
     const fly = h('div', 'cfg-flyout glass'); fly._title = title;   // NOT cfg-panel (that carries the drawer's slide transform)
     const x = h('button', 'cfg-flyout__x', I.close); x.title = 'Close'; x.onclick = closeFlyout;
-    fly.append(x, sec); document.body.appendChild(fly); flyoutEl = fly;
+    fly.append(x, sec); autoGroup(fly); document.body.appendChild(fly); flyoutEl = fly;
     const a = anchor.getBoundingClientRect(), w = fly.offsetWidth;
     // open to the right of the bar, or to the left if the bar sits on the right half
     let left = (a.left > window.innerWidth / 2) ? (a.left - w - 10) : (a.right + 10);
@@ -123,27 +123,66 @@
   function tog(on, fn) { const t = h('div', 'tog' + (on ? ' on' : '')); t.onclick = () => { const nv = !t.classList.contains('on'); t.classList.toggle('on', nv); fn(nv); }; return t; }
   function rowTog(label, on, fn) { const r = h('div', 'cfg-row'); r.appendChild(h('div', 'lab', label)); r.appendChild(tog(on, fn)); return r; }
   function rowWith(label, el) { const r = h('div', 'cfg-row'); r.appendChild(h('div', 'lab', label)); r.appendChild(el); return r; }
+  /* DaVinci Resolve-style rotary dial — THE numeric control for the whole console.
+     270° arc · vertical drag (Shift = fine ×10) · scroll wheel · click number to type */
   function slider(label, val, min, max, step, fn) {
-    const f = h('div', 'cfg-field'); const lab = h('div', 'lab', `<span>${label}</span><span class="val">${val}</span>`);
-    const inp = h('input'); inp.type = 'range'; inp.min = min; inp.max = max; inp.step = step || 1; inp.value = val;
-    inp.oninput = () => { lab.querySelector('.val').textContent = inp.value; fn(parseFloat(inp.value)); };
-    f.append(lab, inp); return f;
-  }
-  function swatches(list, cur, fn) { const sw = h('div', 'cfg-sw'); list.forEach(c => { const b = h('button'); b.style.background = c; if (c === cur) b.classList.add('on'); b.onclick = () => { sw.querySelectorAll('button').forEach(z => z.classList.remove('on')); b.classList.add('on'); fn(c); }; sw.appendChild(b); }); return sw; }
-  /* rotary knob (drag up/down) — DaVinci-style visual control */
-  function knob(label, val, min, max, step, fn) {
-    const wrap = h('div', 'knob');
-    wrap.innerHTML = `<div class="knob__dial" title="Drag up/down"><svg viewBox="0 0 50 50"><circle class="knob__bg" cx="25" cy="25" r="20"/><circle class="knob__fg" cx="25" cy="25" r="20"/></svg><span class="knob__num"></span></div><div class="knob__lab">${label}</div>`;
-    const fg = wrap.querySelector('.knob__fg'), num = wrap.querySelector('.knob__num'), dial = wrap.querySelector('.knob__dial');
-    const C = 2 * Math.PI * 20; fg.style.strokeDasharray = C; let v = val;
-    const fmt = x => step < 1 ? x.toFixed(step < 0.1 ? 2 : 1) : String(Math.round(x));
-    const paint = () => { const f = Math.max(0, Math.min(1, (v - min) / (max - min))); fg.style.strokeDashoffset = C * (1 - f); num.textContent = fmt(v); };
+    const st = step || 1, dec = st < 1 ? (st < 0.1 ? 2 : 1) : 0;
+    const fmt = x => (+x).toFixed(dec);
+    const R = 21, CX = 27, CY = 27, SWEEP = 270, A0 = 135;
+    const pt = aDeg => { const a = aDeg * Math.PI / 180; return [CX + R * Math.cos(a), CY + R * Math.sin(a)]; };
+    const [sx, sy] = pt(A0), [ex, ey] = pt(A0 + SWEEP);
+    const ARC = `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${R} ${R} 0 1 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+    const LEN = 2 * Math.PI * R * (SWEEP / 360);
+    const wrap = h('div', 'dknob');
+    wrap.innerHTML = `<div class="dknob__dial" title="Drag up/down · Shift = fine · scroll = step">
+      <svg viewBox="0 0 54 54">
+        <path class="dknob__trk" d="${ARC}"/>
+        <path class="dknob__arc" d="${ARC}" stroke-dasharray="${LEN.toFixed(2)}"/>
+        <circle class="dknob__dot" r="2.6"/>
+      </svg>
+      <button class="dknob__num" title="Click to type"></button>
+    </div><div class="dknob__lab">${label}</div>`;
+    const arc = wrap.querySelector('.dknob__arc'), dot = wrap.querySelector('.dknob__dot'),
+      num = wrap.querySelector('.dknob__num'), dial = wrap.querySelector('.dknob__dial');
+    let v = Math.max(min, Math.min(max, val));
+    const paint = () => {
+      const f = (v - min) / (max - min);
+      arc.style.strokeDashoffset = (LEN * (1 - f)).toFixed(2);
+      const [dx, dy] = pt(A0 + SWEEP * f); dot.setAttribute('cx', dx.toFixed(2)); dot.setAttribute('cy', dy.toFixed(2));
+      num.textContent = fmt(v);
+    };
+    const setV = nv => { nv = Math.max(min, Math.min(max, Math.round(nv / st) * st)); if (nv === v) return; v = nv; paint(); fn(v); };
     paint();
-    let drag = false, sy = 0, sv = 0;
-    dial.addEventListener('pointerdown', e => { drag = true; sy = e.clientY; sv = v; dial.setPointerCapture(e.pointerId); e.preventDefault(); });
-    dial.addEventListener('pointermove', e => { if (!drag) return; let nv = sv + ((sy - e.clientY) / 130) * (max - min); nv = Math.max(min, Math.min(max, Math.round(nv / step) * step)); if (nv !== v) { v = nv; paint(); fn(v); } });
-    dial.addEventListener('pointerup', () => { drag = false; });
+    let drag = false, sy2 = 0, sv = 0;
+    dial.addEventListener('pointerdown', e => { if (e.target === num) return; drag = true; sy2 = e.clientY; sv = v; try { dial.setPointerCapture(e.pointerId); } catch (err) {} dial.classList.add('is-drag'); e.preventDefault(); });
+    dial.addEventListener('pointermove', e => { if (!drag) return; const fine = e.shiftKey ? 10 : 1; setV(sv + ((sy2 - e.clientY) / (150 * fine)) * (max - min)); });
+    const end = () => { drag = false; dial.classList.remove('is-drag'); };
+    dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
+    dial.addEventListener('wheel', e => { e.preventDefault(); setV(v + (e.deltaY < 0 ? st : -st) * (e.shiftKey ? 10 : 1)); }, { passive: false });
+    num.onclick = e => {
+      e.stopPropagation();
+      const ed = h('input', 'dknob__edit'); ed.type = 'text'; ed.value = fmt(v);
+      num.replaceWith(ed); ed.focus(); ed.select();
+      const done = ok => { const nv = parseFloat(ed.value); ed.replaceWith(num); if (ok && !isNaN(nv)) setV(nv); else paint(); };
+      ed.onkeydown = ev => { if (ev.key === 'Enter') done(true); if (ev.key === 'Escape') done(false); };
+      ed.onblur = () => done(true);
+    };
     return wrap;
+  }
+  /* knob() and slider() are the same Resolve dial — one visual language */
+  function knob(label, val, min, max, step, fn) { return slider(label, val, min, max, step, fn); }
+  function swatches(list, cur, fn) {
+    const sw = h('div', 'cfg-sw');
+    const mark = el => { sw.querySelectorAll('button').forEach(z => z.classList.remove('on')); el.classList.add('on'); };
+    list.forEach(c => { const b = h('button'); b.style.background = c; b.title = c; if ((c || '').toLowerCase() === (cur || '').toLowerCase()) b.classList.add('on'); b.onclick = () => { mark(b); fn(c); }; sw.appendChild(b); });
+    // custom colour chip — rainbow ring, embedded native picker, shows the picked colour
+    const custom = h('button', 'cfg-sw__custom'); custom.title = 'Custom colour';
+    const dot = h('i'); custom.appendChild(dot);
+    const ci = h('input'); ci.type = 'color'; ci.value = /^#/.test(cur || '') ? cur : '#ffffff'; custom.appendChild(ci);
+    if (cur && !list.some(c => (c || '').toLowerCase() === cur.toLowerCase())) { custom.classList.add('on'); dot.style.background = cur; }
+    ci.oninput = () => { dot.style.background = ci.value; mark(custom); fn(ci.value); };
+    sw.appendChild(custom);
+    return sw;
   }
   const knobs = (...ks) => { const g = h('div', 'cfg-knobs'); ks.forEach(k => g.appendChild(k)); return g; };
   function field(label, el) { const f = h('div', 'cfg-field'); f.appendChild(h('div', 'lab', `<span>${label}</span>`)); if (el) f.appendChild(el); return f; }
@@ -153,8 +192,7 @@
   function tabIdentity(C, ct) {
     const st = C.style;
     const { sec, bd } = section('Theme', I.sliders, () => { S.setStyle(cp(D.style)); S.setTilt(D.tilt); S.setTouch(D.touch); });
-    const ci = h('input', 'cfg-color'); ci.type = 'color'; ci.value = st.accent; ci.oninput = () => S.setStyle({ accent: ci.value });
-    const accField = field('Accent', swatches(ACCENTS, st.accent, c => { ci.value = c; S.setStyle({ accent: c }); })); accField.appendChild(ci);
+    const accField = field('Accent', swatches(ACCENTS, st.accent, c => S.setStyle({ accent: c })));
     bd.append(accField,
       knobs(
         knob('Opacity', st.glass, 0, 100, 1, v => S.setStyle({ glass: v })),
@@ -189,16 +227,35 @@
     const q = section('Vertical tool bar', I.sliders, () => { window.QBar && QBar.reset(); renderTab(); });
     const items = window.QBar ? QBar.list() : [];
     const lst = h('div', 'cfg-qbar');
+    let dragId = null;
     items.forEach((it, idx) => {
-      const row = h('div', 'cfg-qrow' + (it.hidden ? ' is-off' : ''));
+      const row = h('div', 'cfg-qrow' + (it.hidden ? ' is-off' : '') + (it.sep ? ' is-sep' : ''));
+      row.draggable = true; row.dataset.qid = it.id;
+      row.appendChild(h('span', 'cfg-qrow__grip', '⋮⋮'));
       row.appendChild(h('span', 'cfg-qrow__n', it.label));
+      row.ondragstart = e => { dragId = it.id; row.classList.add('is-drag'); e.dataTransfer.effectAllowed = 'move'; };
+      row.ondragend = () => { dragId = null; row.classList.remove('is-drag'); lst.querySelectorAll('.is-over').forEach(r => r.classList.remove('is-over')); };
+      row.ondragover = e => { e.preventDefault(); if (dragId && dragId !== it.id) row.classList.add('is-over'); };
+      row.ondragleave = () => row.classList.remove('is-over');
+      row.ondrop = e => {
+        e.preventDefault(); row.classList.remove('is-over');
+        if (!dragId || dragId === it.id) return;
+        const ord = QBar.orderFull(); const from = ord.indexOf(dragId), to = ord.indexOf(it.id);
+        if (from < 0 || to < 0) return; ord.splice(to, 0, ord.splice(from, 1)[0]);
+        QBar.setOrder(ord); renderTab();
+      };
       const up = h('button', 'cfg-ordb', I.chevron); up.style.transform = 'rotate(180deg)'; up.title = 'Move up'; up.disabled = idx === 0; up.onclick = () => { QBar.move(it.id, -1); renderTab(); };
       const dn = h('button', 'cfg-ordb', I.chevron); dn.title = 'Move down'; dn.disabled = idx === items.length - 1; dn.onclick = () => { QBar.move(it.id, 1); renderTab(); };
-      const vis = h('button', 'cfg-ordb' + (it.hidden ? '' : ' is-on'), it.hidden ? I.eyeOff : I.eye); vis.title = it.hidden ? 'Show in bar' : 'Hide from bar'; vis.onclick = () => { QBar.toggle(it.id); renderTab(); };
-      row.append(up, dn, vis); lst.appendChild(row);
+      row.append(up, dn);
+      if (it.sep) { const del = h('button', 'cfg-ordb', I.close); del.title = 'Remove separator'; del.onclick = () => { QBar.removeSep(it.id); renderTab(); }; row.appendChild(del); }
+      else { const vis = h('button', 'cfg-ordb' + (it.hidden ? '' : ' is-on'), it.hidden ? I.eyeOff : I.eye); vis.title = it.hidden ? 'Show in bar' : 'Hide from bar'; vis.onclick = () => { QBar.toggle(it.id); renderTab(); }; row.appendChild(vis); }
+      lst.appendChild(row);
     });
     q.bd.appendChild(lst);
-    q.bd.appendChild(h('div', 'hint', 'Reorder, show or hide the buttons in the left vertical bar (live mode).'));
+    const addSep = h('button', 'cfg-btn', I.plus + ' Add separator'); addSep.title = 'Insert a divider line — drag it between buttons to group your tools';
+    addSep.onclick = () => { QBar.addSep(); renderTab(); };
+    q.bd.appendChild(addSep);
+    q.bd.appendChild(h('div', 'hint', 'Drag rows to reorder (or use the arrows), show/hide buttons, and add separator lines to group tools your way.'));
     // add ANY settings panel as a quick bar button (opens it as a popup from the bar)
     q.bd.appendChild(h('div', 'cfg-subhd', 'Add a settings panel to the bar'));
     const plist = h('div', 'cfg-qbar'); const pinned = pinnedSet(); let lastCat = null;
@@ -644,7 +701,7 @@
     { key: 'assets', label: 'Assets', groups: [tabAssets] },
     { key: 'project', label: 'Project', groups: [tabProject] },
   ];
-  const COLL_KEY = 'newsmap.v3.cfgCatColl', CATORD_KEY = 'newsmap.v3.cfgCatOrder';
+  const COLL_KEY = 'newsmap.v3.cfgCatColl', CATORD_KEY = 'newsmap.v3.cfgCatOrder', CATACT_KEY = 'newsmap.v3.cfgCatActive';
   const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   const catCollapsed = k => !!jget(COLL_KEY, {})[k];
@@ -702,7 +759,7 @@
     sec.addEventListener('drop', e => { e.preventDefault(); sec.classList.remove('dragover'); const from = e.dataTransfer.getData('text/plain'), to = title(sec); if (from && from !== to) reorder(from, to); });
   }
   // responsive column count from the panel width (~300px per column)
-  function colCount() { const w = bodyEl.clientWidth || drawer.getBoundingClientRect().width || 600; return Math.max(1, Math.min(4, Math.round((w - 24) / 300))); }
+  function colCount() { const w = (bodyEl.clientWidth || drawer.getBoundingClientRect().width || 600) - 148; return Math.max(1, Math.min(4, Math.round(w / 270))); }   // -148 = category rail
   // responsive column count from the panel width (~300px per column)
   let _lastCols = 0;
   function relayout() { const n = colCount(); if (n === _lastCols) return; renderTab(); }
@@ -715,26 +772,91 @@
     // section order (seed once across ALL sections so within-band reorder is stable)
     let order = getOrder();
     if (!order.length) { const all = document.createElement('div'); GROUPS.forEach(b => b(S.cfg(), all)); order = [...all.children].map(title); saveOrder(order); }
-    // render each category as a collapsible band, stacked vertically
-    orderedCats().forEach(c => {
-      const collapsed = !searching && catCollapsed(c.key);
-      const band = h('div', 'cfg-band' + (collapsed ? '' : ' open'));
-      const hd = h('div', 'cfg-bandhd', `<span class="cfg-bandgrip" title="Drag to move this category">${I.gripH}</span><span class="cfg-bandlbl">${c.label}</span><span class="cfg-bandchev">${I.chevron}</span>`);
-      hd.onclick = e => { if (e.target.closest('.cfg-bandgrip')) return; toggleCat(c.key); };
-      band.appendChild(hd);
-      const body = h('div', 'cfg-bandbody'); if (collapsed) body.style.display = 'none';
+    // RESOLVE-STYLE LAYOUT: category rail on the left, ONE category's sections on the right
+    // (search shows matches across all categories; rail buttons drag to reorder)
+    bodyEl.classList.add('cfg-railmode');
+    const rail = h('div', 'cfg-rail'), content = h('div', 'cfg-content');
+    bodyEl.append(rail, content);
+    const cats = orderedCats();
+    let act = jget(CATACT_KEY, cats[0].key); if (!cats.some(c => c.key === act)) act = cats[0].key;
+    cats.forEach(c => {
+      const rb = h('button', 'cfg-railbtn' + (c.key === act && !searching ? ' on' : ''),
+        `<span class="cfg-bandgrip" title="Drag to reorder">${I.gripH}</span><span class="cfg-raillbl">${c.label}</span>`);
+      rb.onclick = e => { if (e.target.closest('.cfg-bandgrip')) return; jset(CATACT_KEY, c.key); renderTab(); };
+      setupCatDnD(rb, c.key);
+      rail.appendChild(rb);
+    });
+    const shown = searching ? cats : cats.filter(c => c.key === act);
+    shown.forEach(c => {
+      const band = h('div', 'cfg-band open');
+      if (searching) band.appendChild(h('div', 'cfg-bandhd', `<span class="cfg-bandlbl">${c.label}</span>`));
+      const body = h('div', 'cfg-bandbody');
       const cols = []; for (let i = 0; i < n; i++) { const col = h('div', 'cfg-col'); cols.push(col); body.appendChild(col); }
       const tmp = document.createElement('div'); c.groups.forEach(b => b(S.cfg(), tmp));
       const secs = [...tmp.children].sort((a, b) => { const ia = order.indexOf(title(a)), ib = order.indexOf(title(b)); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
       secs.forEach(s => { if (openT.has(title(s))) s.classList.add('open'); });
-      const per = Math.max(1, Math.ceil(secs.length / n));
-      secs.forEach((sec, i) => { setupDnD(sec); cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec); });
       band.appendChild(body);
-      setupCatDnD(band, c.key);
-      bodyEl.appendChild(band);
+      content.appendChild(band);
+      // height-balanced masonry: each section flows into the currently-shortest column
+      // (order preserved; falls back to count-split when the drawer is hidden = heights unmeasurable)
+      const live = !!bodyEl.offsetParent;
+      const per = Math.max(1, Math.ceil(secs.length / n));
+      secs.forEach((sec, i) => {
+        setupDnD(sec); sec._ord = i; autoGroup(sec);   // group dials BEFORE measuring heights
+        if (live && n > 1) { let best = cols[0]; for (const col of cols) if (col.offsetHeight < best.offsetHeight) best = col; best.appendChild(sec); }
+        else cols[Math.min(n - 1, Math.floor(i / per))].appendChild(sec);
+      });
     });
     applyFilter();
+    autoGroup(bodyEl);   // smart layout: pack consecutive dials into adaptive grids
     bodyEl.scrollTop = sc;   // restore scroll after the rebuild (no jump)
+  }
+  /* layout intelligence — wrap runs of 2+ sibling dials into an auto-fit grid so
+     they distribute evenly at any panel width (no ragged gaps, any column count) */
+  function autoGroup(root) {
+    root.querySelectorAll('.cfg-sec__bd').forEach(bd => {
+      let run = [];
+      const flush = () => {
+        if (run.length >= 2) { const g = h('div', 'cfg-knobs'); run[0].before(g); run.forEach(k => g.appendChild(k)); }
+        run = [];
+      };
+      [...bd.children].forEach(ch => {
+        if (ch.classList.contains('dknob')) run.push(ch);
+        else if (ch.classList.contains('cfg-knobs')) flush();   // already grouped
+        else flush();
+      });
+      flush();
+    });
+  }
+  /* live re-balance: redistribute sections to the shortest columns and FLIP-animate
+     them from their old positions — space stays packed, motion stays traceable */
+  function repack() {
+    if (!bodyEl.offsetParent) return;
+    const all = [...bodyEl.querySelectorAll('.cfg-sec')];
+    const first = new Map(all.map(s => [s, s.getBoundingClientRect()]));
+    bodyEl.querySelectorAll('.cfg-bandbody').forEach(body => {
+      if (body.style.display === 'none') return;
+      const cols = [...body.children].filter(c => c.classList.contains('cfg-col'));
+      if (cols.length < 2) return;
+      const secs = cols.flatMap(c => [...c.children]).sort((a, b) => (a._ord || 0) - (b._ord || 0));
+      const hts = new Map(secs.map(s => [s, s.offsetHeight]));   // measure BEFORE detaching
+      secs.forEach(s => s.remove());
+      const acc = cols.map(() => 0);
+      secs.forEach(s => {
+        let bi = 0; for (let i = 1; i < cols.length; i++) if (acc[i] < acc[bi]) bi = i;
+        cols[bi].appendChild(s); acc[bi] += (hts.get(s) || 0) + 12;
+      });
+    });
+    all.forEach(s => {
+      const f = first.get(s), l = s.getBoundingClientRect();
+      const dx = f.left - l.left, dy = f.top - l.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      s.style.transition = 'none'; s.style.transform = `translate(${dx}px,${dy}px)`;
+      requestAnimationFrame(() => {
+        s.style.transition = 'transform .28s cubic-bezier(.25,.8,.3,1)'; s.style.transform = '';
+        setTimeout(() => { s.style.transition = ''; }, 330);
+      });
+    });
   }
   renderTab();
   renderBarButtons();   // place any pinned section buttons on the tool bar

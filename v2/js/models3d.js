@@ -124,7 +124,7 @@
     models().forEach(m => { const r = m.route; if (m.on !== false && m.mode !== '3d' && r && (r.pts || []).length >= 2) { L.polyline(r.pts, { color: '#ffb020', weight: 2, opacity: 0.75, dashArray: '5 5', interactive: false }).addTo(routeLayer); r.pts.forEach(p => L.circleMarker(p, { radius: 2.5, color: '#ffb020', weight: 0, fillColor: '#ffb020', fillOpacity: 0.9, interactive: false }).addTo(routeLayer)); } });
   }
   function px(m) { return Math.max(28, Math.min(200, Math.round(60 * ((m.scale || 1) / 10 + 0.4)))); }
-  const BLANK = L.divIcon({ className: 'm3d-billboard', html: '', iconSize: [1, 1] });
+  const BLANK = L.divIcon({ className: 'm3d-billboard', html: '<span class="m3d-wait"><i></i></span>', iconSize: [34, 34], iconAnchor: [17, 17] });
   async function place2D(m) {
     // reserve the marker SYNCHRONOUSLY so a second sync2D (e.g. a 'models3d' emit
     // immediately followed by a 'sync') can't create a duplicate before the await resolves
@@ -140,7 +140,12 @@
     const url = await billboard(m, e.rotZ);
     if (markers.get(m.id) !== mk || !url) return;   // deleted/replaced while rendering
     const s = px(e);
-    mk.setIcon(L.icon({ iconUrl: url, iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)], className: 'm3d-billboard' }));
+    const pop = !mk._revealed; mk._revealed = true;   // soft drop-in on FIRST reveal only
+    mk.setIcon(L.divIcon({
+      className: 'm3d-billboard',
+      html: `<img src="${url}" class="m3d-img${pop ? ' m3d-pop' : ''}" style="width:${s}px;height:${s}px" draggable="false">`,
+      iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)],
+    }));
   }
   function sync2D() {
     const live = models().filter(m => m.on !== false && m.mode !== '3d');

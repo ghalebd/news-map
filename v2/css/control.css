@@ -341,3 +341,144 @@ body.touch .mctl__b { height: 46px; }
 
 .cfg-reset { margin: 4px 18px; padding: 9px; border-radius: 8px; border: 1px solid var(--stroke); color: var(--text-2); font-size: 11px; font-weight: 600; width: calc(100% - 36px); }
 .cfg-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ---- tool-bar customiser: drag & drop + separators ---- */
+.cfg-qrow { cursor: grab; }
+.cfg-qrow.is-drag { opacity: .45; }
+.cfg-qrow.is-over { box-shadow: inset 0 2px 0 rgba(120, 210, 255, .9); }
+.cfg-qrow__grip { opacity: .35; font-size: 10px; letter-spacing: -2px; margin-right: 6px; cursor: grab; user-select: none; }
+.cfg-qrow.is-sep .cfg-qrow__n { opacity: .55; font-style: italic; letter-spacing: 1px; }
+
+/* ============================================================
+   UNIFIED CONTROL SYSTEM — one visual language for every value
+   ============================================================ */
+
+/* ---- premium slider: −/+ steppers · filled track · editable value pill ---- */
+.cfg-sld .lab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.cfg-sld__val { font-family: var(--mono); font-size: 11px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 7px; padding: 2px 9px; cursor: text; min-width: 44px; text-align: center; transition: background .15s, border-color .15s; }
+.cfg-sld__val:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: var(--accent); }
+.cfg-sld__edit { width: 64px; font-family: var(--mono); font-size: 11px; color: #fff; background: rgba(255,255,255,.07); border: 1px solid var(--accent); border-radius: 7px; padding: 2px 8px; text-align: center; outline: none; }
+.cfg-sld__row { display: flex; align-items: center; gap: 8px; }
+.cfg-sld__btn { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 8px; border: 1px solid var(--stroke); background: rgba(255,255,255,.05); color: var(--text); font-size: 15px; line-height: 1; cursor: pointer; display: grid; place-items: center; user-select: none; transition: background .12s, border-color .12s, transform .08s; }
+.cfg-sld__btn:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: #fff; }
+.cfg-sld__btn:active { transform: scale(.92); }
+.cfg-panel .cfg-sld input[type=range] { flex: 1; min-width: 0; height: 5px; border-radius: 3px; -webkit-appearance: none; appearance: none;
+  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--p, 50%), var(--stroke) var(--p, 50%), var(--stroke) 100%); }
+.cfg-panel .cfg-sld input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 1px 6px rgba(0,0,0,.5), var(--accent-glow); cursor: grab; transition: transform .1s; }
+.cfg-panel .cfg-sld input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.cfg-panel .cfg-sld input[type=range]:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.05); }
+
+/* the old knob grid now stacks unified sliders in two columns */
+.cfg-knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+.cfg-knobs .cfg-sld { min-width: 0; }
+
+/* ---- colour swatches: refined chips + integrated custom picker ---- */
+.cfg-sw { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.cfg-sw button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.12); cursor: pointer; box-shadow: inset 0 1px 2px rgba(255,255,255,.25), 0 2px 5px rgba(0,0,0,.35); transition: transform .12s, border-color .12s, box-shadow .12s; position: relative; }
+.cfg-sw button:hover { transform: scale(1.14); }
+.cfg-sw button.on { border-color: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 2px 6px rgba(0,0,0,.4); }
+.cfg-sw__custom { background: conic-gradient(red, #ff0, #0f0, #0ff, #00f, #f0f, red) !important; overflow: hidden; }
+.cfg-sw__custom i { position: absolute; inset: 4px; border-radius: 50%; background: #11161f; pointer-events: none; }
+.cfg-sw__custom input[type=color] { position: absolute; inset: -4px; opacity: 0; cursor: pointer; }
+
+/* ---- long lists: capped height + inner scroll + edge fades ---- */
+.cfg-qbar, .cfg-list { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px;
+  mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent); }
+.cfg-qbar::-webkit-scrollbar, .cfg-list::-webkit-scrollbar, .cfg-body::-webkit-scrollbar { width: 7px; }
+.cfg-qbar::-webkit-scrollbar-thumb, .cfg-list::-webkit-scrollbar-thumb, .cfg-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 4px; }
+.cfg-qbar::-webkit-scrollbar-thumb:hover, .cfg-list::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+.cfg-qbar::-webkit-scrollbar-track, .cfg-list::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- section cards: depth, hover lift, accent edge when open ---- */
+.cfg-sec { border: 1px solid var(--stroke); border-radius: 13px; background: rgba(255,255,255,.025); transition: border-color .18s, box-shadow .18s, background .18s; }
+.cfg-sec:hover { border-color: color-mix(in srgb, var(--accent) 28%, var(--stroke)); background: rgba(255,255,255,.04); }
+.cfg-sec.open { border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke)); box-shadow: inset 3px 0 0 var(--accent), 0 6px 18px rgba(0,0,0,.25); background: rgba(255,255,255,.035); }
+.cfg-sec__hd { transition: color .15s; }
+.cfg-sec:hover .cfg-sec__hd .t { color: #fff; }
+.cfg-sec.open .cfg-sec__hd .i { color: var(--accent); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+
+/* ============================================================
+   RESOLVE DIAL (.dknob) — the one numeric control everywhere
+   ============================================================ */
+.dknob { display: inline-flex; flex-direction: column; align-items: center; width: 76px; padding: 4px 0 6px; vertical-align: top; }
+.dknob__dial { position: relative; width: 54px; height: 54px; cursor: ns-resize; border-radius: 50%; transition: filter .15s; }
+.dknob__dial:hover { filter: brightness(1.18); }
+.dknob__dial.is-drag { filter: brightness(1.3); }
+.dknob__dial svg { width: 100%; height: 100%; display: block; }
+.dknob__trk { fill: none; stroke: rgba(255,255,255,.13); stroke-width: 3.5; stroke-linecap: round; }
+.dknob__arc { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent)); transition: stroke-dashoffset .08s linear; }
+.dknob__dot { fill: #fff; stroke: var(--accent); stroke-width: 1.5; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 80%, transparent)); }
+.dknob__num { position: absolute; inset: 0; margin: auto; width: 36px; height: 18px; background: none; border: none; color: #fff; font-family: var(--mono); font-size: 11.5px; font-weight: 600; cursor: text; padding: 0; text-align: center; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.dknob__num:hover { color: var(--accent); }
+.dknob__edit { position: absolute; inset: 0; margin: auto; width: 42px; height: 18px; background: rgba(10,14,22,.92); border: 1px solid var(--accent); border-radius: 5px; color: #fff; font-family: var(--mono); font-size: 11px; text-align: center; outline: none; padding: 0; }
+.dknob__lab { margin-top: 2px; font-size: 9.5px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-3); text-align: center; max-width: 76px; line-height: 1.25; }
+.dknob:hover .dknob__lab { color: var(--text); }
+
+/* dial groups: wrap into tidy Resolve-style rows (replaces old knob grid + slider stacks) */
+.cfg-knobs { display: flex; flex-wrap: wrap; gap: 2px 4px; justify-content: flex-start; }
+.cfg-sec__bd .dknob + .dknob { margin-left: 2px; }
+
+/* ============================================================
+   ADAPTIVE LAYOUT SYSTEM — no gaps, any width, any condition
+   ============================================================ */
+/* dial grids: auto-fit fills the row evenly whatever the panel width */
+.cfg-knobs { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px 2px; justify-items: center; align-items: start; }
+.cfg-knobs .dknob { width: 100%; max-width: 92px; }
+/* button rows: same intelligence */
+.cfg-btnrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: 7px; }
+/* consistent vertical rhythm inside sections */
+.cfg-sec__bd > * { min-width: 0; }
+.cfg-row { min-height: 30px; }
+
+/* ---- Resolve-language buttons ---- */
+.cfg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.028));
+  border: 1px solid var(--stroke); border-radius: 9px; color: var(--text);
+  font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+  padding: 8px 12px; cursor: pointer; transition: border-color .14s, background .14s, color .14s, transform .08s; }
+.cfg-btn:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--stroke)); color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, rgba(255,255,255,.06)), color-mix(in srgb, var(--accent) 7%, rgba(255,255,255,.02))); }
+.cfg-btn:active { transform: translateY(1px) scale(.985); }
+.cfg-btn svg { width: 13px; height: 13px; }
+.cfg-ordb { border-radius: 7px; transition: border-color .12s, background .12s, transform .08s; }
+.cfg-ordb:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--stroke)); }
+.cfg-ordb:active { transform: scale(.9); }
+
+/* ---- touch mode: dials and hit targets scale up gracefully ---- */
+body.touch .dknob__dial { width: 66px; height: 66px; }
+body.touch .dknob { max-width: 104px; }
+body.touch .cfg-knobs { grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); }
+body.touch .dknob__num { font-size: 13px; width: 44px; }
+body.touch .cfg-btn { padding: 11px 14px; font-size: 12px; }
+
+/* narrow panel / small screens: dials stay tidy down to 2-per-row */
+@media (max-width: 760px) {
+  .cfg-knobs { grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); }
+}
+
+/* dial labels: readable over any glass backdrop */
+.dknob__lab { color: var(--text-2, rgba(255,255,255,.78)); text-shadow: 0 1px 4px rgba(0,0,0,.65); }
+.dknob__num { text-shadow: 0 1px 4px rgba(0,0,0,.75); }
+
+/* ============================================================
+   RESOLVE RAIL LAYOUT — one category at a time, zero dead space
+   ============================================================ */
+.cfg-body.cfg-railmode { display: flex; gap: 12px; align-items: flex-start; }
+.cfg-rail { flex: 0 0 134px; position: sticky; top: 0; display: flex; flex-direction: column; gap: 4px; padding: 2px 0; }
+.cfg-railbtn { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: 9px; color: var(--text-2, rgba(255,255,255,.7));
+  font-size: 11.5px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase;
+  padding: 9px 10px; cursor: pointer; transition: background .14s, color .14s, border-color .14s; }
+.cfg-railbtn .cfg-bandgrip { opacity: 0; transition: opacity .15s; cursor: grab; }
+.cfg-railbtn:hover { background: rgba(255,255,255,.05); color: #fff; }
+.cfg-railbtn:hover .cfg-bandgrip { opacity: .5; }
+.cfg-railbtn.on { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: #fff; box-shadow: inset 2.5px 0 0 var(--accent); }
+.cfg-railbtn.catover { border-color: var(--accent); }
+.cfg-content { flex: 1; min-width: 0; }
+.cfg-content .cfg-band { margin: 0 0 10px; }
+.cfg-content .cfg-bandbody { display: flex; gap: 12px; align-items: flex-start; }
+.cfg-content .cfg-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+
+/* rail sits BESIDE the content (override the drawer's column direction) */
+.cfg-body.cfg-railmode { flex-direction: row !important; }

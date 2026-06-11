@@ -117,7 +117,8 @@ const Store = (() => {
   const activeScene = () => scenes().find(s => s.id === state.rundown.activeId) || null;
   const sceneIndex = id => scenes().findIndex(s => s.id === id);
   function addScene(view, opts = {}) {
-    const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: view || { lat: 29.5, lng: 45, zoom: 5 }, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], reveal: false, lowerThird: null };
+    const okView = view && typeof view === 'object' && Number.isFinite(view.lat) && Number.isFinite(view.lng) && Number.isFinite(view.zoom);
+    const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: okView ? view : { lat: 29.5, lng: 45, zoom: 5 }, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], reveal: false, lowerThird: null };
     scenes().push(s); state.rundown.activeId = s.id; revealReset(s.id); emit('scenes'); return s;
   }
   function removeScene(id) { const i = sceneIndex(id); if (i < 0) return; scenes().splice(i, 1); if (state.rundown.activeId === id) state.rundown.activeId = (scenes()[i] || scenes()[i - 1] || {}).id || null; emit('scenes'); }
@@ -194,7 +195,10 @@ const Store = (() => {
   function setThreeD(patch) { if (!state.config.threeD) state.config.threeD = {}; Object.assign(state.config.threeD, patch); emit('threed'); }
   function setLight3d(patch) { if (!state.config.light3d) state.config.light3d = {}; Object.assign(state.config.light3d, patch); emit('light3d'); }
   function timeline() { if (!state.config.timeline) state.config.timeline = { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} }; return state.config.timeline; }
-  function setTimeline(patch) { Object.assign(timeline(), patch); emit('timeline'); }
+  function setTimeline(patch) {
+    if (patch && Array.isArray(patch.cam)) patch.cam = patch.cam.filter(k => k && Number.isFinite(k.t) && Number.isFinite(k.lat) && Number.isFinite(k.lng));
+    Object.assign(timeline(), patch); emit('timeline');
+  }
   function setTrack3d(patch) { if (!state.config.track3d) state.config.track3d = {}; Object.assign(state.config.track3d, patch); emit('track3d'); }
   function setUI(patch) { if (!state.config.ui) state.config.ui = {}; Object.assign(state.config.ui, patch); emit('config'); }
   function setGrid(patch) { if (!state.config.grid) state.config.grid = {}; Object.assign(state.config.grid, patch); emit('config'); }
