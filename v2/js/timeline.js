@@ -25,12 +25,15 @@
 
   /* ---- interpolation ---- */
   const angLerp = (a, b, f) => { const d = ((b - a + 540) % 360) - 180; return a + d * f; };
+  // motion easing (shared with route playback): smooth ease-in/out between keyframes, or linear
+  const easeMode = () => ((S.cfg && S.cfg().easing) || 'inout');
+  function ease(t) { if (easeMode() !== 'inout') return t; t = Math.max(0, Math.min(1, t)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
   function lerpKeys(keys, t, fields, ang) {
     if (!keys.length) return null;
     const ks = keys.slice().sort((a, b) => a.t - b.t);
     if (t <= ks[0].t) return ks[0]; if (t >= ks[ks.length - 1].t) return ks[ks.length - 1];
     let i = 0; while (i < ks.length - 1 && t > ks[i + 1].t) i++;
-    const a = ks[i], b = ks[i + 1], f = (t - a.t) / ((b.t - a.t) || 1), o = {};
+    const a = ks[i], b = ks[i + 1], f = ease((t - a.t) / ((b.t - a.t) || 1)), o = {};
     fields.forEach(k => { o[k] = ang.indexOf(k) >= 0 ? angLerp(a[k] || 0, b[k] || 0, f) : ((a[k] || 0) + ((b[k] || 0) - (a[k] || 0)) * f); });
     return o;
   }

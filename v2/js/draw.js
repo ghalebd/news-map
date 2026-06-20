@@ -277,6 +277,9 @@ const Draw = (() => {
       const ROT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>';
       ctx.appendChild(ctxBtn(ROT, 'Rotate', () => { const r = ((el.rot || 0) + 15) % 360; S.updateElement(el.id, { rot: r }); el.rot = r; }));
     }
+    if (el.type === 'marker' || el.type === 'text') {
+      ctx.appendChild(ctxBtn(I.film, '→ Lower third', () => { const sc = S.activeScene(); if (!sc) return; const title = (el.label || el.text || '').trim() || 'Lower third'; S.setLowerThird(sc.id, { title, sub: (el.desc || '').trim() }); window.UI && UI.toast && UI.toast('Lower-third set from this ' + el.type); }));
+    }
     ctx.appendChild(ctxBtn(I.layers, 'Duplicate', () => { const copy = JSON.parse(JSON.stringify(el)); delete copy.id; S.addElement(copy); }));
     ctx.appendChild(ctxBtn(I.close, 'Delete', () => { S.removeElement(el.id); deselect(); }));
     ctx.hidden = false; positionCtx(el);

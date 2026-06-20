@@ -31,6 +31,11 @@
     return pose;
   }
 
+  // motion easing (shared with the timeline): smooth ease-in/out or linear
+  const easeMode = () => ((S.cfg && S.cfg().easing) || 'inout');
+  function ease(t) { if (easeMode() !== 'inout') return t; t = Math.max(0, Math.min(1, t)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+  const lastPoses = {};   // id -> current animated pose (for the follow camera)
   let prevActive = new Set(), raf = null;
   function frame() {
     raf = requestAnimationFrame(frame);
@@ -43,14 +48,14 @@
       const dur = Math.max(0.5, r.dur || 10);
       let p = ((now - (r.t0 || now)) / 1000) / dur, done = false;
       if (r.loop) { p = p - Math.floor(p); } else { if (p >= 1) { p = 1; done = true; } if (p < 0) p = 0; }
-      const pose = alongPath(r.pts, p, r.heading !== false);
-      pm[m.id] = pose; active.add(m.id);
+      const pose = alongPath(r.pts, ease(p), r.heading !== false);
+      pm[m.id] = pose; lastPoses[m.id] = pose; active.add(m.id);
       if (done && isCtrl) {   // finalize once, only from the control window
         S.updateModel3d(m.id, { lat: +pose.lat.toFixed(6), lng: +pose.lng.toFixed(6), rotZ: Math.round(pose.rotZ || m.rotZ || 0), route: Object.assign({}, r, { play: false, t0: 0 }) });
       }
     });
     // clear poses for models that just stopped
-    prevActive.forEach(id => { if (!active.has(id)) pm[id] = null; });
+    prevActive.forEach(id => { if (!active.has(id)) { pm[id] = null; delete lastPoses[id]; } });
     prevActive = active;
     if (Object.keys(pm).length) window.Models3D.tick(pm);
   }
@@ -61,5 +66,7 @@
     play(id) { const m = models().find(x => x.id === id); if (!m || !m.route || !(m.route.pts || []).length) return; S.updateModel3d(id, { route: Object.assign({}, m.route, { play: true, t0: Date.now() }) }); },
     stop(id) { const m = models().find(x => x.id === id); if (!m || !m.route) return; S.updateModel3d(id, { route: Object.assign({}, m.route, { play: false, t0: 0 }) }); },
     playing(id) { const m = models().find(x => x.id === id); return !!(m && m.route && m.route.play); },
+    // current position of a model — live animated pose if moving, else its static placement (used by the follow camera)
+    poseOf(id) { const m = models().find(x => x.id === id); if (!m) return null; return lastPoses[id] || { lat: m.lat, lng: m.lng, rotZ: m.rotZ || 0 }; },
   };
 })();

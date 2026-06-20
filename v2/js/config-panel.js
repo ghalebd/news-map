@@ -686,7 +686,21 @@
     ct.appendChild(sec);
   }
 
-  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabModels3d, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
+  function tabMotion(C, ct) {
+    const { sec, bd } = section('Motion & camera', I.film, () => { S.setEasing('inout'); S.setFollow({ on: false, kind: null, id: null, zoom: null }); });
+    bd.appendChild(rowTog('Smooth motion (ease in / out)', (C.easing || 'inout') !== 'linear', on => S.setEasing(on ? 'inout' : 'linear')));
+    const f = C.follow || {};
+    const sel = h('select', 'cfg-sel');
+    const off = h('option', null, 'Off — release camera'); off.value = ''; sel.appendChild(off);
+    const targets = (window.Follow && Follow.targets) ? Follow.targets() : [];
+    targets.forEach(t => { const o = h('option', null, t.name); o.value = t.kind + '|' + t.id; if (f.on && f.kind === t.kind && String(f.id) === String(t.id)) o.selected = true; sel.appendChild(o); });
+    sel.onchange = () => { const v = sel.value; if (!v) { S.setFollow({ on: false, kind: null, id: null }); return; } const ix = v.indexOf('|'); S.setFollow({ on: true, kind: v.slice(0, ix), id: v.slice(ix + 1) }); };
+    bd.appendChild(rowWith('Follow target', sel));
+    bd.appendChild(h('div', 'hint', 'Smooth motion eases route + timeline playback in/out (off = linear). Follow locks the camera onto a moving target — a model along its route, or a live ship / flight — and keeps it centred on both the flat and 3D maps; the presenter follows in lockstep. Pick a target to start, “Off” to release.'));
+    ct.appendChild(sec);
+  }
+
+  const GROUPS = [tabIdentity, tabLayout, tabPermissions, tabTools, tabMap, tabOverlays, tabThreeD, tabModels3d, tabMotion, tabFx, tabTracking, tabBroadcast, tabAssets, tabProject];
   // category BANDS — all categories stacked in one vertical scroll. Each band is
   // collapsible and the whole band can be dragged to reorder categories; sections
   // inside a band stay individually reorderable. Add a new tabX to the right entry.
@@ -695,7 +709,7 @@
     { key: 'layout', label: 'Layout', groups: [tabLayout] },
     { key: 'tools', label: 'Tools', groups: [tabPermissions, tabTools] },
     { key: 'map', label: 'Map', groups: [tabMap, tabOverlays, tabFx] },
-    { key: '3d', label: '3D', groups: [tabThreeD, tabModels3d] },
+    { key: '3d', label: '3D', groups: [tabThreeD, tabModels3d, tabMotion] },
     { key: 'live', label: 'Live', groups: [tabTracking] },
     { key: 'cast', label: 'Broadcast', groups: [tabBroadcast] },
     { key: 'assets', label: 'Assets', groups: [tabAssets] },

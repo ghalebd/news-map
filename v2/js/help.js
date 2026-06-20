@@ -44,6 +44,7 @@
     // 3D + models
     '3D terrain': 'Real 3D terrain (MapLibre). Enter/exit 3D, set terrain height exaggeration and camera pitch, and keep place names lying on the terrain.',
     '3D lighting': 'A directional sun that shades the terrain relief and lights the 3D models from one angle. Sun direction and height control the shadows; intensity/ambient the brightness; terrain relief the shading strength. Lower sun = longer, more dramatic shadows.',
+    'Motion & camera': 'Smooth motion eases route + timeline playback with an ease-in/out curve (turn off for constant-speed linear). Follow locks the camera onto a moving target — a model travelling its route, or a live ship / flight — and keeps it centred on both the flat and 3D maps; the presenter follows in lockstep. Pick a target to start, “Off” to release. You can also start Follow from the model-control HUD.',
     '3D model library': 'Built-in, broadcast-optimised 3D military models. Filter by category and click one to drop it at the map centre — it then auto-selects in the control HUD. Sizes are sensible per type.',
     'Upload your own GLB': 'Add your own model. GLB is best (single file, compressed). Dropped at the current map centre.',
     'Placed models': 'Every model on the map. Per model: Control on the map (live HUD), fly to it, show/hide, delete, size, rotation, height, which maps it shows on, Solid/Wireframe style, exact coordinates, and a movement Path (draw it, set travel time, loop, auto-heading, play).',

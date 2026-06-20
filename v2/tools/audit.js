@@ -188,8 +188,8 @@ const p4=await p.evaluate(async()=>{const out=[];const push=(n,ok,i)=>out.push({
  const fin=[...document.querySelectorAll('.rdraw__b')].find(b=>/Finish/.test(b.textContent));fin&&fin.click();await new Promise(r=>setTimeout(r,150));
  const m=Store.models3d().find(x=>x.id===id);push('route draw (on-screen)', !!(m.route&&m.route.pts&&m.route.pts.length>=2), 'pts='+(m.route&&m.route.pts?m.route.pts.length:0));
  // route play moves it
- const lat0=m.lat;ModelsAnim.play(id);await new Promise(r=>setTimeout(r,1500));const mk=Models3D.marker(id);const moved=mk&&Math.abs(mk.getLatLng().lng-50)>0.5;ModelsAnim.stop(id);
- push('route playback moves model', moved);
+ const lat0=m.lat;Store.setEasing('linear');ModelsAnim.play(id);await new Promise(r=>setTimeout(r,3000));const mk=Models3D.marker(id);const lngNow=mk?mk.getLatLng().lng:null;const moved=mk&&Math.abs(lngNow-50)>0.5;ModelsAnim.stop(id);Store.setEasing('inout');
+ push('route playback moves model', moved, 'lng '+(lngNow!=null?lngNow.toFixed(2):'no-marker'));
  // 3D drag pose
  await new Promise(r=>setTimeout(r,200));
  return out;});

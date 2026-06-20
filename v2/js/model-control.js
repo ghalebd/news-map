@@ -103,7 +103,8 @@
   function togglePlay() { const m = sel(); if (!m) return; if (!(m.route && (m.route.pts || []).length >= 2)) { drawRoute(); return; } if (window.ModelsAnim) { ModelsAnim.playing(m.id) ? ModelsAnim.stop(m.id) : ModelsAnim.play(m.id); } renderVals(); }
 
   /* ---- HUD ---- */
-  let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt, wireBtn, routeB, playB;
+  let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt, wireBtn, routeB, playB, followB;
+  function toggleFollow() { const m = sel(); if (!m || !window.Follow) return; Follow.isFollowing('model', m.id) ? Follow.stop() : Follow.set('model', m.id); renderVals(); }
   function toggleWire() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { style: (m.style === 'wireframe') ? 'solid' : 'wireframe' }); }
   function build() {
     hud = h('div', 'mctl glass'); hud.hidden = true;
@@ -154,11 +155,12 @@
     const act = h('div', 'mctl__act mctl__act--6');
     routeB = B(I.sketch + '<span>Path</span>', 'Draw a movement path', drawRoute);
     playB = B(I.play + '<span>Play</span>', 'Play / stop movement', togglePlay);
+    followB = B(I.target + '<span>Follow</span>', 'Camera follows this model (locks on as it moves)', toggleFollow);
     act.append(
       B(I.target + '<span>Fly</span>', 'Fly camera to model', flyTo),
       B(I.layers + '<span>Copy</span>', 'Duplicate model', duplicate),
       B(I.undo + '<span>Reset</span>', 'Reset heading/pitch/roll', resetAttitude),
-      routeB, playB,
+      routeB, playB, followB,
       B(I.close + '<span>Delete</span>', 'Delete model', del, 'mctl__b--danger'),
     );
     hud.appendChild(act);
@@ -183,6 +185,7 @@
     const playing = window.ModelsAnim && ModelsAnim.playing(m.id);
     if (playB) { playB.innerHTML = (playing ? I.close : I.play) + '<span>' + (playing ? 'Stop' : 'Play') + '</span>'; playB.classList.toggle('on', !!playing); }
     if (routeB) routeB.classList.toggle('on', !!(routeMode && routeMode.id === m.id));
+    if (followB) followB.classList.toggle('on', !!(window.Follow && Follow.isFollowing('model', m.id)));
     // rebuild the picker
     if (picker) { picker.innerHTML = ''; models().forEach(x => { const o = h('option', null, x.name || 'Model'); o.value = x.id; if (x.id === selId) o.selected = true; picker.appendChild(o); }); }
   }
