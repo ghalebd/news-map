@@ -11,7 +11,7 @@ browser=await puppeteer.launch({headless:'new',executablePath:CHROME,
 const p=await browser.newPage();await p.setViewport({width:1280,height:840});
 p.on('error',e=>console.log('PAGE CRASHED:',''+e));
 p.on('pageerror',e=>console.log('PAGEERR:',(''+e).slice(0,150)));
-await p.goto('http://localhost:8000/v2/control.html',{waitUntil:'networkidle2'});
+await p.goto('http://localhost:8000/v2/control.html?nosync',{waitUntil:'networkidle2'});
 await sleep(2000);
 await p.evaluate(()=>{
  GameMap.map.setView([26.5,56.0],7,{animate:false});

@@ -178,6 +178,24 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
 5. Git: never push to `main`; work on branch `v2-rebuild`; commit messages end with the
    Co-Authored-By trailer.
 
+## Global sync (control ↔ presenter) — `js/sync-client.js`
+- Both windows join a cloud room (`wss://newsmap-sync…workers.dev`, default room
+  `aljazeera-main`) and exchange timestamped snapshots (last-writer-wins via `newsmap.v3.syncts`).
+- **The control console is the single source of truth; the presenter is a pure mirror
+  (receive-only).** Only `APP_ROLE==='control'` sends. A mirror must never push its (stale)
+  state back or it clobbers the operator's edits.
+- A local edit MUST claim a fresh `TSKEY` **synchronously** (not in the debounced `send()`),
+  else a slightly-older cloud snapshot satisfies `j.ts > myTs()` during the 300ms send window and
+  **wipes freshly-added models/overlays/drawings**. This was a real "I add something and it
+  vanishes" bug — keep the synchronous timestamp claim.
+- Room is overridable with `?room=NAME`; `?nosync` detaches a window entirely.
+- **TESTS MUST NOT touch the live room.** Every headless harness loads URLs with `?nosync`
+  (feature tests) or `?room=autotest-*` (the sync test), so they never write into the live
+  `aljazeera-main` broadcast state. Never point a test at a bare control.html/index.html URL.
+- Tools: `v2/tools/integration.js` (combined-state: FX stacking, full 3D load, globe, mode
+  stress, panel clamp — must be `PASS==TOTAL`, 0 page errors) and `v2/tools/sync-test.js`
+  (verifies the sender/timestamp rules in an isolated room).
+
 ## Known gotchas
 - Many layout rules use `!important`. To move a panel via JS you must use `el.style.setProperty(prop, val, 'important')` or it won't budge.
 - ID selectors beat class selectors: a media-query rule on `.right-panels-stack` loses to `#rightPanelsStack`. Match ID specificity.

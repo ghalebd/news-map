@@ -8,13 +8,20 @@
 (() => {
   if (/[?&]nosync/.test(location.search)) return;
   const KEY = 'newsmap.v3', TSKEY = 'newsmap.v3.syncts';
-  const ROOM_WS = 'wss://newsmap-sync.dida-newsmap.workers.dev/?room=aljazeera-main';
+  // Room is overridable via ?room=NAME — lets you run an isolated broadcast (and lets automated
+  // tests use a throwaway room so they never write into the live 'aljazeera-main' state).
+  const ROOM = (new URLSearchParams(location.search).get('room') || 'aljazeera-main').slice(0, 64);
+  const ROOM_WS = 'wss://newsmap-sync.dida-newsmap.workers.dev/?room=' + encodeURIComponent(ROOM);
+  // The control console is the single source of truth; the presenter window is a pure mirror
+  // (receive-only). A mirror must NEVER push its possibly-stale state back, or it can clobber
+  // the operator's fresh edits.
+  const IS_SENDER = window.APP_ROLE === 'control';
   let ws = null, applyingRemote = false, retryT = null;
   const myTs = () => parseInt(localStorage.getItem(TSKEY) || '0', 10);
 
   function connect() {
     try { ws = new WebSocket(ROOM_WS); } catch (e) { retry(); return; }
-    ws.onopen = () => { send(); badge('live'); };
+    ws.onopen = () => { if (IS_SENDER) send(); badge('live'); };
     ws.onmessage = ev => {
       try {
         const j = JSON.parse(ev.data);
@@ -43,7 +50,14 @@
   }
 
   let t = null;
-  if (window.Store && Store.on) Store.on(() => { if (applyingRemote) return; clearTimeout(t); t = setTimeout(send, 300); });
+  if (IS_SENDER && window.Store && Store.on) Store.on(() => {
+    if (applyingRemote) return;
+    // Claim a fresh timestamp SYNCHRONOUSLY on every local edit. Without this, TSKEY stayed
+    // stale until the debounced send() ran 300ms later — leaving a window where an older cloud
+    // snapshot satisfied `j.ts > myTs()` and overwrote freshly-added models/overlays/drawings.
+    localStorage.setItem(TSKEY, String(Date.now()));
+    clearTimeout(t); t = setTimeout(send, 300);
+  });
 
   function badge(st) {
     let el = document.getElementById('syncdot');

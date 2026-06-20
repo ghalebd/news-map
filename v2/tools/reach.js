@@ -3,7 +3,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
 const b=await puppeteer.launch({headless:'new',executablePath:CHROME,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
 const p=await b.newPage();await p.setViewport({width:1440,height:900});
-await p.goto('http://localhost:8000/v2/control.html',{waitUntil:'domcontentloaded'});await sleep(1500);
+await p.goto('http://localhost:8000/v2/control.html?nosync',{waitUntil:'domcontentloaded'});await sleep(1500);
 await p.evaluate(()=>{try{localStorage.clear();indexedDB.deleteDatabase('newsmap.assets3d');}catch(e){}});
 await p.reload({waitUntil:'domcontentloaded'});await sleep(2600);
 await p.evaluate(()=>{try{Store.setMode('build');}catch(e){}});await sleep(300);
@@ -63,7 +63,7 @@ await p.evaluate(()=>{ try{ window.Map3D&&Map3D.on&&Map3D.toggle&&Map3D.toggle(f
 
 // PRESENTER window (on-air output)
 const pp=await b.newPage();await pp.setViewport({width:1440,height:900});
-await pp.goto('http://localhost:8000/v2/index.html',{waitUntil:'domcontentloaded'});await sleep(2600);
+await pp.goto('http://localhost:8000/v2/index.html?nosync',{waitUntil:'domcontentloaded'});await sleep(2600);
 const scanFn=(containerSel,label)=>{
   const root = containerSel?document.querySelector(containerSel):document.body;
   if(!root) return {label,missing:true};

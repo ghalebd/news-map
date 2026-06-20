@@ -6,7 +6,7 @@ const b=await puppeteer.launch({headless:'new',executablePath:CHROME,args:['--no
 const p=await b.newPage();await p.setViewport({width:1280,height:840});
 p.on('dialog',d=>d.accept().catch(()=>{}));
 const er=[];p.on('pageerror',e=>er.push(''+e));p.on('console',m=>{if(m.type()==='error'&&!/CORS|ERR_FAILED|ERR_ABORTED|fetch|airplanes|opensky|aisstream|codetabs|maptiler|Failed to load resource|status of 40|tile/i.test(m.text()))er.push('CE '+m.text());});
-await p.goto('http://localhost:8000/v2/control.html',{waitUntil:'networkidle2'});
+await p.goto('http://localhost:8000/v2/control.html?nosync',{waitUntil:'networkidle2'});
 await p.evaluate(()=>{localStorage.clear();indexedDB.deleteDatabase('newsmap.assets3d');});
 await p.reload({waitUntil:'networkidle2'});await sleep(2200);
 await p.evaluate(()=>{ if(Store.setMode)Store.setMode('live'); GameMap.flyToView({lat:33,lng:53,zoom:6},{type:'jumpTo'}); });await sleep(500);
@@ -312,7 +312,7 @@ await sleep(400);
 const pres = await b.newPage(); await pres.setViewport({ width: 1280, height: 840 });
 const perr = []; pres.on('pageerror', e => perr.push('' + e));
 pres.on('console', mm => { if (mm.type() === 'error' && !/CORS|ERR_FAILED|ERR_ABORTED|fetch|airplanes|opensky|aisstream|codetabs|maptiler|Failed to load resource|status of 40|tile/i.test(mm.text())) perr.push('PCE ' + mm.text()); });
-await pres.goto('http://localhost:8000/v2/index.html', { waitUntil: 'domcontentloaded' });
+await pres.goto('http://localhost:8000/v2/index.html?nosync', { waitUntil: 'domcontentloaded' });
 await sleep(2600);
 const mir = await pres.evaluate(() => {
   const S = window.Store;

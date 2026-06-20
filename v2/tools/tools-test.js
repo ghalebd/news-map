@@ -24,7 +24,7 @@ const TOOLS = [
   const b = await puppeteer.launch({ headless: 'new', executablePath: CHROME, args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const p = await b.newPage(); await p.setViewport({ width: 1440, height: 900 });
   p.on('dialog', d => d.accept().catch(() => {}));
-  await p.goto('http://localhost:8000/v2/control.html', { waitUntil: 'domcontentloaded' }); await sleep(1200);
+  await p.goto('http://localhost:8000/v2/control.html?nosync', { waitUntil: 'domcontentloaded' }); await sleep(1200);
   await p.evaluate(() => { try { localStorage.clear(); indexedDB.deleteDatabase('newsmap.assets3d'); } catch (e) {} });
   await p.reload({ waitUntil: 'domcontentloaded' }); await sleep(2600);
   await p.evaluate(() => { Store.setMode('build'); if (!Store.scenes().length) Store.addScene({ lat: 31, lng: 47, zoom: 6 }); Store.setActive(Store.scenes()[0].id); Store.clearElements(); });
