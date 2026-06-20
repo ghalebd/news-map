@@ -182,6 +182,7 @@
 
   /* ---------- mode application ---------- */
   function applyMode() {
+    document.body.classList.toggle('role-control', window.APP_ROLE === 'control');
     document.body.classList.toggle('mode-build', S.state.mode === 'build');
     document.body.classList.toggle('mode-live', S.state.mode === 'live');
     modeSwitch.querySelectorAll('.modesw__btn').forEach(b => b.classList.toggle('is-active', b.dataset.mode === S.state.mode));

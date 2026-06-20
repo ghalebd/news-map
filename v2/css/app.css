@@ -190,7 +190,9 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 /* presenter vertical toolbar */
 .qtools { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: none; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: var(--r); max-height: calc(100vh - 130px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 .qtools::-webkit-scrollbar { width: 0; }
-body.mode-live .qtools { display: flex; }
+/* Operator console (control.html): toolbar always available, in BOTH Prep and Presenter modes.
+   On-air output window (index.html, no role-control): stays hidden so the broadcast is clean. */
+body.role-control .qtools { display: flex; }
 .qtools__sep { width: 24px; height: 1px; background: var(--stroke); margin: 2px 0; }
 .qtool { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen); transition: all var(--t-fast) var(--ease); }
 .qtool svg { width: 20px; height: 20px; }
@@ -328,7 +330,8 @@ body.mode-live .qtools { display: flex; }
 .port-pin__lbl { position: absolute; left: 16px; top: -3px; white-space: nowrap; background: rgba(8, 11, 18, .86); color: #cfefff; font: 700 10px var(--font); letter-spacing: .4px; padding: 3px 8px; border-radius: 5px; border: 1px solid rgba(124, 243, 255, .5); text-transform: uppercase; }
 
 /* ---------- zoom / reset cluster ---------- */
-.zoomctl { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: var(--r); }
+/* Essential map-nav chrome: sits just above movable panels so a dragged panel can never bury it. */
+.zoomctl { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: calc(var(--z-bar) + 50); display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: var(--r); }
 .zoomctl__b { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); transition: all var(--t-fast) var(--ease); }
 .zoomctl__b svg { width: 18px; height: 18px; }
 .zoomctl__b:hover { color: var(--accent); border-color: var(--accent); }
@@ -345,7 +348,8 @@ body.mode-live .qtools { display: flex; }
 .sceneins__btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- scene inspector (PREP) ---------- */
-.sceneins { position: fixed; right: 16px; top: 70px; width: 268px; z-index: var(--z-bar); padding: 14px; display: flex; flex-direction: column; gap: 13px; }
+/* right: 84px leaves a clear strip for the right-edge zoom bar (.zoomctl) so they never collide */
+.sceneins { position: fixed; right: 84px; top: 70px; width: 268px; z-index: var(--z-bar); padding: 14px; display: flex; flex-direction: column; gap: 13px; }
 .sceneins__hd { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: var(--accent); }
 .sceneins__hd svg { width: 15px; height: 15px; }
 .sceneins__f { display: flex; flex-direction: column; gap: 6px; }

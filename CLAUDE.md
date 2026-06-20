@@ -155,6 +155,17 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    opened with `domcontentloaded` (live-tracking sockets keep it from ever going network-idle).
    Add a check here whenever you add a feature — this is the systematic "no exceptions" review
    (مراجعة شاملة بلا استثناءات).
+   **CRITICAL — also run the reachability scanner** `v2/tools/reach.js`
+   (`NODE_PATH=$HOME/.npm-global/lib/node_modules node v2/tools/reach.js`). The feature audit
+   calls `Store.setX()` and fires `.click()` programmatically — which SUCCEEDS even on elements
+   that are `display:none`, zero-size, off-screen, or covered by another panel, i.e. that the
+   user can NOT actually see or click. That blind spot is how "verified" features still reach the
+   user broken. `reach.js` opens the real panels and does true hit-testing
+   (`document.elementFromPoint` at each control's centre must return that control) across
+   control+presenter × build/live/3D × every togglable panel. It must report `0 issues`
+   everywhere (it filters scroll/closed-panel off-screen noise; real signals are `covered-by:*`
+   and `zero-size`). When you add any visible control, add it to a reach.js scan. Rule of thumb:
+   **a feature is not "working" until a real click at its on-screen position lands on it.**
 5. Git: never push to `main`; work on branch `v2-rebuild`; commit messages end with the
    Co-Authored-By trailer.
 

@@ -223,5 +223,5 @@
   const _piv = setInterval(() => { bindPick3d(); if (pick3dBound) clearInterval(_piv); }, 1500);
   onStore();
 
-  window.ModelControl = { select, deselect, drawPath: (id) => { select(id); drawRoute(); }, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); }, get selected() { return selId; } };
+  window.ModelControl = { select, deselect, drawPath: (id) => { select(id); drawRoute(); }, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); else window.UI && UI.toast && UI.toast('No 3D models yet — add one from the 3D library first'); }, get selected() { return selId; } };
 })();
