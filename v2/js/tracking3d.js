@@ -18,15 +18,17 @@
   let glmap = null, layer = null, timer = null;
   const tmpM = new THREE.Matrix4(), tmpP = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), upZ = new THREE.Vector3(0, 0, 1);
 
-  // merge several indexed box geometries into one (MeshBasicMaterial is unlit, so normals/uvs don't matter)
+  // merge several indexed box geometries into one, keeping normals so the shapes can be SHADED
+  // (shading is what makes a 3D box read as a 3D object instead of a flat blob)
   function mergeGeos(geos) {
     let vCount = 0, iCount = 0;
     geos.forEach(g => { vCount += g.attributes.position.count; iCount += g.index.count; });
-    const pos = new Float32Array(vCount * 3), idx = (vCount > 65535 ? new Uint32Array(iCount) : new Uint16Array(iCount));
+    const pos = new Float32Array(vCount * 3), nor = new Float32Array(vCount * 3), idx = (vCount > 65535 ? new Uint32Array(iCount) : new Uint16Array(iCount));
     let vo = 0, io = 0;
-    geos.forEach(g => { const p = g.attributes.position.array, ix = g.index.array; pos.set(p, vo * 3); for (let k = 0; k < ix.length; k++) idx[io + k] = ix[k] + vo; vo += g.attributes.position.count; io += ix.length; });
+    geos.forEach(g => { const p = g.attributes.position.array, n = g.attributes.normal.array, ix = g.index.array; pos.set(p, vo * 3); nor.set(n, vo * 3); for (let k = 0; k < ix.length; k++) idx[io + k] = ix[k] + vo; vo += g.attributes.position.count; io += ix.length; });
     const out = new THREE.BufferGeometry();
     out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     out.setIndex(new THREE.BufferAttribute(idx, 1));
     return out;
   }
@@ -58,9 +60,12 @@
       // custom layer on style.load) so we never leak InstancedMeshes/geometry/materials
       if (!this.scene) {
         this.cam = new THREE.Camera(); this.scene = new THREE.Scene();
-        // unlit, always-visible flat colour (fast + clear on air)
-        this.shipMat = new THREE.MeshBasicMaterial({ color: 0x3ad6ff });
-        this.planeMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+        // lit so the 3D box form reads clearly (not a flat blob); ambient keeps them bright on air
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const dl = new THREE.DirectionalLight(0xffffff, 1.15); dl.position.set(0.5, -0.6, 1.4); this.scene.add(dl);
+        const fill = new THREE.DirectionalLight(0x9fc6ff, 0.35); fill.position.set(-0.6, 0.5, 0.4); this.scene.add(fill);
+        this.shipMat = new THREE.MeshLambertMaterial({ color: 0x36c8ff, emissive: 0x05121c });
+        this.planeMat = new THREE.MeshLambertMaterial({ color: 0xffcf4d, emissive: 0x16100a });
         this.ships = new THREE.InstancedMesh(shipGeo(), this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0;
         this.planes = new THREE.InstancedMesh(planeGeo(), this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0;
         this.scene.add(this.ships, this.planes);

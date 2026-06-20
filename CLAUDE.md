@@ -196,6 +196,15 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
   stress, panel clamp — must be `PASS==TOTAL`, 0 page errors) and `v2/tools/sync-test.js`
   (verifies the sender/timestamp rules in an isolated room).
 
+## Cache-busting (avoid stale JS in the browser)
+- All local `js/*.js` and `css/*.css` includes in `v2/control.html` + `v2/index.html` carry a
+  `?v=N` query. **Bump N (both files, all tags) whenever you change client JS/CSS** so a normal
+  reload pulls fresh code. The plain `python http.server` sends no cache-control headers, so
+  without this the browser serves stale scripts and "fixes" appear not to land. Quick bump:
+  `sed -i '' -E 's#(src="js/[a-z0-9_-]+\.js)(\?v=[0-9]+)?"#\1?v=N"#g; s#(href="css/[a-z0-9_-]+\.css)(\?v=[0-9]+)?"#\1?v=N"#g' v2/control.html v2/index.html`
+  (also note: re-entering 3D in an already-open page does NOT reload scripts — the operator must
+  reload the page to get new code).
+
 ## Known gotchas
 - Many layout rules use `!important`. To move a panel via JS you must use `el.style.setProperty(prop, val, 'important')` or it won't budge.
 - ID selectors beat class selectors: a media-query rule on `.right-panels-stack` loses to `#rightPanelsStack`. Match ID specificity.
