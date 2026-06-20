@@ -227,7 +227,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 4px; }
 .cfg-cat3d__i span { font-size: 12px; font-weight: 700; line-height: 1.2; }
 .cfg-cat3d__i small { font-size: 9.5px; color: var(--text-2); opacity: .75; }
 /* ---- Timeline (slim, compact) ---- */
-.tl { position: fixed; left: 50%; transform: translateX(-50%); right: auto; bottom: 12px; width: min(820px, calc(100vw - 360px)); z-index: var(--z-flyout, 60); padding: 7px 9px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px; }
+/* bottom: 124px keeps the movement timeline stacked ABOVE the scene deck (bottom:18px, ~94px tall) — never overlapping it */
+.tl { position: fixed; left: 50%; transform: translateX(-50%); right: auto; bottom: 124px; width: min(820px, calc(100vw - 360px)); z-index: var(--z-flyout, 60); padding: 7px 9px; border-radius: 12px; display: flex; flex-direction: column; gap: 5px; }
 .tl__hd { display: flex; align-items: center; gap: 5px; }
 .tl__b { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: pointer; transition: all var(--t-fast) var(--ease); }
 .tl__b svg { width: 13px; height: 13px; }

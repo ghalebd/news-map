@@ -166,6 +166,15 @@ locator, scene-inspector, config-apply, config-panel, app, theme, ui, icons.
    everywhere (it filters scroll/closed-panel off-screen noise; real signals are `covered-by:*`
    and `zero-size`). When you add any visible control, add it to a reach.js scan. Rule of thumb:
    **a feature is not "working" until a real click at its on-screen position lands on it.**
+   **And run the tool/conflict tester** `v2/tools/tools-test.js`: it exercises EVERY draw tool
+   through its real ADD-menu item (real click) + real map gesture, asserting the tool activates,
+   exactly ONE tool is active (no double-active conflict), the cursor/arm-chip/map-drag state is
+   correct and restored after each gesture, and the element actually renders. Then a conflict
+   pass: panel-overlap matrix with ALL panels open (must be 0 — this caught the timeline `.tl`
+   overlapping the scene deck `.deck`), z-order token ordering, Select-tool cleanup, and
+   active-tool exclusivity under rapid switching. Must report `PASS == TOTAL`. NOTE: erase is a
+   full click (mousedown+click); a test firing only mousedown leaves the internal `skipClick`
+   flag set and swallows the NEXT map click — always complete simulated gestures.
 5. Git: never push to `main`; work on branch `v2-rebuild`; commit messages end with the
    Co-Authored-By trailer.
 
