@@ -51,7 +51,15 @@
     addSceneLayers(); mirror(); mirrorOverlays(); applyLabels3D();
     try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
     try { if (window.Tracking3D) window.Tracking3D.attach3D(map); } catch (e) {}   // live ships/planes as 3D
-    applyLight(); applyProjection();
+    applyLight(); applyProjection(); applyPerf();
+  }
+  // PERFORMANCE: on a retina display the GL terrain renders ~4× the pixels (devicePixelRatio 2 → 2²).
+  // Cap to 1× by default (huge speedup for the heavy 3D + terrain scene); the operator can opt back
+  // into full-resolution "sharp" render from Settings ▸ 3D when the machine can afford it.
+  function applyPerf() {
+    if (!map || !map.setPixelRatio) return;
+    const hi = !!cfg3().hi, dpr = window.devicePixelRatio || 1;
+    try { map.setPixelRatio(hi ? dpr : Math.min(dpr, 1)); } catch (e) {}
   }
   // globe ↔ flat projection (MapLibre v5). Models are mercator-projected, so they
   // are hidden on the globe (the planet view is an establishing/whole-Earth shot).
@@ -234,7 +242,7 @@
 
   /* ---- react to store: keep 3D base in step with the 2D app ---- */
   S.on((st, evt) => {
-    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); } return; }
+    if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); applyPerf(); } return; }
     if (evt === 'light3d') { if (on && map) applyLight(); return; }
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }

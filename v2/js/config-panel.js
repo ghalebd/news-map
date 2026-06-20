@@ -537,6 +537,7 @@
       slider('Camera pitch', Math.round(t.pitch), 0, 80, 1, v => S.setThreeD({ pitch: v })));
     bd.appendChild(rowTog('3D names (lie on terrain)', t.labels3d !== false, on => S.setThreeD({ labels3d: on })));
     bd.appendChild(rowTog('Globe (planet) view', !!t.globe, on => S.setThreeD({ globe: on })));
+    bd.appendChild(rowTog('Sharp render (retina — slower)', !!t.hi, on => S.setThreeD({ hi: on })));
     bd.appendChild(h('div', 'hint', 'Real 3D terrain (MapLibre). Toggle from here or the “3D” button by the zoom controls; rotate with right-drag or the on-screen rotate buttons. Globe view shows the whole Earth as a sphere (zoom out); zoom in returns to the terrain. 3D models are shown in flat terrain view.'));
     ct.appendChild(sec);
 

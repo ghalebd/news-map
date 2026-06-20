@@ -32,21 +32,22 @@
   }
   const box = (w, l, h, x, y, z) => { const g = new THREE.BoxGeometry(w, l, h); g.translate(x || 0, y || 0, z || 0); return g; };
 
-  // recognizable low-poly silhouettes, pointing +Y (nose/bow forward), wings/beam along X, height +Z
+  // SOLID, chunky silhouettes (no thin masts/fins that read as "sticks"), with real height so they
+  // stay readable even at a low/near-horizontal camera angle. Pointing +Y (nose/bow forward).
   function planeGeo() {
     return mergeGeos([
-      box(0.18, 1.5, 0.16, 0, 0.05, 0),    // fuselage (nose toward +Y)
-      box(1.5, 0.42, 0.07, 0, -0.05, 0),   // main wings (span along X)
-      box(0.62, 0.3, 0.06, 0, -0.62, 0),   // tailplane
-      box(0.07, 0.34, 0.34, 0, -0.6, 0.16),// vertical tail fin
+      box(0.30, 1.6, 0.30, 0, 0.05, 0),     // chunky fuselage (nose toward +Y)
+      box(1.7, 0.55, 0.18, 0, -0.05, 0),    // thick main wings (span along X)
+      box(0.7, 0.36, 0.16, 0, -0.66, 0),    // tailplane
+      box(0.20, 0.40, 0.46, 0, -0.62, 0.24),// vertical tail fin (chunky block, not a sliver)
     ]);
   }
   function shipGeo() {
     return mergeGeos([
-      box(0.42, 1.35, 0.26, 0, 0, 0.02),   // hull block
-      box(0.5, 0.5, 0.16, 0, 0.62, -0.02), // raised bow wedge (toward +Y)
-      box(0.3, 0.42, 0.4, 0, -0.1, 0.28),  // superstructure / bridge tower
-      box(0.08, 0.08, 0.5, 0, -0.1, 0.6),  // mast
+      box(0.52, 1.5, 0.34, 0, 0, 0.0),      // chunky hull
+      box(0.52, 0.42, 0.22, 0, 0.66, 0.10), // raised bow (toward +Y)
+      box(0.46, 0.7, 0.6, 0, -0.18, 0.46),  // tall solid bridge/superstructure (vertical presence)
+      box(0.5, 0.22, 0.26, 0, -0.74, 0.14), // stern block
     ]);
   }
 
