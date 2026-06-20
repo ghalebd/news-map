@@ -18,9 +18,37 @@
   let glmap = null, layer = null, timer = null;
   const tmpM = new THREE.Matrix4(), tmpP = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), upZ = new THREE.Vector3(0, 0, 1);
 
-  // simple low-poly shapes, built pointing +Y (forward), lying in the ground plane
-  function planeGeo() { const g = new THREE.ConeGeometry(0.34, 1.5, 4); g.scale(1, 1, 0.5); return g; }   // 4-sided dart
-  function shipGeo() { const g = new THREE.BoxGeometry(0.32, 1.1, 0.28); return g; }                       // long narrow hull
+  // merge several indexed box geometries into one (MeshBasicMaterial is unlit, so normals/uvs don't matter)
+  function mergeGeos(geos) {
+    let vCount = 0, iCount = 0;
+    geos.forEach(g => { vCount += g.attributes.position.count; iCount += g.index.count; });
+    const pos = new Float32Array(vCount * 3), idx = (vCount > 65535 ? new Uint32Array(iCount) : new Uint16Array(iCount));
+    let vo = 0, io = 0;
+    geos.forEach(g => { const p = g.attributes.position.array, ix = g.index.array; pos.set(p, vo * 3); for (let k = 0; k < ix.length; k++) idx[io + k] = ix[k] + vo; vo += g.attributes.position.count; io += ix.length; });
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    out.setIndex(new THREE.BufferAttribute(idx, 1));
+    return out;
+  }
+  const box = (w, l, h, x, y, z) => { const g = new THREE.BoxGeometry(w, l, h); g.translate(x || 0, y || 0, z || 0); return g; };
+
+  // recognizable low-poly silhouettes, pointing +Y (nose/bow forward), wings/beam along X, height +Z
+  function planeGeo() {
+    return mergeGeos([
+      box(0.18, 1.5, 0.16, 0, 0.05, 0),    // fuselage (nose toward +Y)
+      box(1.5, 0.42, 0.07, 0, -0.05, 0),   // main wings (span along X)
+      box(0.62, 0.3, 0.06, 0, -0.62, 0),   // tailplane
+      box(0.07, 0.34, 0.34, 0, -0.6, 0.16),// vertical tail fin
+    ]);
+  }
+  function shipGeo() {
+    return mergeGeos([
+      box(0.42, 1.35, 0.26, 0, 0, 0.02),   // hull block
+      box(0.5, 0.5, 0.16, 0, 0.62, -0.02), // raised bow wedge (toward +Y)
+      box(0.3, 0.42, 0.4, 0, -0.1, 0.28),  // superstructure / bridge tower
+      box(0.08, 0.08, 0.5, 0, -0.1, 0.6),  // mast
+    ]);
+  }
 
   const customLayer = {
     id: 'tracking3d', type: 'custom', renderingMode: '3d',
@@ -51,7 +79,7 @@
     const mc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], altM || 0);
     const mpu = mc.meterInMercatorCoordinateUnits(), sc = sizeM * mpu;
     tmpP.set(mc.x, mc.y, mc.z);
-    tmpQ.setFromAxisAngle(upZ, (180 - (heading || 0)) * D2R);   // face the heading (cw from north)
+    tmpQ.setFromAxisAngle(upZ, (180 + (heading || 0)) * D2R);   // face the heading (clockwise from north; +Z is up in mercator space)
     tmpS.set(sc, sc, sc);
     tmpM.compose(tmpP, tmpQ, tmpS);
     mesh.setMatrixAt(i, tmpM);
