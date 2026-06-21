@@ -243,12 +243,16 @@
       if (!this.on) return;
       const b = map.getBounds(), c = map.getCenter();
       const distNM = Math.min(Math.max(50, c.distanceTo(L.latLng(b.getNorth(), b.getEast())) / 1852), 1000);
-      const sources = [
-        { url: `https://api.airplanes.live/v2/point/${c.lat.toFixed(2)}/${c.lng.toFixed(2)}/${Math.round(distNM)}`, parse: d => (d.ac || d.aircraft || []).filter(a => a.lat != null && a.lon != null).map(a => ({ icao: a.hex, callsign: (a.flight || a.r || '').trim(), lat: a.lat, lng: a.lon, alt: a.alt_baro || 0, velocity: (a.gs || 0) * 0.5144, heading: a.track || a.true_heading || 0, type: a.t || '' })) },
-        { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://opensky-network.org/api/states/all?lamin=${b.getSouth().toFixed(3)}&lomin=${b.getWest().toFixed(3)}&lamax=${b.getNorth().toFixed(3)}&lomax=${b.getEast().toFixed(3)}`)}`, parse: d => (d.states || []).filter(s => s[6] != null && s[5] != null && !s[8]).map(s => ({ icao: s[0], callsign: (s[1] || '').trim(), lat: s[6], lng: s[5], alt: (s[7] || 0) * 3.281, velocity: s[9] || 0, heading: s[10] || 0, type: '' })) },
-      ];
+      // airplanes.live — free, no auth, sends CORS (access-control-allow-origin: *). The old
+      // OpenSky-via-codetabs fallback is dead (OpenSky now needs auth; codetabs 400s) so it was
+      // removed — it only added noise and hid the working source. Two quick tries on transient fails.
+      const parse = d => (d.ac || d.aircraft || []).filter(a => a.lat != null && a.lon != null).map(a => ({ icao: a.hex, callsign: (a.flight || a.r || '').trim(), lat: a.lat, lng: a.lon, alt: a.alt_baro || 0, velocity: (a.gs || 0) * 0.5144, heading: a.track || a.true_heading || 0, type: a.t || '' }));
+      const url = `https://api.airplanes.live/v2/point/${c.lat.toFixed(2)}/${c.lng.toFixed(2)}/${Math.round(distNM)}`;
       let ac = null;
-      for (const src of sources) { try { const r = await fetch(src.url, { signal: AbortSignal.timeout(8000) }); if (!r.ok) continue; ac = src.parse(await r.json()); break; } catch (e) {} }
+      for (let attempt = 0; attempt < 2 && ac == null; attempt++) {
+        try { const r = await fetch(url, { signal: AbortSignal.timeout(9000) }); if (r.ok) ac = parse(await r.json()); } catch (e) {}
+        if (ac == null && attempt === 0) await new Promise(r => setTimeout(r, 1200));
+      }
       if (!ac || !this.on) return;   // bail if tracking was switched off while awaiting
       const seen = new Set(), bounds = map.getBounds();
       ac.forEach(a => { if (!bounds.contains([a.lat, a.lng])) return; seen.add(a.icao); this.upsert(a.icao, a); });

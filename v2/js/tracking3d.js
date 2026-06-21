@@ -21,18 +21,29 @@
   const loader = new THREE.GLTFLoader();
   try { if (THREE.DRACOLoader) { const d = new THREE.DRACOLoader(); d.setDecoderPath('lib/draco/'); loader.setDRACOLoader(d); } } catch (e) {}
 
-  // merge a GLB into ONE unit-sized geometry, then stand it upright (Z-up) with its base at z=0
+  // merge a GLB into ONE unit-sized geometry (Z-up, base z=0). Each mesh's material colour is
+  // baked into per-vertex colours so the model keeps its REAL colours in a single instanced mesh.
   function mergeScene(scene) {
     scene.updateMatrixWorld(true);
     const parts = [];
-    scene.traverse(o => { if (o.isMesh && o.geometry) { let g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (g.index) g = g.toNonIndexed(); if (!g.getAttribute('normal')) g.computeVertexNormals(); parts.push(g); } });
+    scene.traverse(o => {
+      if (!(o.isMesh && o.geometry)) return;
+      let g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (g.index) g = g.toNonIndexed(); if (!g.getAttribute('normal')) g.computeVertexNormals();
+      const m = Array.isArray(o.material) ? o.material[0] : o.material;
+      const col = (m && m.color) ? m.color : new THREE.Color(0xbcc8d4);
+      const n = g.getAttribute('position').count, ca = new Float32Array(n * 3);
+      for (let k = 0; k < n; k++) { ca[k * 3] = col.r; ca[k * 3 + 1] = col.g; ca[k * 3 + 2] = col.b; }
+      g.setAttribute('color', new THREE.BufferAttribute(ca, 3));
+      parts.push(g);
+    });
     if (!parts.length) return null;
     let nv = 0; parts.forEach(g => nv += g.getAttribute('position').count);
-    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3); let o = 0;
-    parts.forEach(g => { pos.set(g.getAttribute('position').array, o * 3); nor.set(g.getAttribute('normal').array, o * 3); o += g.getAttribute('position').count; });
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), colr = new Float32Array(nv * 3); let o = 0;
+    parts.forEach(g => { pos.set(g.getAttribute('position').array, o * 3); nor.set(g.getAttribute('normal').array, o * 3); colr.set(g.getAttribute('color').array, o * 3); o += g.getAttribute('position').count; });
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colr, 3));
     geo.computeBoundingBox(); const bb = geo.boundingBox, c = new THREE.Vector3(), sz = new THREE.Vector3(); bb.getCenter(c); bb.getSize(sz);
     geo.translate(-c.x, -bb.min.y, -c.z);                       // centre XZ, base on Y=0
     const maxd = Math.max(sz.x, sz.y, sz.z) || 1; geo.scale(1 / maxd, 1 / maxd, 1 / maxd);
@@ -91,8 +102,9 @@
         const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(0.4, 1.3, 0.7); this.scene.add(key);
         const fill = new THREE.DirectionalLight(0xcfe0f5, 0.35); fill.position.set(-0.6, 0.5, -0.4); this.scene.add(fill);
         // light, low-saturation finishes so they read as clean models, not loud blobs
-        this.shipMat = new THREE.MeshLambertMaterial({ color: 0xbcc8d4 });
-        this.planeMat = new THREE.MeshLambertMaterial({ color: 0xe9edf2 });
+        // vertex colours carry the model's real materials (container colours, livery, etc.)
+        this.shipMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+        this.planeMat = new THREE.MeshLambertMaterial({ vertexColors: true });
         loadModel(SHIP_GLB).then(g => { if (!g) return; this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); update(); });
         loadModel(PLANE_GLB).then(g => { if (!g) return; this.planes = new THREE.InstancedMesh(g, this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0; this.scene.add(this.planes); update(); });
       }
