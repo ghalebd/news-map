@@ -1,122 +1,90 @@
 /* ============================================================
-   TRACKING3D — live ships & flights as LIGHTWEIGHT 3D shapes in
-   the 3D map. Uses two THREE InstancedMeshes (one for ships, one
-   for planes) so hundreds of targets render in a single draw call
-   each — fast enough for live tracking. Positions/headings come
-   from window.Tracking (Ships.ships / Flights.flights), refreshed
-   on a timer while in 3D. config.track3d (synced): { on, shipKm,
-   planeKm, realAlt }.
+   TRACKING3D — live ships & flights in the 3D map, rebuilt as a
+   NATIVE MapLibre symbol layer (not three.js). Each target is a
+   flat icon that ALWAYS faces the camera (billboard) and rotates
+   to its true heading — like a flight-radar. This reads clearly
+   from ANY camera angle (never goes flat/bent), is GPU-batched in
+   a single layer (fast — no extra WebGL renderer), and sits on the
+   live positions from window.Tracking, refreshed on a timer.
+   config.track3d (synced): { on, shipKm, planeKm }.
    ============================================================ */
 (() => {
-  const S = window.Store, THREE = window.THREE;
-  if (!S || !THREE) { return; }
-  const D2R = Math.PI / 180;
-  const MAXS = 600, MAXF = 600;
-  const cfg = () => Object.assign({ on: true, shipKm: 5, planeKm: 4, realAlt: true }, S.cfg().track3d || {});
+  const S = window.Store;
+  if (!S) return;
+  const SRC = 'trk3d', LYR = 'trk3d-sym';
+  const cfg = () => Object.assign({ on: true, shipKm: 5, planeKm: 4 }, S.cfg().track3d || {});
   const TS = () => S.cfg().trackStyle || {};
+  let glmap = null, ready = false, lastColors = '';
 
-  let glmap = null, layer = null, timer = null;
-  const tmpM = new THREE.Matrix4(), tmpP = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), upZ = new THREE.Vector3(0, 0, 1);
-
-  // merge several indexed box geometries into one, keeping normals so the shapes can be SHADED
-  // (shading is what makes a 3D box read as a 3D object instead of a flat blob)
-  function mergeGeos(geos) {
-    let vCount = 0, iCount = 0;
-    geos.forEach(g => { vCount += g.attributes.position.count; iCount += g.index.count; });
-    const pos = new Float32Array(vCount * 3), nor = new Float32Array(vCount * 3), idx = (vCount > 65535 ? new Uint32Array(iCount) : new Uint16Array(iCount));
-    let vo = 0, io = 0;
-    geos.forEach(g => { const p = g.attributes.position.array, n = g.attributes.normal.array, ix = g.index.array; pos.set(p, vo * 3); nor.set(n, vo * 3); for (let k = 0; k < ix.length; k++) idx[io + k] = ix[k] + vo; vo += g.attributes.position.count; io += ix.length; });
-    const out = new THREE.BufferGeometry();
-    out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-    out.setIndex(new THREE.BufferAttribute(idx, 1));
-    return out;
+  /* ---- crisp top-view icons drawn on a canvas (pointing UP = north at heading 0) ---- */
+  function draw(kind, color) {
+    const S2 = 64, cv = document.createElement('canvas'); cv.width = cv.height = S2 * 2;
+    const x = cv.getContext('2d'); x.scale(2, 2);
+    x.lineJoin = 'round'; x.lineCap = 'round'; x.strokeStyle = 'rgba(3,10,20,.92)'; x.lineWidth = 3; x.fillStyle = color;
+    const poly = pts => { x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.closePath(); x.fill(); x.stroke(); };
+    if (kind === 'plane') {
+      poly([[32, 7], [37, 17], [37, 30], [60, 43], [60, 49], [37, 42], [37, 52], [46, 58], [46, 61], [32, 57], [18, 61], [18, 58], [27, 52], [27, 42], [4, 49], [4, 43], [27, 30], [27, 17]]); // swept airliner
+    } else {
+      poly([[32, 6], [43, 22], [43, 50], [38, 58], [26, 58], [21, 50], [21, 22]]); // ship hull, pointed bow up
+      x.fillStyle = 'rgba(3,12,22,.85)'; x.fillRect(27, 30, 10, 16);               // bridge block (dark)
+    }
+    return x.getImageData(0, 0, cv.width, cv.height);
   }
-  const box = (w, l, h, x, y, z) => { const g = new THREE.BoxGeometry(w, l, h); g.translate(x || 0, y || 0, z || 0); return g; };
-
-  // SOLID, chunky silhouettes (no thin masts/fins that read as "sticks"), with real height so they
-  // stay readable even at a low/near-horizontal camera angle. Pointing +Y (nose/bow forward).
-  function planeGeo() {
-    return mergeGeos([
-      box(0.30, 1.6, 0.30, 0, 0.05, 0),     // chunky fuselage (nose toward +Y)
-      box(1.7, 0.55, 0.18, 0, -0.05, 0),    // thick main wings (span along X)
-      box(0.7, 0.36, 0.16, 0, -0.66, 0),    // tailplane
-      box(0.20, 0.40, 0.46, 0, -0.62, 0.24),// vertical tail fin (chunky block, not a sliver)
-    ]);
-  }
-  function shipGeo() {
-    return mergeGeos([
-      box(0.52, 1.5, 0.34, 0, 0, 0.0),      // chunky hull
-      box(0.52, 0.42, 0.22, 0, 0.66, 0.10), // raised bow (toward +Y)
-      box(0.46, 0.7, 0.6, 0, -0.18, 0.46),  // tall solid bridge/superstructure (vertical presence)
-      box(0.5, 0.22, 0.26, 0, -0.74, 0.14), // stern block
-    ]);
+  function ensureIcons(map) {
+    const sc = TS().shipColor || '#36c8ff', fc = TS().flightColor || '#ffcf4d';
+    ['trk-ship', 'trk-plane'].forEach((id, i) => {
+      const img = draw(i ? 'plane' : 'ship', i ? fc : sc);
+      try { if (map.hasImage(id)) map.removeImage(id); } catch (e) {}
+      try { map.addImage(id, img, { pixelRatio: 2 }); } catch (e) {}
+    });
+    lastColors = sc + fc;
   }
 
-  const customLayer = {
-    id: 'tracking3d', type: 'custom', renderingMode: '3d',
-    onAdd(map, gl) {
-      // build the scene/meshes ONCE and reuse across style swaps (MapLibre re-adds the
-      // custom layer on style.load) so we never leak InstancedMeshes/geometry/materials
-      if (!this.scene) {
-        this.cam = new THREE.Camera(); this.scene = new THREE.Scene();
-        // lit so the 3D box form reads clearly (not a flat blob); ambient keeps them bright on air
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const dl = new THREE.DirectionalLight(0xffffff, 1.15); dl.position.set(0.5, -0.6, 1.4); this.scene.add(dl);
-        const fill = new THREE.DirectionalLight(0x9fc6ff, 0.35); fill.position.set(-0.6, 0.5, 0.4); this.scene.add(fill);
-        this.shipMat = new THREE.MeshLambertMaterial({ color: 0x36c8ff, emissive: 0x05121c });
-        this.planeMat = new THREE.MeshLambertMaterial({ color: 0xffcf4d, emissive: 0x16100a });
-        this.ships = new THREE.InstancedMesh(shipGeo(), this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0;
-        this.planes = new THREE.InstancedMesh(planeGeo(), this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0;
-        this.scene.add(this.ships, this.planes);
-      }
-      if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
-      layer = this; update();
-    },
-    render(gl, args) {
-      if (!this.scene) return;
-      const m = (args && args.defaultProjectionData) ? args.defaultProjectionData.mainMatrix : args;
-      this.cam.projectionMatrix = new THREE.Matrix4().fromArray(m);
-      this.renderer.resetState(); this.renderer.render(this.scene, this.cam);
-    },
-  };
+  /* ---- live features from window.Tracking ---- */
+  function fc() {
+    const T = window.Tracking, c = cfg(), feats = [];
+    if (c.on && T) {
+      if (T.Ships && T.Ships.on && T.Ships.ships) for (const [, s] of T.Ships.ships) { if (s.lat == null) continue; feats.push(pt(s.lng, s.lat, 'ship', s.course != null ? s.course : (s.heading || 0))); }
+      if (T.Flights && T.Flights.on && T.Flights.flights) for (const [, f] of T.Flights.flights) { if (f.lat == null) continue; feats.push(pt(f.lng, f.lat, 'plane', f.heading || 0)); }
+    }
+    return { type: 'FeatureCollection', features: feats };
+  }
+  const pt = (lng, lat, kind, hdg) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] }, properties: { kind, hdg: Math.round(hdg) || 0 } });
 
-  function setInst(mesh, i, lat, lng, altM, heading, sizeM) {
-    const mc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], altM || 0);
-    const mpu = mc.meterInMercatorCoordinateUnits(), sc = sizeM * mpu;
-    tmpP.set(mc.x, mc.y, mc.z);
-    tmpQ.setFromAxisAngle(upZ, (180 + (heading || 0)) * D2R);   // face the heading (clockwise from north; +Z is up in mercator space)
-    tmpS.set(sc, sc, sc);
-    tmpM.compose(tmpP, tmpQ, tmpS);
-    mesh.setMatrixAt(i, tmpM);
+  const sizeExpr = () => { const c = cfg(); const sz = km => Math.max(0.4, Math.min(1.5, (km || 5) / 7)); return ['match', ['get', 'kind'], 'plane', sz(c.planeKm), sz(c.shipKm)]; };
+
+  function attach3D(map) {
+    glmap = map; ensureIcons(map);
+    if (!map.getSource(SRC)) map.addSource(SRC, { type: 'geojson', data: fc() });
+    if (!map.getLayer(LYR)) {
+      map.addLayer({
+        id: LYR, type: 'symbol', source: SRC,
+        layout: {
+          'icon-image': ['match', ['get', 'kind'], 'plane', 'trk-plane', 'trk-ship'],
+          'icon-size': sizeExpr(),
+          'icon-rotate': ['get', 'hdg'],
+          'icon-rotation-alignment': 'map',   // heading is geographic (relative to map north)
+          'icon-pitch-alignment': 'viewport', // ALWAYS face the camera — never lies flat on a tilt
+          'icon-allow-overlap': true, 'icon-ignore-placement': true,
+        },
+      });
+    }
+    ready = true; update();
   }
 
   function update() {
-    if (!layer || !glmap) return;
-    const c = cfg();
-    layer.shipMat.color.set(TS().shipColor || '#3ad6ff');
-    layer.planeMat.color.set(TS().flightColor || '#ffd166');
-    const T = window.Tracking;
-    let i = 0, j = 0;
-    if (c.on && T) {
-      if (T.Ships && T.Ships.on && T.Ships.ships) for (const [, s] of T.Ships.ships) { if (i >= MAXS) break; setInst(layer.ships, i, s.lat, s.lng, 0, s.course || s.heading || 0, c.shipKm * 1000); i++; }
-      if (T.Flights && T.Flights.on && T.Flights.flights) for (const [, f] of T.Flights.flights) { if (j >= MAXF) break; const altM = c.realAlt ? (f.alt || 0) * 0.3048 : 0; setInst(layer.planes, j, f.lat, f.lng, altM, f.heading || 0, c.planeKm * 1000); j++; }
-    }
-    layer.ships.count = i; layer.ships.instanceMatrix.needsUpdate = true;
-    layer.planes.count = j; layer.planes.instanceMatrix.needsUpdate = true;
-    if (i || j || layer._lastN) glmap.triggerRepaint();   // skip the repaint when there's nothing (and nothing was) shown
-    layer._lastN = i + j;
+    if (!glmap || !ready) return;
+    if ((TS().shipColor || '#36c8ff') + (TS().flightColor || '#ffcf4d') !== lastColors) ensureIcons(glmap);
+    const src = glmap.getSource(SRC); if (src) src.setData(fc());
+    try { glmap.setLayoutProperty(LYR, 'icon-size', sizeExpr()); } catch (e) {}
   }
 
-  function attach3D(map) {
-    glmap = map;
-    if (!map.getLayer('tracking3d')) { try { map.addLayer(customLayer); } catch (e) { console.warn('Tracking3D layer', e); return; } }
-    layer = customLayer; update();
-  }
-
-  // refresh on a timer while in 3D (positions update slowly), and on store changes
-  timer = setInterval(() => { if (window.Map3D && Map3D.on) update(); }, 700);
+  // refresh while in 3D (live positions update slowly) + on relevant store changes
+  setInterval(() => { if (window.Map3D && Map3D.on) update(); }, 700);
   S.on((st, evt) => { if ((evt === 'tracking' || evt === 'config' || evt === 'sync' || evt === 'track3d') && window.Map3D && Map3D.on) update(); });
 
-  window.Tracking3D = { attach3D, refresh: update, _counts() { return (layer && layer.ships) ? { ships: layer.ships.count, planes: layer.planes.count } : null; } };
+  window.Tracking3D = {
+    attach3D, refresh: update,
+    _counts() { try { return { ships: fc().features.filter(f => f.properties.kind === 'ship').length, planes: fc().features.filter(f => f.properties.kind === 'plane').length }; } catch (e) { return null; } },
+  };
 })();
