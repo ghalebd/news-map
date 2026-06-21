@@ -51,7 +51,8 @@
   }
   const pt = (lng, lat, kind, hdg) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] }, properties: { kind, hdg: Math.round(hdg) || 0 } });
 
-  const sizeExpr = () => { const c = cfg(); const sz = km => Math.max(0.4, Math.min(1.5, (km || 5) / 7)); return ['match', ['get', 'kind'], 'plane', sz(c.planeKm), sz(c.shipKm)]; };
+  // clearly visible by default (icon canvas is 64px → size 1.0 ≈ 64px on screen); km slider scales it
+  const sizeExpr = () => { const c = cfg(); const sz = km => Math.max(0.7, Math.min(2.2, (km || 5) / 5 * 0.95)); return ['match', ['get', 'kind'], 'plane', sz(c.planeKm), sz(c.shipKm)]; };
 
   function attach3D(map) {
     glmap = map; ensureIcons(map);
