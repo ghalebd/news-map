@@ -63,10 +63,30 @@
     else { poly([[32, 6], [43, 22], [43, 50], [38, 58], [26, 58], [21, 50], [21, 22]]); x.fillStyle = 'rgba(3,12,22,.85)'; x.fillRect(27, 30, 10, 16); }
     return x.getImageData(0, 0, 128, 128);
   }
+  // render a merged GLB geometry to a 3/4-view sprite (so globe icons look like the 3D models,
+  // not flat outlines). One-shot offscreen WebGL render, disposed immediately.
+  const sprites = {};   // kind -> ImageData
+  function spriteFromGeo(geo) {
+    try {
+      const W = 192, cv = document.createElement('canvas'); cv.width = cv.height = W;
+      const r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true }); r.setClearColor(0x000000, 0);
+      const sc = new THREE.Scene();
+      sc.add(new THREE.AmbientLight(0xffffff, 0.95));
+      const dl = new THREE.DirectionalLight(0xffffff, 1.05); dl.position.set(1, 1.4, 2); sc.add(dl);
+      const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true })); sc.add(mesh);
+      geo.computeBoundingSphere(); const R = (geo.boundingSphere && geo.boundingSphere.radius) || 0.7;
+      const cam = new THREE.PerspectiveCamera(32, 1, 0.01, 100); cam.up.set(0, 0, 1);
+      cam.position.set(R * 1.6, -R * 2.0, R * 1.7); cam.lookAt(0, 0, R * 0.25);
+      r.render(sc, cam);
+      const c2 = document.createElement('canvas'); c2.width = c2.height = W; const x = c2.getContext('2d'); x.drawImage(cv, 0, 0);
+      const img = x.getImageData(0, 0, W, W); r.dispose(); return img;
+    } catch (e) { return null; }
+  }
   function ensureIcons(map) {
     const TS = S.cfg().trackStyle || {};
     [['trk-ship', 'ship', TS.shipColor || '#36c8ff'], ['trk-plane', 'plane', TS.flightColor || '#ffcf4d']].forEach(([id, k, c]) => {
-      try { if (map.hasImage(id)) map.removeImage(id); } catch (e) {} try { map.addImage(id, drawIcon(k, c), { pixelRatio: 2 }); } catch (e) {}
+      const img = sprites[k] || drawIcon(k, c);   // prefer the 3D-rendered sprite; flat icon as fallback
+      try { if (map.hasImage(id)) map.removeImage(id); } catch (e) {} try { map.addImage(id, img, { pixelRatio: 2 }); } catch (e) {}
     });
   }
   function icoFeatures() {
@@ -132,8 +152,8 @@
         // vertex colours carry the model's real materials (container colours, livery, etc.)
         this.shipMat = new THREE.MeshLambertMaterial({ vertexColors: true });
         this.planeMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-        loadModel(SHIP_GLB).then(g => { if (!g) return; this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); update(); });
-        loadModel(PLANE_GLB).then(g => { if (!g) return; this.planes = new THREE.InstancedMesh(g, this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0; this.scene.add(this.planes); update(); });
+        loadModel(SHIP_GLB).then(g => { if (!g) return; this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); sprites.ship = spriteFromGeo(g); if (glmap) ensureIcons(glmap); update(); });
+        loadModel(PLANE_GLB).then(g => { if (!g) return; this.planes = new THREE.InstancedMesh(g, this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0; this.scene.add(this.planes); sprites.plane = spriteFromGeo(g); if (glmap) ensureIcons(glmap); update(); });
       }
       if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
       layer = this; update();
