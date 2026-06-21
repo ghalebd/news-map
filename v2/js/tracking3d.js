@@ -1,91 +1,120 @@
 /* ============================================================
-   TRACKING3D — live ships & flights in the 3D map, rebuilt as a
-   NATIVE MapLibre symbol layer (not three.js). Each target is a
-   flat icon that ALWAYS faces the camera (billboard) and rotates
-   to its true heading — like a flight-radar. This reads clearly
-   from ANY camera angle (never goes flat/bent), is GPU-batched in
-   a single layer (fast — no extra WebGL renderer), and sits on the
-   live positions from window.Tracking, refreshed on a timer.
+   TRACKING3D — live ships & flights as REAL 3D GLB MODELS in the
+   3D map (same quality as placed models). One ship GLB + one plane
+   GLB are loaded once, each merged into a single mesh, then cloned
+   into a pooled set placed at the live MercatorCoordinates and
+   rotated to heading — lit, upright, on the water/at altitude.
    config.track3d (synced): { on, shipKm, planeKm }.
    ============================================================ */
 (() => {
-  const S = window.Store;
-  if (!S) return;
-  const SRC = 'trk3d', LYR = 'trk3d-sym';
+  const S = window.Store, THREE = window.THREE;
+  if (!S || !THREE || !THREE.GLTFLoader) { return; }
+  const D2R = Math.PI / 180;
+  const CAP = 70;                         // max rendered targets per type (nearest first)
+  const SHIP_GLB = 'us-coastguard-nsc.glb', PLANE_GLB = 'a-330.glb';
+  const SHIP_FWD = 0, PLANE_FWD = 0;      // heading calibration offset (deg), tuned per model
   const cfg = () => Object.assign({ on: true, shipKm: 5, planeKm: 4 }, S.cfg().track3d || {});
   const TS = () => S.cfg().trackStyle || {};
-  let glmap = null, ready = false, lastColors = '';
+  let glmap = null, layer = null;
 
-  /* ---- crisp top-view icons drawn on a canvas (pointing UP = north at heading 0) ---- */
-  function draw(kind, color) {
-    const S2 = 64, cv = document.createElement('canvas'); cv.width = cv.height = S2 * 2;
-    const x = cv.getContext('2d'); x.scale(2, 2);
-    x.lineJoin = 'round'; x.lineCap = 'round'; x.strokeStyle = 'rgba(3,10,20,.92)'; x.lineWidth = 3; x.fillStyle = color;
-    const poly = pts => { x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.closePath(); x.fill(); x.stroke(); };
-    if (kind === 'plane') {
-      poly([[32, 7], [37, 17], [37, 30], [60, 43], [60, 49], [37, 42], [37, 52], [46, 58], [46, 61], [32, 57], [18, 61], [18, 58], [27, 52], [27, 42], [4, 49], [4, 43], [27, 30], [27, 17]]); // swept airliner
-    } else {
-      poly([[32, 6], [43, 22], [43, 50], [38, 58], [26, 58], [21, 50], [21, 22]]); // ship hull, pointed bow up
-      x.fillStyle = 'rgba(3,12,22,.85)'; x.fillRect(27, 30, 10, 16);               // bridge block (dark)
-    }
-    return x.getImageData(0, 0, cv.width, cv.height);
+  const loader = new THREE.GLTFLoader();
+  try { if (THREE.DRACOLoader) { const d = new THREE.DRACOLoader(); d.setDecoderPath('lib/draco/'); loader.setDRACOLoader(d); } } catch (e) {}
+
+  // merge a loaded GLB into ONE unit-sized, Y-up, origin-centred geometry (sits on Y=0 = waterline)
+  function mergeScene(scene) {
+    scene.updateMatrixWorld(true);
+    const parts = [];
+    scene.traverse(o => { if (o.isMesh && o.geometry) { let g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (g.index) g = g.toNonIndexed(); if (!g.getAttribute('normal')) g.computeVertexNormals(); parts.push(g); } });
+    if (!parts.length) return null;
+    let nv = 0; parts.forEach(g => nv += g.getAttribute('position').count);
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3); let o = 0;
+    parts.forEach(g => { pos.set(g.getAttribute('position').array, o * 3); nor.set(g.getAttribute('normal').array, o * 3); o += g.getAttribute('position').count; });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    geo.computeBoundingBox(); const bb = geo.boundingBox, c = new THREE.Vector3(), sz = new THREE.Vector3(); bb.getCenter(c); bb.getSize(sz);
+    geo.translate(-c.x, -bb.min.y, -c.z);                       // centre XZ, base on Y=0
+    const maxd = Math.max(sz.x, sz.y, sz.z) || 1; geo.scale(1 / maxd, 1 / maxd, 1 / maxd);
+    return geo;
   }
-  function ensureIcons(map) {
-    const sc = TS().shipColor || '#36c8ff', fc = TS().flightColor || '#ffcf4d';
-    ['trk-ship', 'trk-plane'].forEach((id, i) => {
-      const img = draw(i ? 'plane' : 'ship', i ? fc : sc);
-      try { if (map.hasImage(id)) map.removeImage(id); } catch (e) {}
-      try { map.addImage(id, img, { pixelRatio: 2 }); } catch (e) {}
-    });
-    lastColors = sc + fc;
+  const loadModel = file => new Promise(res => loader.load('assets3d/' + file, g => res(mergeScene(g.scene)), undefined, () => res(null)));
+
+  function buildPool(L, kind) {
+    const geo = kind === 'ship' ? L.shipGeo : L.planeGeo; if (!geo) return;
+    const mat = kind === 'ship' ? L.shipMat : L.planeMat;
+    const pool = [];
+    for (let i = 0; i < CAP; i++) {
+      const grp = new THREE.Group(); grp.rotation.x = Math.PI / 2;             // Y-up model -> Z-up world (upright)
+      const inner = new THREE.Mesh(geo, mat); inner.rotation.order = 'YXZ';
+      grp.add(inner); grp.visible = false; L.scene.add(grp);
+      pool.push({ grp, inner });
+    }
+    if (kind === 'ship') L.shipPool = pool; else L.planePool = pool;
   }
 
-  /* ---- live features from window.Tracking ---- */
-  function fc() {
-    const T = window.Tracking, c = cfg(), feats = [];
-    if (c.on && T) {
-      if (T.Ships && T.Ships.on && T.Ships.ships) for (const [, s] of T.Ships.ships) { if (s.lat == null) continue; feats.push(pt(s.lng, s.lat, 'ship', s.course != null ? s.course : (s.heading || 0))); }
-      if (T.Flights && T.Flights.on && T.Flights.flights) for (const [, f] of T.Flights.flights) { if (f.lat == null) continue; feats.push(pt(f.lng, f.lat, 'plane', f.heading || 0)); }
-    }
-    return { type: 'FeatureCollection', features: feats };
-  }
-  const pt = (lng, lat, kind, hdg) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] }, properties: { kind, hdg: Math.round(hdg) || 0 } });
+  const customLayer = {
+    id: 'trk3d', type: 'custom', renderingMode: '3d',
+    onAdd(map, gl) {
+      if (!this.scene) {
+        this.cam = new THREE.Camera(); this.scene = new THREE.Scene();
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+        const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(0.5, 1.2, 0.8); this.scene.add(key);
+        const fill = new THREE.DirectionalLight(0xbcd4ff, 0.4); fill.position.set(-0.6, 0.4, -0.5); this.scene.add(fill);
+        this.shipMat = new THREE.MeshLambertMaterial({ color: 0x9fb7c9 });
+        this.planeMat = new THREE.MeshLambertMaterial({ color: 0xe8eef5 });
+        this.shipPool = []; this.planePool = [];
+        loadModel(SHIP_GLB).then(g => { this.shipGeo = g; buildPool(this, 'ship'); update(); });
+        loadModel(PLANE_GLB).then(g => { this.planeGeo = g; buildPool(this, 'plane'); update(); });
+      }
+      if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
+      layer = this; update();
+    },
+    render(gl, args) {
+      if (!this.scene) return;
+      const m = (args && args.defaultProjectionData) ? args.defaultProjectionData.mainMatrix : args;
+      this.cam.projectionMatrix = new THREE.Matrix4().fromArray(m);
+      this.renderer.resetState(); this.renderer.render(this.scene, this.cam);
+    },
+  };
 
-  // clearly visible by default (icon canvas is 64px → size 1.0 ≈ 64px on screen); km slider scales it
-  const sizeExpr = () => { const c = cfg(); const sz = km => Math.max(0.7, Math.min(2.2, (km || 5) / 5 * 0.95)); return ['match', ['get', 'kind'], 'plane', sz(c.planeKm), sz(c.shipKm)]; };
-
-  function attach3D(map) {
-    glmap = map; ensureIcons(map);
-    if (!map.getSource(SRC)) map.addSource(SRC, { type: 'geojson', data: fc() });
-    if (!map.getLayer(LYR)) {
-      map.addLayer({
-        id: LYR, type: 'symbol', source: SRC,
-        layout: {
-          'icon-image': ['match', ['get', 'kind'], 'plane', 'trk-plane', 'trk-ship'],
-          'icon-size': sizeExpr(),
-          'icon-rotate': ['get', 'hdg'],
-          'icon-rotation-alignment': 'map',   // heading is geographic (relative to map north)
-          'icon-pitch-alignment': 'viewport', // ALWAYS face the camera — never lies flat on a tilt
-          'icon-allow-overlap': true, 'icon-ignore-placement': true,
-        },
-      });
-    }
-    ready = true; update();
+  function place(item, lat, lng, altM, headingDeg, km, fwd) {
+    const ground = (() => { try { return glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([lng, lat]) || 0) : 0; } catch (e) { return 0; } })();
+    const mc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], ground + (altM || 0));
+    const mpu = mc.meterInMercatorCoordinateUnits(), meters = Math.max(10, (km || 5) * 1000);
+    item.grp.position.set(mc.x, mc.y, mc.z);
+    item.grp.scale.setScalar(meters * mpu);
+    item.inner.rotation.set(0, (fwd - (headingDeg || 0)) * D2R, 0);   // heading about up (compass cw)
+    item.grp.visible = true;
   }
 
   function update() {
-    if (!glmap || !ready) return;
-    if ((TS().shipColor || '#36c8ff') + (TS().flightColor || '#ffcf4d') !== lastColors) ensureIcons(glmap);
-    const src = glmap.getSource(SRC); if (src) src.setData(fc());
-    try { glmap.setLayoutProperty(LYR, 'icon-size', sizeExpr()); } catch (e) {}
+    if (!layer || !glmap) return;
+    if (layer.shipMat) layer.shipMat.color.set(TS().shipColor || '#9fb7c9');
+    if (layer.planeMat) layer.planeMat.color.set(TS().flightColor || '#e8eef5');
+    const c = cfg(), T = window.Tracking;
+    let si = 0, pi = 0;
+    if (c.on && T) {
+      if (layer.shipPool && layer.shipPool.length && T.Ships && T.Ships.on && T.Ships.ships)
+        for (const [, s] of T.Ships.ships) { if (si >= CAP) break; if (s.lat == null) continue; place(layer.shipPool[si], s.lat, s.lng, 0, s.course != null ? s.course : (s.heading || 0), c.shipKm, SHIP_FWD); si++; }
+      if (layer.planePool && layer.planePool.length && T.Flights && T.Flights.on && T.Flights.flights)
+        for (const [, f] of T.Flights.flights) { if (pi >= CAP) break; if (f.lat == null) continue; place(layer.planePool[pi], f.lat, f.lng, (f.alt || 0) * 0.3048, f.heading || 0, c.planeKm, PLANE_FWD); pi++; }
+    }
+    if (layer.shipPool) for (let i = si; i < layer.shipPool.length; i++) layer.shipPool[i].grp.visible = false;
+    if (layer.planePool) for (let i = pi; i < layer.planePool.length; i++) layer.planePool[i].grp.visible = false;
+    layer._n = si + pi; if (glmap) glmap.triggerRepaint();
   }
 
-  // refresh while in 3D (live positions update slowly) + on relevant store changes
+  function attach3D(map) {
+    glmap = map;
+    if (!map.getLayer('trk3d')) { try { map.addLayer(customLayer); } catch (e) { console.warn('Tracking3D', e); return; } }
+    layer = customLayer; update();
+  }
+
   setInterval(() => { if (window.Map3D && Map3D.on) update(); }, 700);
   S.on((st, evt) => { if ((evt === 'tracking' || evt === 'config' || evt === 'sync' || evt === 'track3d') && window.Map3D && Map3D.on) update(); });
 
   window.Tracking3D = {
     attach3D, refresh: update,
-    _counts() { try { return { ships: fc().features.filter(f => f.properties.kind === 'ship').length, planes: fc().features.filter(f => f.properties.kind === 'plane').length }; } catch (e) { return null; } },
+    _counts() { const T = window.Tracking; if (!T) return null; return { ships: (T.Ships && T.Ships.on && T.Ships.ships) ? Math.min(CAP, T.Ships.ships.size) : 0, planes: (T.Flights && T.Flights.on && T.Flights.flights) ? Math.min(CAP, T.Flights.flights.size) : 0 }; },
   };
 })();
