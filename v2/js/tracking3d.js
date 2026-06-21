@@ -93,7 +93,7 @@
         // light, low-saturation finishes so they read as clean models, not loud blobs
         this.shipMat = new THREE.MeshLambertMaterial({ color: 0xbcc8d4 });
         this.planeMat = new THREE.MeshLambertMaterial({ color: 0xe9edf2 });
-        { const g = buildCargoShipGeo(); this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); }
+        loadModel(SHIP_GLB).then(g => { if (!g) return; this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); update(); });
         loadModel(PLANE_GLB).then(g => { if (!g) return; this.planes = new THREE.InstancedMesh(g, this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0; this.scene.add(this.planes); update(); });
       }
       if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
