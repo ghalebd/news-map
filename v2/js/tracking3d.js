@@ -41,6 +41,36 @@
   }
   const loadModel = file => new Promise(res => loader.load('assets3d/' + file, g => res(mergeScene(g.scene)), undefined, () => res(null)));
 
+  // procedural CARGO (container) ship — bow toward +Y, up +Z, base z=0. A container vessel is
+  // genuinely box-shaped, so this reads true and is extremely light. Built to the same
+  // unit-size / Z-up / base-z=0 convention as the merged GLBs.
+  const box = (w, l, h, x, y, z) => { const g = new THREE.BoxGeometry(w, l, h); g.translate(x, y, z); return g; };
+  function mergeBoxes(geos) {
+    const parts = geos.map(g => g.toNonIndexed());
+    let nv = 0; parts.forEach(g => nv += g.getAttribute('position').count);
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3); let o = 0;
+    parts.forEach(g => { pos.set(g.getAttribute('position').array, o * 3); nor.set(g.getAttribute('normal').array, o * 3); o += g.getAttribute('position').count; });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    return geo;
+  }
+  function buildCargoShipGeo() {
+    const geo = mergeBoxes([
+      box(0.34, 1.55, 0.16, 0, 0, 0.08),     // hull
+      box(0.24, 0.36, 0.14, 0, 0.82, 0.07),  // narrower bow (forward +Y)
+      box(0.32, 0.32, 0.20, 0, 0.36, 0.26),  // container stack fwd
+      box(0.32, 0.32, 0.24, 0, 0.00, 0.28),  // container stack mid (tallest)
+      box(0.32, 0.32, 0.18, 0, -0.36, 0.25), // container stack aft
+      box(0.30, 0.20, 0.34, 0, -0.70, 0.33), // bridge/superstructure (stern)
+      box(0.09, 0.12, 0.14, 0, -0.74, 0.55), // funnel
+    ]);
+    geo.computeBoundingBox(); const bb = geo.boundingBox, c = new THREE.Vector3(), sz = new THREE.Vector3(); bb.getCenter(c); bb.getSize(sz);
+    geo.translate(-c.x, -c.y, -bb.min.z);                       // centre XY, base on z=0 (waterline)
+    const maxd = Math.max(sz.x, sz.y, sz.z) || 1; geo.scale(1 / maxd, 1 / maxd, 1 / maxd);
+    return geo;
+  }
+
   const tmpM = new THREE.Matrix4(), tmpP = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), upZ = new THREE.Vector3(0, 0, 1);
   function setInst(mesh, i, lat, lng, altM, heading, km, fwd) {
     const mc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], altM || 0);   // sea level (fast — no per-instance terrain query)
@@ -63,7 +93,7 @@
         // light, low-saturation finishes so they read as clean models, not loud blobs
         this.shipMat = new THREE.MeshLambertMaterial({ color: 0xbcc8d4 });
         this.planeMat = new THREE.MeshLambertMaterial({ color: 0xe9edf2 });
-        loadModel(SHIP_GLB).then(g => { if (!g) return; this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); update(); });
+        { const g = buildCargoShipGeo(); this.ships = new THREE.InstancedMesh(g, this.shipMat, MAXS); this.ships.frustumCulled = false; this.ships.count = 0; this.scene.add(this.ships); }
         loadModel(PLANE_GLB).then(g => { if (!g) return; this.planes = new THREE.InstancedMesh(g, this.planeMat, MAXF); this.planes.frustumCulled = false; this.planes.count = 0; this.scene.add(this.planes); update(); });
       }
       if (!this.renderer || this._gl !== gl) { this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); this.renderer.autoClear = false; this._gl = gl; }
