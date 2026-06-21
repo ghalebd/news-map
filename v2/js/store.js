@@ -18,6 +18,7 @@ const Store = (() => {
     },
     mapStyles: [
       { id: '019caada-7e48-7379-ba36-e8967f4fcc92', name: 'News', on: true },
+      { id: 'wireframe', name: 'Wireframe', on: true },
       { id: 'satellite', name: 'Satellite', on: true },
       { id: 'hybrid', name: 'Hybrid', on: true },
       { id: 'dataviz-dark', name: 'Dark', on: true },
@@ -108,6 +109,8 @@ const Store = (() => {
     if (!c._mig.qbar4) { c.qbar = c.qbar || { order: [], hidden: [] }; const set = new Set(c.qbar.hidden || []); ['redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'].forEach(id => set.add(id)); c.qbar.hidden = [...set]; c._mig.qbar4 = true; }   // new extras off the bar by default; add them via the customiser
     // drop the rejected darkened-satellite / low-res NASA night styles; enable real dark vector maps
     if (!c._mig.nightClean) { const bad = ['satellite-night', 'satellite-dark', 'night-lights']; if (c.mapStyles) c.mapStyles = c.mapStyles.filter(m => !bad.includes(m.id)); if (bad.includes(state.mapStyle)) state.mapStyle = 'dataviz-dark'; ['streets-v2-dark', 'basic-v2-dark'].forEach(id => { const m = (c.mapStyles || []).find(x => x.id === id); if (m) m.on = true; }); c._mig.nightClean = true; }
+    // add the Wireframe map style for configs saved before it existed
+    if (!c._mig.wireframe) { c.mapStyles = c.mapStyles || []; if (!c.mapStyles.some(m => m.id === 'wireframe')) c.mapStyles.splice(1, 0, { id: 'wireframe', name: 'Wireframe', on: true }); c._mig.wireframe = true; }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }
