@@ -15,7 +15,7 @@
   const AIS_PROXY = 'wss://newsmap-ais-proxy.dida-newsmap.workers.dev';   // key lives server-side in the Worker secret — never in this code
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
   /* all tunables come from config.trackStyle (control panel) */
-  const TS = () => Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, S.cfg().trackStyle || {});
+  const TS = () => Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 1000, showVectors: true, showHistory: true, showRoutes: true }, S.cfg().trackStyle || {});
   const rtFaint = () => { const w = TS().lineWeight; return { interactive: false, color: '#5fd8ff', weight: Math.max(.8, w), opacity: Math.min(.6, TS().lineOpacity * .8), dashArray: '3 7', lineCap: 'round' }; };
   const rtFocus = () => { const w = TS().lineWeight; return { interactive: false, color: '#8af0ff', weight: Math.max(1.6, w * 1.8), opacity: .85, dashArray: '7 6', lineCap: 'round' }; };
   const showTrails = () => S.state.tracking.trails !== false;   // master route/trail line visibility
