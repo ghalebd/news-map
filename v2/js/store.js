@@ -41,7 +41,7 @@ const Store = (() => {
     customAssets: [],   // { id, name, cat, url }
     models3d: [],       // 3D GLB assets — binary lives in IndexedDB (Assets3D), here is metadata:
                         // { id, name, lat, lng, alt, scale, rotZ, mode:'both'|'3d'|'2d', on }
-    trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true },
+    trackStyle: { shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 1000, showVectors: true, showHistory: true, showRoutes: true },
     brand: { logo: null, size: 38, x: 70, y: 30 },   // logo data-URL + height(px) + position(px from top-left; 70 clears the gear)
     touch: false,            // large touch-friendly controls
     locator: false,          // mini locator inset map
@@ -111,6 +111,8 @@ const Store = (() => {
     if (!c._mig.nightClean) { const bad = ['satellite-night', 'satellite-dark', 'night-lights']; if (c.mapStyles) c.mapStyles = c.mapStyles.filter(m => !bad.includes(m.id)); if (bad.includes(state.mapStyle)) state.mapStyle = 'dataviz-dark'; ['streets-v2-dark', 'basic-v2-dark'].forEach(id => { const m = (c.mapStyles || []).find(x => x.id === id); if (m) m.on = true; }); c._mig.nightClean = true; }
     // add the Wireframe map style for configs saved before it existed
     if (!c._mig.wireframe) { c.mapStyles = c.mapStyles || []; if (!c.mapStyles.some(m => m.id === 'wireframe')) c.mapStyles.splice(1, 0, { id: 'wireframe', name: 'Wireframe', on: true }); c._mig.wireframe = true; }
+    // raise the old 300 default ship cap so more live ships show
+    if (!c._mig.maxShips1k) { if (c.trackStyle && (c.trackStyle.maxShips == null || c.trackStyle.maxShips === 300)) c.trackStyle.maxShips = 1000; c._mig.maxShips1k = true; }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }

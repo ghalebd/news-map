@@ -342,7 +342,7 @@
     live.trails = tog(S.state.tracking.trails !== false, on => S.setTracking('trails', on));
     t1.bd.append(rowWith('Live ships (AIS)' + (sc ? ` · ${sc}` : ''), live.ships), rowWith('Live flights' + (fc ? ` · ${fc}` : ''), live.flights), rowWith('Route / trail lines', live.trails));
     ct.appendChild(t1.sec);
-    const T = Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 300, showVectors: true, showHistory: true, showRoutes: true }, C.trackStyle || {});
+    const T = Object.assign({ shipColor: '#46d8ff', flightColor: '#ffd54a', lineWeight: 1, lineOpacity: 0.4, vectorMins: 3, trailPoints: 60, maxShips: 1000, showVectors: true, showHistory: true, showRoutes: true }, C.trackStyle || {});
     const t2 = section('Tracking style', I.curve, () => S.setTrackStyle(cp(D.trackStyle)));
     t2.bd.append(field('Ship colour', swatches(TC, T.shipColor, c => S.setTrackStyle({ shipColor: c }))),
       field('Flight colour', swatches(TC, T.flightColor, c => S.setTrackStyle({ flightColor: c }))),
@@ -351,7 +351,7 @@
         knob('Opacity', Math.round(T.lineOpacity * 100), 10, 100, 5, v => S.setTrackStyle({ lineOpacity: v / 100 })),
         knob('Vector', T.vectorMins, 0, 15, 1, v => S.setTrackStyle({ vectorMins: v })),
         knob('Trail', T.trailPoints, 5, 200, 5, v => S.setTrackStyle({ trailPoints: v })),
-        knob('Max', T.maxShips, 50, 1000, 50, v => S.setTrackStyle({ maxShips: v })),
+        knob('Max', T.maxShips, 100, 3000, 100, v => S.setTrackStyle({ maxShips: v })),
       ),
       rowTog('Course vectors', T.showVectors !== false, on => S.setTrackStyle({ showVectors: on })),
       rowTog('Travelled trails', T.showHistory !== false, on => S.setTrackStyle({ showHistory: on })),
