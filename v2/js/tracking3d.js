@@ -11,7 +11,7 @@
   if (!S || !THREE || !THREE.GLTFLoader) { return; }
   const D2R = Math.PI / 180;
   const MAXS = 800, MAXF = 800;
-  const SHIP_GLB = 'us-coastguard-nsc.glb', PLANE_GLB = 'a-330.glb';
+  const SHIP_GLB = 'cargo-ship.glb', PLANE_GLB = 'a-330.glb';   // cargo ship: Alex Safayan / Poly Pizza (CC-BY)
   const SHIP_FWD = 180, PLANE_FWD = 180;            // heading calibration (deg) per model
   const SHIP_MUL = 0.42, PLANE_MUL = 0.42;          // size factor (km slider × this) — kept small/proportional
   const PLANE_ALT_CAP = 2600;                       // metres — keep aircraft at a sensible visual height
