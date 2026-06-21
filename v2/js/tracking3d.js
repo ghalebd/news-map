@@ -204,7 +204,14 @@
       if (!map.getSource(ICO_SRC)) map.addSource(ICO_SRC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       if (!map.getLayer(ICO_LYR)) map.addLayer({
         id: ICO_LYR, type: 'symbol', source: ICO_SRC,
-        layout: { 'icon-image': ['match', ['get', 'kind'], 'plane', 'trk-plane', 'trk-ship'], 'icon-size': 0.7, 'icon-rotate': ['get', 'hdg'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'viewport', 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'visibility': 'none' },
+        layout: {
+          'icon-image': ['match', ['get', 'kind'], 'plane', 'trk-plane', 'trk-ship'],
+          // small + zoom-responsive so they don't dominate the globe
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.13, 5, 0.22, 8, 0.34],
+          'icon-pitch-alignment': 'viewport',   // face the camera (billboard); NO heading rotation (avoids the flipped look)
+          'icon-allow-overlap': false, 'icon-ignore-placement': false,   // let MapLibre declutter overlapping icons
+          'visibility': 'none',
+        },
       });
     } catch (e) { console.warn('Tracking3D icons', e); }
     update();
