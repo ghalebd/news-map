@@ -1,0 +1,65 @@
+/* ============================================================
+   DESIGN TOKENS — "Liquid Glass (Dark)"  · LOCKED IDENTITY
+   Single source of truth. The Control Panel can override the
+   --accent / --glass / --blur / --glass-distort / --r vars live.
+   ============================================================ */
+:root {
+  /* ---- base ---- */
+  --bg: #070a10;
+
+  /* ---- accent (default Azure; Control Panel can change) ---- */
+  --accent: #5b9dff;
+  --accent-soft: rgba(91, 157, 255, 0.16);
+  --accent-glow: 0 0 18px rgba(91, 157, 255, 0.5);
+  --accent-ink: #06122b;            /* readable text on accent fills */
+
+  /* ---- glass surfaces ---- */
+  --glass: rgba(22, 27, 38, 0.55);
+  --glass-2: rgba(32, 38, 52, 0.5);
+  --glass-hi: rgba(255, 255, 255, 0.07);
+  --stroke: rgba(255, 255, 255, 0.12);
+  --stroke-2: rgba(255, 255, 255, 0.22);
+  --sheen: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --blur: 24px;
+  --glass-distort: 46;              /* SVG feDisplacementMap scale (Control Panel adjustable) */
+
+  /* ---- text ---- */
+  --text: #f4f7fc;
+  --text-2: #aab3c5;
+  --text-3: #6c7686;
+
+  /* ---- semantic ---- */
+  --live: #ff453a;
+  --ok: #32d583;
+  --warn: #ffb020;
+  --danger: #ff5a5f;
+
+  /* ---- typography ---- */
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  /* ---- geometry ---- */
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 20px;
+  --pill: 999px;
+  --btn: 44px;
+  --gap: 8px;
+
+  /* ---- elevation / motion ---- */
+  --shadow: 0 14px 44px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 26px 70px rgba(0, 0, 0, 0.6);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 0.12s;
+  --t: 0.2s;
+
+  /* ---- z-index scale ---- */
+  --z-map: 1;
+  --z-panel: 1000;
+  --z-bar: 1100;
+  --z-flyout: 2000;
+  --z-modal: 3000;    /* config drawer / gear */
+  --z-dialog: 3300;   /* text-input + help modals — above the drawer */
+  --z-toast: 4000;    /* toasts — always on top */
+}

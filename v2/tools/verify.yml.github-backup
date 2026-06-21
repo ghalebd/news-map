@@ -1,0 +1,39 @@
+name: verify-v2
+# Runs the headless visual/error check in GitHub's cloud — not on your laptop.
+on:
+  push:
+    branches: [v2-rebuild]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install puppeteer (bundled Chromium, in the cloud)
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm i puppeteer@23 --no-audit --no-fund
+
+      - name: Serve the site
+        run: |
+          python3 -m http.server 8000 &
+          sleep 2
+
+      - name: Verify v2 (errors / overlaps / off-screen)
+        env:
+          BASE_URL: http://localhost:8000/v2/index.html
+        run: node .github/scripts/verify.js
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-screenshots
+          path: ci-shots/
+          retention-days: 14

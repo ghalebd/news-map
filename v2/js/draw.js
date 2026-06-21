@@ -1,0 +1,440 @@
+/* ============================================================
+   DRAW — per-scene elements: render, draw interactions, and the
+   CONTEXTUAL tools (quick-add launcher + selection context-bar).
+   No fixed toolbar — tools are summoned and dismissed.
+   ============================================================ */
+const Draw = (() => {
+  const map = GameMap.map, drawn = GameMap.drawn, S = Store, I = ICONS;
+  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const fmtDist = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
+  const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${color}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
+  /* permission gate — the control console (full console) always permits;
+     the presenter is limited by config.permissions. */
+  const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
+
+  let tool = 'select', selected = null, selLayer = null, dragStart = null, ghost = null, sketchPts = null, polyPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null, skipClick = false;
+  /* translate every coordinate of an element by a lat/lng delta (move) */
+  function moveEl(el, dLat, dLng) {
+    if (el.ll) el.ll = [el.ll[0] + dLat, el.ll[1] + dLng];
+    if (el.a) el.a = [el.a[0] + dLat, el.a[1] + dLng];
+    if (el.b) el.b = [el.b[0] + dLat, el.b[1] + dLng];
+    if (el.pts) el.pts = el.pts.map(p => [p[0] + dLat, p[1] + dLng]);
+  }
+
+  /* marker icon set (broadcast) — keyed; '' = plain dot */
+  const mk = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const MICONS = {
+    pin: mk('<path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/>'),
+    flag: mk('<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5" fill="currentColor"/>'),
+    star: mk('<path d="M12 3l2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.9 6.7 19.5l1.1-6L3.4 9.3l6-.8Z" fill="currentColor"/>'),
+    alert: mk('<path d="M12 3 2 20h20L12 3Z" fill="currentColor"/><path d="M12 10v4" stroke="#0a0e16"/><circle cx="12" cy="17" r="1" fill="#0a0e16" stroke="none"/>'),
+    fire: mk('<path d="M12 3c1 3 4 4 4 8a4 4 0 1 1-8 0c0-1 .5-2 1-2.5C9 11 8 9 12 3Z" fill="currentColor"/>'),
+    blast: mk('<path d="M12 2l2 5 5-2-2 5 5 2-5 2 2 5-5-2-2 5-2-5-5 2 2-5-5-2 5-2-2-5 5 2Z" fill="currentColor"/>'),
+    capital: mk('<circle cx="12" cy="12" r="8"/><path d="M12 8l1.6 3.2 3.4.4-2.5 2.3.7 3.3L12 15.7 8.8 17.2l.7-3.3L7 11.6l3.4-.4Z" fill="currentColor" stroke="none"/>'),
+    airport: mk('<path d="M12 3c.7 0 1 .8 1 2v4.5l7 4v2l-7-2v4l2 1.5v1.5L12 19l-3 1.5V19l2-1.5v-4l-7 2v-2l7-4V5c0-1.2.3-2 1-2Z" fill="currentColor" stroke="none"/>'),
+    port: mk('<path d="M12 5v14M12 5a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 12 5ZM6 11h12M6 11a6 6 0 0 0 12 0"/>'),
+    target: mk('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>'),
+    // --- animated targeting / live markers ---
+    pulse:  mk('<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><circle class="mkfx-ping" cx="12" cy="12" r="5"/><circle class="mkfx-ping mkfx-ping-b" cx="12" cy="12" r="5"/>'),
+    radar:  mk('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><g class="mkfx-spin"><path d="M12 12 12 3"/><path d="M12 3a9 9 0 0 1 7.8 4.5L12 12Z" fill="currentColor" stroke="none" opacity=".22"/></g>'),
+    reticle: mk('<g class="mkfx-spin-slow"><circle cx="12" cy="12" r="9" stroke-dasharray="4 4"/></g><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
+    blink:  mk('<circle class="mkfx-blink" cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9" opacity=".4"/>'),
+    locked: mk('<g class="mkfx-pulse"><path d="M4 8V4h4"/><path d="M20 8V4h-4"/><path d="M4 16v4h4"/><path d="M20 16v4h-4"/></g><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>'),
+    spinner: mk('<g class="mkfx-spin"><circle cx="12" cy="12" r="8" stroke-dasharray="3 5"/></g><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
+    // --- NATO / military unit symbols (APP-6 style; tinted by marker colour) ---
+    mil_inf: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 7l16 10M20 7L4 17"/>'),
+    mil_armor: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><ellipse cx="12" cy="12" rx="5" ry="2.6"/>'),
+    mil_mech: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 7l16 10M20 7L4 17"/><ellipse cx="12" cy="12" rx="4.6" ry="2.4"/>'),
+    mil_arty: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/>'),
+    mil_ad: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M6.5 17a5.5 5.5 0 0 1 11 0"/>'),
+    mil_hq: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 17V22"/>'),
+    mil_recon: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 17 20 7"/>'),
+    mil_med: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M12 8.5v7M8.5 12h7"/>'),
+    mil_supply: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 12h16"/>'),
+    mil_air: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M12 7c-2 2-2 3 0 5 2-2 2-3 0-5z" fill="currentColor"/>'),
+  };
+  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target', 'pulse', 'radar', 'reticle', 'blink', 'locked', 'spinner', 'mil_inf', 'mil_armor', 'mil_mech', 'mil_arty', 'mil_ad', 'mil_hq', 'mil_recon', 'mil_med', 'mil_supply', 'mil_air'];
+
+  /* ---------------- render the active scene ---------------- */
+  let lastScene = null, lastN = 0;
+  function render() {
+    drawn.clearLayers();
+    const sc = S.activeScene(); if (!sc) { lastScene = null; lastN = 0; return; }
+    const live = S.state.mode === 'live';
+    const n = live ? S.revealedCount(sc) : sc.elements.length;
+    // which elements are newly revealed -> animate them in
+    let animFrom = -1;
+    if (live) { if (sc.id === lastScene && n > lastN) animFrom = lastN; lastScene = sc.id; lastN = n; }
+    else { lastScene = sc.id; lastN = n; }
+    sc.elements.slice(0, n).forEach((el, i) => {
+      const l = buildLayer(el); if (!l) return;
+      l.__id = el.id; drawn.addLayer(l);
+      if (el.desc && l.bindTooltip) l.bindTooltip(esc(el.desc), { direction: 'top', offset: [0, -10], className: 'trk-tip' });
+      bindSelect(l, el);
+      if (animFrom >= 0 && i >= animFrom) animateIn(l, el);
+    });
+    refreshCtx();
+  }
+  /* draw-on / fade-in animation for a revealed element */
+  function animateIn(layer, el) {
+    const ms = (S.state.broadcast && S.state.broadcast.anim && S.state.broadcast.anim.ms) || 700;
+    const paths = []; const fades = []; const marks = [];
+    const collect = lyr => {
+      if (lyr._path) { const cl = lyr._path.getAttribute('class') || ''; const dashed = lyr._path.getAttribute('stroke-dasharray'); if (/el-flow|el-ring|el-head/.test(cl) || dashed) fades.push(lyr._path); else paths.push(lyr._path); }
+      if (lyr._icon) marks.push(lyr._icon);
+    };
+    if (layer.eachLayer) layer.eachLayer(collect); else collect(layer);
+    paths.forEach(p => { try { const len = p.getTotalLength ? p.getTotalLength() : 0; if (len) { p.style.transition = 'none'; p.style.strokeDasharray = len; p.style.strokeDashoffset = len; p.getBoundingClientRect(); p.style.transition = `stroke-dashoffset ${ms}ms ease`; p.style.strokeDashoffset = 0; } } catch (e) {} });
+    fades.forEach(p => { p.style.animation = `mkIn ${Math.min(500, ms)}ms var(--ease-out)`; });
+    marks.forEach(m => { m.style.animation = `mkIn ${Math.min(500, ms)}ms var(--ease-out)`; });
+  }
+  const dw = () => (S.cfg().drawDefaults && S.cfg().drawDefaults.weight) || 3;
+  function buildLayer(el) {
+    const o = { color: el.color, weight: el.weight || dw(), opacity: 1 };
+    switch (el.type) {
+      case 'marker':  {
+        if (el.icon && MICONS[el.icon]) { const html = `<span class="map-mk" style="color:${el.color}">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [30, 30], iconAnchor: [15, 15] }) }); }
+        if (el.label) return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html: `<span class="map-mk__dot" style="background:${el.color}"></span><span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>`, iconSize: [14, 14], iconAnchor: [7, 7] }) });
+        return L.circleMarker(el.ll, { radius: 7, color: '#fff', weight: 2, fillColor: el.color, fillOpacity: 1 });
+      }
+      case 'circle':  return L.circle(el.ll, { radius: el.radius, ...o, fillColor: el.color, fillOpacity: 0.12, className: 'el-pulse' });
+      case 'ring':    { const g = L.layerGroup(); g.addLayer(L.circle(el.ll, { radius: el.radius, ...o, fill: false, dashArray: '6 5', className: 'el-ring' })); g.addLayer(L.marker(el.ll, { icon: labelIcon((el.radius / 1000).toFixed(0) + ' KM', el.color) })); return g; }
+      case 'arrow':   return arrowLine(L.latLng(el.a), L.latLng(el.b), o);
+      case 'curve':   return curveLine(L.latLng(el.a), L.latLng(el.b), o);
+      case 'tarrow':  return tarrowLine(el.pts, o);
+      case 'polygon': return L.polygon(el.pts, { ...o, fillColor: el.color, fillOpacity: 0.12 });
+      case 'sketch':  return L.polyline(el.pts, o);
+      case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
+      case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
+      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; const tint = el.tint ? `<span class="asset-tint" style="background:${el.tint};opacity:${(el.tintStr == null ? 65 : el.tintStr) / 100};-webkit-mask:url('${esc(el.src)}') center/contain no-repeat;mask:url('${esc(el.src)}') center/contain no-repeat;transform:rotate(${rot}deg)"></span>` : ''; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<span class="asset-im" style="width:${w}px;height:auto"><img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${tint}</span>${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      case 'frontline': return frontLine(L.latLng(el.a), L.latLng(el.b), { color: el.color });
+      case 'country': { const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: el.color, weight: 2, fillColor: el.color, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(el.name, { sticky: true, className: 'trk-tip' }); return lyr; }
+    }
+    return null;
+  }
+  function frontLine(a, b, o) {
+    const g = L.layerGroup();
+    g.addLayer(L.polyline([a, b], { color: o.color, weight: 4, opacity: 1 }));
+    const steps = 9, d = map.distance(a, b) * 0.045, ang = Math.atan2(b.lat - a.lat, b.lng - a.lng) + Math.PI / 2;
+    for (let i = 0; i < steps; i++) { const t = (i + 0.5) / steps, lat = a.lat + (b.lat - a.lat) * t, lng = a.lng + (b.lng - a.lng) * t; const tl = lat + Math.sin(ang) * d / 111000, tg = lng + Math.cos(ang) * d / (111000 * Math.cos(lat * Math.PI / 180) || 1); g.addLayer(L.polyline([[lat, lng], [tl, tg]], { color: o.color, weight: 3, opacity: 1 })); }
+    return g;
+  }
+  /* point-in-polygon (ray casting) for country highlight */
+  function pir(p, ring) { let x = p[0], y = p[1], inside = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1]; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside; } return inside; }
+  function pip(p, poly) { if (!pir(p, poly[0])) return false; for (let i = 1; i < poly.length; i++) if (pir(p, poly[i])) return false; return true; }
+  function countryAt(lng, lat) { for (const c of (window.COUNTRIES || [])) { const g = c.g; if (g.type === 'Polygon') { if (pip([lng, lat], g.coordinates)) return c; } else if (g.type === 'MultiPolygon') { for (const poly of g.coordinates) if (pip([lng, lat], poly)) return c; } } return null; }
+  /* filled triangular arrowhead at b, pointing along a→b, sized in screen pixels (consistent regardless of length) */
+  function pxHead(a, b, o) {
+    const pa = map.latLngToContainerPoint(a), pb = map.latLngToContainerPoint(b);
+    const ang = Math.atan2(pb.y - pa.y, pb.x - pa.x), len = 15, half = 7;
+    const back = { x: pb.x - Math.cos(ang) * len, y: pb.y - Math.sin(ang) * len }, nx = Math.cos(ang + Math.PI / 2), ny = Math.sin(ang + Math.PI / 2);
+    const toLL = p => map.containerPointToLatLng(p);
+    return L.polygon([toLL(pb), toLL({ x: back.x + nx * half, y: back.y + ny * half }), toLL({ x: back.x - nx * half, y: back.y - ny * half })],
+      { color: o.color, weight: 1, opacity: o.opacity != null ? o.opacity : 1, fillColor: o.color, fillOpacity: o.opacity != null ? o.opacity : 1, className: 'el-head' });
+  }
+  function flowOpts(o) { return { color: o.color, weight: o.weight || dw(), opacity: o.opacity != null ? o.opacity : 1, dashArray: '2 12', lineCap: 'round', className: 'el-flow' }; }
+  function arrowLine(a, b, o) { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], o)); g.addLayer(L.polyline([a, b], flowOpts(o))); g.addLayer(pxHead(a, b, o)); return g; }
+  function curvePts(a, b) { const mid = L.latLng((a.lat + b.lat) / 2 + (b.lng - a.lng) * 0.2, (a.lng + b.lng) / 2 - (b.lat - a.lat) * 0.2); const p = []; for (let t = 0; t <= 1.0001; t += 0.05) p.push([(1 - t) ** 2 * a.lat + 2 * (1 - t) * t * mid.lat + t * t * b.lat, (1 - t) ** 2 * a.lng + 2 * (1 - t) * t * mid.lng + t * t * b.lng]); return p; }
+  function curveLine(a, b, o) { const p = curvePts(a, b), g = L.layerGroup(); g.addLayer(L.polyline(p, o)); g.addLayer(L.polyline(p, flowOpts(o))); const n = p.length; g.addLayer(pxHead(headRef(p), L.latLng(p[n - 1][0], p[n - 1][1]), o)); return g; }
+  function tarrowLine(pts, o) { if (!pts || pts.length < 2) return L.layerGroup(); const g = L.layerGroup(); g.addLayer(L.polyline(pts, o)); g.addLayer(L.polyline(pts, flowOpts(o))); const n = pts.length; g.addLayer(pxHead(headRef(pts), L.latLng(pts[n - 1][0], pts[n - 1][1]), o)); return g; }
+
+  function bindSelect(layer, el) {
+    const wire = lyr => lyr && lyr.on && lyr.on('mousedown', ev => {
+      if (tool !== 'select' && tool !== 'erase') return;
+      L.DomEvent.stopPropagation(ev);
+      skipClick = true;   // swallow the map 'click' that follows so we don't deselect
+      if (tool === 'erase') { S.removeElement(el.id); return; }
+      selectEl(el, layer);
+      dragEl = el; dragPrev = ev.latlng; map.dragging.disable();   // begin move
+    });
+    if (layer.eachLayer) layer.eachLayer(wire); else wire(layer);
+  }
+  function findLayer(id) { let r = null; drawn.eachLayer(l => { if (l.__id === id) r = l; }); return r; }
+  // screen point using whichever map is active (GL in 3D, Leaflet in 2D) so selection
+  // + the context bar work identically in both modes.
+  function screenPt(lat, lng) { if (window.Map3D && Map3D.on && Map3D.map) { try { const p = Map3D.map.project([lng, lat]); return L.point(p.x, p.y); } catch (e) {} } return map.latLngToContainerPoint(L.latLng(lat, lng)); }
+  function geomHit(geom, lng, lat) { if (!geom) return false; if (geom.type === 'Polygon') return pip([lng, lat], geom.coordinates); if (geom.type === 'MultiPolygon') { for (const poly of geom.coordinates) if (pip([lng, lat], poly)) return true; } return false; }
+  // pick the nearest drawn element to a lat/lng (areas via point-in-polygon, others by
+  // screen proximity), select it, or deselect if none. Works in 2D and 3D.
+  function pickAt(latlng, tol) {
+    const sp = screenPt(latlng.lat, latlng.lng), T = tol || 22; let best = null, bd = T;
+    (S.activeScene().elements || []).forEach(el => {
+      const geom = el.geom || (el.pts && (el.type === 'polygon' || el.type === 'country') ? { type: 'Polygon', coordinates: [el.pts.map(p => [p[1], p[0]])] } : null);
+      if ((el.type === 'country' || el.type === 'polygon') && geomHit(geom, latlng.lng, latlng.lat)) { best = el; bd = 0; return; }
+      const pts = []; if (el.ll) pts.push(el.ll); if (el.a) pts.push(el.a); if (el.b) pts.push(el.b); if (el.pts) el.pts.forEach(p => pts.push(p));
+      pts.forEach(p => { const q = screenPt(p[0], p[1]); const d = Math.hypot(q.x - sp.x, q.y - sp.y); if (d < bd) { bd = d; best = el; } });
+    });
+    if (best) { selectEl(best, findLayer(best.id)); return best; }
+    deselect(); return null;
+  }
+  function moveSelected(dLat, dLng) { if (selected) { moveEl(selected, dLat, dLng); render(); positionCtx(selected); } }
+  function commitSelected() { if (!selected) return; const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (selected[k] != null) patch[k] = selected[k]; }); if (Object.keys(patch).length) S.updateElement(selected.id, patch); }
+  function highlight(layer, on) { if (!layer) return; const f = lyr => { if (lyr._path) lyr._path.classList.toggle('el-sel', on); if (lyr._icon) lyr._icon.classList.toggle('mk-sel', on); }; if (layer.eachLayer) layer.eachLayer(f); else f(layer); }
+
+  /* ---------------- tools ---------------- */
+  const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'tarrow', 'measure', 'frontline'];
+  const FREE = ['sketch', 'tarrow'];   // freehand: collect points while dragging
+  function setTool(t) {
+    tool = t;
+    if (t !== 'asset') assetPending = null; deselect(); closePalette(); closeFlags(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));
+  }
+  /* smoothing for freehand strokes — drop near-duplicate points then Chaikin-round corners */
+  function decimate(pts, minM) { if (pts.length < 3) return pts; const out = [pts[0]]; for (let i = 1; i < pts.length; i++) { if (map.distance(L.latLng(out[out.length - 1][0], out[out.length - 1][1]), L.latLng(pts[i][0], pts[i][1])) >= minM) out.push(pts[i]); } if (out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]); return out; }
+  function chaikin(pts, iter) { let p = pts; for (let k = 0; k < (iter || 2); k++) { if (p.length < 3) break; const out = [p[0]]; for (let i = 0; i < p.length - 1; i++) { const a = p[i], b = p[i + 1]; out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); } out.push(p[p.length - 1]); p = out; } return p; }
+  function smoothPts(pts) { return chaikin(decimate(pts, 8), 2); }
+  // stable arrowhead reference: walk back from the tip until ~16px away on screen
+  function headRef(pts) { const n = pts.length, tip = map.latLngToContainerPoint(L.latLng(pts[n - 1][0], pts[n - 1][1])); for (let i = n - 2; i >= 0; i--) { const pt = map.latLngToContainerPoint(L.latLng(pts[i][0], pts[i][1])); if (tip.distanceTo(pt) >= 16) return L.latLng(pts[i][0], pts[i][1]); } return L.latLng(pts[0][0], pts[0][1]); }
+
+  map.on('mousedown', e => { if (!DRAG.includes(tool)) return; if (!permits(tool)) { setTool('select'); return; } dragStart = e.latlng; map.dragging.disable(); sketchPts = FREE.includes(tool) ? [[e.latlng.lat, e.latlng.lng]] : null; });
+  map.on('mousemove', e => {
+    if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
+    if (!dragStart) return; if (FREE.includes(tool)) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
+  });
+  map.on('mouseup', e => {
+    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
+    if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
+  });
+  map.on('click', e => {
+    if (skipClick) { skipClick = false; return; }   // came from selecting/erasing an element
+    if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
+    else if (tool === 'text') { const ll = [e.latlng.lat, e.latlng.lng]; if (window.UI) UI.input({ title: 'Label text', placeholder: 'Type a label…' }).then(t => { if (t && t.trim()) S.addElement({ type: 'text', ll, text: t.trim(), color: S.state.color }); }); else { const t = prompt('Label text:'); if (t) S.addElement({ type: 'text', ll, text: t, color: S.state.color }); } }
+    else if (tool === 'asset' && assetPending) S.addElement({ type: 'asset', ll: [e.latlng.lat, e.latlng.lng], src: assetPending.url, name: assetPending.name || '', w: 54 });
+    else if (tool === 'country') { const c = countryAt(e.latlng.lng, e.latlng.lat); if (c) S.addElement({ type: 'country', name: c.n, geom: c.g, color: S.state.color }); else window.UI && UI.toast('No country here'); }
+    else if (tool === 'select') deselect();
+  });
+  /* touch drawing: one finger drives the same tools (browsers don't emit mousemove
+     during touch drags). Select tool leaves native pan/pinch to Leaflet. */
+  (function touchDraw() {
+    const cont = map.getContainer();
+    const llOf = t => { const r = cont.getBoundingClientRect(); return map.containerPointToLatLng([t.clientX - r.left, t.clientY - r.top]); };
+    let active = false, moved = false, last = null;
+    cont.addEventListener('touchstart', e => {
+      if (tool === 'select' || e.touches.length !== 1) { active = false; return; }
+      if (!(window.APP_ROLE === 'control' || permits(tool))) return;
+      e.preventDefault(); active = true; moved = false; last = llOf(e.touches[0]);
+      if (DRAG.includes(tool)) map.fire('mousedown', { latlng: last });
+    }, { passive: false });
+    cont.addEventListener('touchmove', e => {
+      if (!active || e.touches.length !== 1) return;
+      e.preventDefault(); moved = true; last = llOf(e.touches[0]);
+      if (DRAG.includes(tool)) map.fire('mousemove', { latlng: last });
+    }, { passive: false });
+    cont.addEventListener('touchend', e => {
+      if (!active) return; e.preventDefault(); active = false;
+      if (DRAG.includes(tool)) map.fire('mouseup', { latlng: last });
+      else if (!moved && last) map.fire('click', { latlng: last });   // tap = click tools
+    }, { passive: false });
+  })();
+  function preview(t, a, b) {
+    const o = { color: S.state.color, weight: dw(), opacity: 0.6 };
+    if (t === 'circle') return L.circle(a, { radius: map.distance(a, b), ...o, fillOpacity: 0.08 });
+    if (t === 'ring') { const g = L.layerGroup(); g.addLayer(L.circle(a, { radius: map.distance(a, b), ...o, fill: false, dashArray: '6 5' })); g.addLayer(L.marker(a, { icon: labelIcon((map.distance(a, b) / 1000).toFixed(0) + ' KM', S.state.color) })); return g; }
+    if (t === 'arrow') return arrowLine(a, b, o);
+    if (t === 'frontline') return frontLine(a, b, o);
+    if (t === 'curve') return curveLine(a, b, o);
+    if (t === 'polygon') return L.polygon([a, b, [a.lat, b.lng]], { ...o, fillOpacity: 0.08 });
+    if (t === 'measure') { const g = L.layerGroup(); g.addLayer(L.polyline([a, b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(b, { icon: labelIcon(fmtDist(map.distance(a, b)), S.state.color) })); return g; }
+    if (t === 'sketch') return L.polyline(sketchPts, o);
+    if (t === 'tarrow') return tarrowLine(sketchPts || [[a.lat, a.lng], [b.lat, b.lng]], o);
+    return null;
+  }
+  function commit(t, a, b) {
+    if (!permits(t)) { setTool('select'); return; }   // permission chokepoint: nothing gets created without it
+    const c = S.state.color, A = [a.lat, a.lng], B = [b.lat, b.lng];
+    if (map.distance(a, b) < 1 && t !== 'sketch') return;
+    if (t === 'circle') S.addElement({ type: 'circle', ll: A, radius: map.distance(a, b), color: c });
+    else if (t === 'ring') S.addElement({ type: 'ring', ll: A, radius: map.distance(a, b), color: c });
+    else if (t === 'arrow') S.addElement({ type: 'arrow', a: A, b: B, color: c });
+    else if (t === 'frontline') S.addElement({ type: 'frontline', a: A, b: B, color: c });
+    else if (t === 'curve') S.addElement({ type: 'curve', a: A, b: B, color: c });
+    else if (t === 'polygon') S.addElement({ type: 'polygon', pts: [A, B, [a.lat, b.lng]], color: c });
+    else if (t === 'measure') S.addElement({ type: 'measure', a: A, b: B, color: c });
+    else if (t === 'sketch' && sketchPts && sketchPts.length > 1) S.addElement({ type: 'sketch', pts: smoothPts(sketchPts), color: c });
+    else if (t === 'tarrow' && sketchPts && sketchPts.length > 1) S.addElement({ type: 'tarrow', pts: smoothPts(sketchPts), color: c });
+  }
+
+  /* ---------------- selection + context bar ---------------- */
+  const ctx = h('div', 'ctxbar'); ctx.hidden = true; document.body.appendChild(ctx);
+  function selectEl(el, layer) { if (selLayer) highlight(selLayer, false); selected = el; selLayer = layer || findLayer(el.id); highlight(selLayer, true); buildCtx(el); }
+  function deselect() { if (selLayer) highlight(selLayer, false); selLayer = null; selected = null; ctx.hidden = true; }
+  function elAnchor(el) { if (el.ll) return el.ll; if (el.a) return el.a; if (el.pts) return el.pts[0]; return null; }
+  function buildCtx(el) {
+    ctx.innerHTML = '';
+    const COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
+    const colors = h('div', 'ctxbar__colors'); const isAsset = el.type === 'asset';
+    if (isAsset) { const clr = h('button', 'ctxbar__sw ctxbar__sw--none' + (!el.tint ? ' is-on' : '')); clr.title = 'No tint'; clr.onclick = () => { S.updateElement(el.id, { tint: undefined }); el.tint = undefined; buildCtx(el); }; colors.appendChild(clr); }
+    COLORS.forEach(c => { const on = isAsset ? el.tint === c : c === el.color; const s = h('button', 'ctxbar__sw' + (on ? ' is-on' : '')); s.style.background = c; s.title = isAsset ? 'Tint image' : 'Colour'; s.onclick = () => { if (isAsset) { S.updateElement(el.id, { tint: c }); el.tint = c; } else { S.updateElement(el.id, { color: c }); el.color = c; } buildCtx(el); }; colors.appendChild(s); });
+    ctx.appendChild(colors);
+    if (el.type === 'arrow' || el.type === 'curve') ctx.appendChild(ctxBtn(I.curve, 'Straight ↔ Curved', () => { S.updateElement(el.id, { type: el.type === 'arrow' ? 'curve' : 'arrow' }); el.type = el.type === 'arrow' ? 'curve' : 'arrow'; }));
+    if (el.type === 'marker') {
+      ctx.appendChild(ctxBtn(I.text, 'Edit label', () => { window.UI && UI.input({ title: 'Marker label', value: el.label || '', placeholder: 'Label (optional)' }).then(v => { if (v != null) { const lab = v.trim() || undefined; S.updateElement(el.id, { label: lab }); el.label = lab; } }); }));
+      ctx.appendChild(ctxBtn(I.layers, 'Description', () => { window.UI && UI.input({ title: 'Marker description', value: el.desc || '', placeholder: 'Tooltip text', multiline: true }).then(v => { if (v != null) { const d = v.trim() || undefined; S.updateElement(el.id, { desc: d }); el.desc = d; } }); }));
+    }
+    if (el.type === 'asset') {
+      ctx.appendChild(ctxBtn(I.minus, 'Smaller', () => { const w = Math.max(24, (el.w || 54) - 10); S.updateElement(el.id, { w }); el.w = w; }));
+      ctx.appendChild(ctxBtn(I.plus, 'Larger', () => { const w = Math.min(220, (el.w || 54) + 10); S.updateElement(el.id, { w }); el.w = w; }));
+      const ROT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>';
+      ctx.appendChild(ctxBtn(ROT, 'Rotate', () => { const r = ((el.rot || 0) + 15) % 360; S.updateElement(el.id, { rot: r }); el.rot = r; }));
+    }
+    if (el.type === 'marker' || el.type === 'text') {
+      ctx.appendChild(ctxBtn(I.film, '→ Lower third', () => { const sc = S.activeScene(); if (!sc) return; const title = (el.label || el.text || '').trim() || 'Lower third'; S.setLowerThird(sc.id, { title, sub: (el.desc || '').trim() }); window.UI && UI.toast && UI.toast('Lower-third set from this ' + el.type); }));
+    }
+    ctx.appendChild(ctxBtn(I.layers, 'Duplicate', () => { const copy = JSON.parse(JSON.stringify(el)); delete copy.id; S.addElement(copy); }));
+    ctx.appendChild(ctxBtn(I.close, 'Delete', () => { S.removeElement(el.id); deselect(); }));
+    ctx.hidden = false; positionCtx(el);
+  }
+  function ctxBtn(icon, title, fn) { const b = h('button', 'ctxbar__btn', icon); b.title = title; b.onclick = fn; return b; }
+  function positionCtx(el) { const a = elAnchor(el); if (!a) return; const p = screenPt(a[0], a[1]); ctx.style.left = Math.max(10, Math.min(p.x - ctx.offsetWidth / 2, innerWidth - ctx.offsetWidth - 10)) + 'px'; ctx.style.top = Math.max(60, p.y - ctx.offsetHeight - 14) + 'px'; }
+  function refreshCtx() { if (!selected) return; const fresh = S.activeScene().elements.find(e => e.id === selected.id); if (!fresh) { deselect(); return; } selected = fresh; selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); }
+  map.on('move zoom', () => { if (selected) positionCtx(selected); });
+
+  /* ---------------- asset library (image placement) ---------------- */
+  let assetPending = null;
+  const apal = h('div', 'qa qa--assets'); apal.hidden = true; document.body.appendChild(apal);
+  function buildPalette() {
+    apal.innerHTML = '';
+    apal.appendChild(h('div', 'qa__title', 'PLACE IMAGE'));
+    const assets = S.cfg().customAssets || [];
+    if (!assets.length) { apal.appendChild(h('div', 'qa-asset__empty', 'No images yet. Add them from the Control Panel — Assets section.')); return; }
+    const cats = (S.cfg().assetCats || []).concat(['(uncategorised)']);
+    cats.forEach(cat => {
+      const items = assets.filter(a => (a.cat || '(uncategorised)') === cat);
+      if (!items.length) return;
+      apal.appendChild(h('div', 'qa-asset__cat', cat));
+      const grid = h('div', 'qa-asset__grid');
+      items.forEach(a => { const b = h('button', 'qa-asset__item' + (assetPending && assetPending.id === a.id ? ' is-on' : ''), `<img src="${a.url}" alt=""><span>${esc(a.name || '')}</span>`); b.title = a.name || ''; b.onclick = () => { assetPending = a; setTool('asset'); }; grid.appendChild(b); });
+      apal.appendChild(grid);
+    });
+  }
+  function openPalette() { buildPalette(); apal.hidden = false; }
+  function closePalette() { apal.hidden = true; }
+  function togglePalette() { apal.hidden ? openPalette() : closePalette(); }
+  document.addEventListener('click', e => { if (!apal.hidden && !apal.contains(e.target) && !e.target.closest('.qtool,.qa__tool')) closePalette(); });
+
+  /* ---------------- country flags library ---------------- */
+  const fpal = h('div', 'qa qa--assets qa--flags'); fpal.hidden = true; document.body.appendChild(fpal);
+  function buildFlags() {
+    fpal.innerHTML = '';
+    fpal.appendChild(h('div', 'qa__title', 'PLACE FLAG'));
+    const grid = h('div', 'qa-asset__grid');
+    (window.FLAGS || []).forEach(fl => { const b = h('button', 'qa-asset__item' + (assetPending && assetPending.id === 'flag_' + fl.c ? ' is-on' : ''), `<img src="${esc(fl.s)}" alt=""><span>${esc(fl.n)}</span>`); b.title = fl.n; b.onclick = () => { assetPending = { id: 'flag_' + fl.c, url: fl.s, name: fl.n }; setTool('asset'); closeFlags(); }; grid.appendChild(b); });
+    fpal.appendChild(grid);
+  }
+  function openFlags() { buildFlags(); fpal.hidden = false; }
+  function closeFlags() { fpal.hidden = true; }
+  function toggleFlags() { fpal.hidden ? openFlags() : closeFlags(); }
+  document.addEventListener('click', e => { if (!fpal.hidden && !fpal.contains(e.target) && !e.target.closest('.qtool,.qa__tool')) closeFlags(); });
+
+  /* ---------------- quick-add launcher (+ FAB) + menu + arm chip ---------------- */
+  const TOOLS = [
+    ['marker', I.marker, 'Marker'], ['text', I.text, 'Label'], ['arrow', I.arrow, 'Arrow'], ['tarrow', I.arrowZig, 'Freehand arrow'], ['curve', I.curve, 'Curved arrow'],
+    ['ring', I.target, 'Range ring'], ['circle', I.circle, 'Circle'], ['polygon', I.polygon, 'Area'], ['sketch', I.sketch, 'Freehand'],
+    ['frontline', I.frontline, 'Front line'], ['country', I.country, 'Highlight country'],
+    ['measure', I.ruler, 'Measure'], ['asset', I.asset, 'Image'], ['flags', I.flag, 'Flag'], ['erase', I.erase, 'Erase'],
+  ];
+  const COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'];
+
+  const fab = h('button', 'fab', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'); fab.title = 'Add element  ( / )'; document.body.appendChild(fab);
+  const menu = h('div', 'qa'); menu.hidden = true; document.body.appendChild(menu);
+  const arm = h('div', 'armchip'); arm.hidden = true; document.body.appendChild(arm);
+
+  function buildMenu() {
+    menu.innerHTML = '';
+    const cRow = h('div', 'qa__colors');
+    COLORS.forEach(c => { const s = h('button', 'qa__sw' + (c === S.state.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.setColor(c); cRow.querySelectorAll('.qa__sw').forEach(x => x.classList.remove('is-on')); s.classList.add('is-on'); }; cRow.appendChild(s); });
+    const grid = h('div', 'qa__tools');
+    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else if (id === 'flags') { e.stopPropagation(); openFlags(); } else setTool(id); }; grid.appendChild(b); });
+    menu.append(h('div', 'qa__title', 'ADD'), cRow, grid);
+    if (permits('marker')) {
+      const iconRow = h('div', 'qa__icons');
+      MICON_KEYS.forEach(k => { const b = h('button', 'qa__icon' + ((markerIcon || '') === k ? ' is-on' : ''), k ? MICONS[k] : '<span class="qa__dot"></span>'); b.title = k || 'Dot'; b.onclick = () => { markerIcon = k || null; setTool('marker'); closeMenu(); }; iconRow.appendChild(b); });
+      menu.append(h('div', 'qa__sub', 'MARKER ICON'), iconRow);
+    }
+  }
+  function openMenu() { buildMenu(); menu.hidden = false; }
+  function closeMenu() { menu.hidden = true; }
+  function toggleMenu() { menu.hidden ? openMenu() : closeMenu(); }
+  fab.onclick = e => { e.stopPropagation(); toggleMenu(); };
+  document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== fab) closeMenu(); });
+
+  function armChip() {
+    if (tool === 'select') { arm.hidden = true; return; }
+    const def = TOOLS.find(t => t[0] === tool);
+    arm.innerHTML = `${def ? def[1] : ''}<span>${def ? def[2] : tool}</span>`;
+    const x = h('button', 'armchip__x', I.close); x.title = 'Done (Esc)'; x.onclick = () => setTool('select');
+    arm.appendChild(x); arm.hidden = false;
+  }
+
+  /* ---------------- presenter quick toolbar (vertical, left edge) ---------------- */
+  // Full button library — every tool can be shown/reordered in the bar (extras hidden by default via config.qbar)
+  const QTOOLS = [
+    ['select', I.pan, 'Select / Pan'],
+    ['arrow', I.arrow, 'Arrow'],
+    ['tarrow', I.arrowZig, 'Freehand arrow'],
+    ['curve', I.curve, 'Curved arrow'],
+    ['marker', I.marker, 'Marker'],
+    ['ring', I.target, 'Range ring'],
+    ['circle', I.circle, 'Circle'],
+    ['polygon', I.polygon, 'Area'],
+    ['sketch', I.sketch, 'Freehand'],
+    ['frontline', I.frontline, 'Front line'],
+    ['country', I.country, 'Highlight country'],
+    ['text', I.text, 'Label'],
+    ['measure', I.ruler, 'Measure'],
+    ['asset', I.asset, 'Image'],
+    ['flags', I.flag, 'Flags'],
+    ['erase', I.erase, 'Erase'],
+  ];
+  const qbar = h('div', 'qtools');
+  QTOOLS.forEach(([id, icon, title]) => { const b = h('button', 'qtool' + (id === 'select' ? ' is-on' : ''), icon); b.title = title; b.dataset.qid = id; b.onclick = e => { if (id === 'asset') { e.stopPropagation(); togglePalette(); } else if (id === 'flags') { e.stopPropagation(); toggleFlags(); } else setTool(id); }; qbar.appendChild(b); qbtns[id] = b; });
+  qbar.appendChild(h('div', 'qtools__sep'));
+  // colour button + popover
+  const qcolor = h('button', 'qtool qtool--color', '<span class="qtool__dot"></span>'); qcolor.title = 'Colour'; qcolor.dataset.qid = 'color';
+  const setDot = () => qcolor.querySelector('.qtool__dot').style.background = S.state.color;
+  setDot();
+  const qpop = h('div', 'qtools-pop lbar-pop'); qpop.hidden = true;
+  ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'].forEach(c => { const s = h('button', 'qtools-pop__sw'); s.style.background = c; s.onclick = () => { S.setColor(c); setDot(); qpop.hidden = true; }; qpop.appendChild(s); });
+  qcolor.onclick = e => { e.stopPropagation(); window.LBar ? LBar.toggle(qcolor, qpop) : (qpop.hidden = !qpop.hidden); };
+  document.addEventListener('click', e => { if (e.target !== qcolor && !qcolor.contains(e.target) && !qpop.contains(e.target)) qpop.hidden = true; });
+  qbar.appendChild(qcolor); document.body.appendChild(qpop);
+  // undo
+  const qundo = h('button', 'qtool', I.undo); qundo.title = 'Undo'; qundo.dataset.qid = 'undo'; qundo.onclick = () => S.undo(); qbar.appendChild(qundo);
+  const qclear = h('button', 'qtool qtool--danger', I.trash); qclear.title = 'Clear screen'; qclear.dataset.qid = 'clear';
+  qclear.onclick = () => {
+    const sc = S.activeScene(); const nEl = (sc && sc.elements.length) || 0; const nM = (S.models3d ? S.models3d().length : 0);
+    if (!nEl && !nM) { window.UI && UI.toast && UI.toast('Nothing to clear'); return; }
+    if (!confirm('Clear everything on screen — drawings AND 3D objects?')) return;
+    S.clearElements();
+    if (S.clearModels3d) { try { S.models3d().forEach(m => { if (!m.src && window.Assets3D) try { Assets3D.del(m.id); } catch (e) {} }); } catch (e) {} S.clearModels3d(); }
+    window.UI && UI.toast && UI.toast('Screen cleared');
+  };
+  qbar.appendChild(qclear);
+  // quick action / FX toggle buttons (reorderable + hideable like any bar button)
+  const qredo = h('button', 'qtool', I.redo); qredo.title = 'Redo'; qredo.dataset.qid = 'redo'; qredo.onclick = () => S.redo && S.redo(); qbar.appendChild(qredo);
+  const qhide = h('button', 'qtool', I.eyeOff); qhide.title = 'Hide UI (clean output)'; qhide.dataset.qid = 'hideui'; qhide.onclick = () => window.UI && UI.hideUI && UI.hideUI(true); qbar.appendChild(qhide);
+  const qgrid = h('button', 'qtool', I.grid); qgrid.title = 'Grid on/off'; qgrid.dataset.qid = 'grid'; qgrid.onclick = () => S.setGrid({ on: !(S.cfg().grid || {}).on }); qbar.appendChild(qgrid);
+  const qsea = h('button', 'qtool', I.waves); qsea.title = 'Sea on/off'; qsea.dataset.qid = 'sea'; qsea.onclick = () => S.setSea({ on: !(S.cfg().sea || {}).on }); qbar.appendChild(qsea);
+  const qcloud = h('button', 'qtool', I.cloud); qcloud.title = 'Clouds on/off'; qcloud.dataset.qid = 'clouds'; qcloud.onclick = () => S.setClouds({ on: !(S.cfg().clouds || {}).on }); qbar.appendChild(qcloud);
+  const qdn = h('button', 'qtool', I.daynight); qdn.title = 'Day / night shading on/off'; qdn.dataset.qid = 'daynight'; qdn.onclick = () => S.setDayNight({ on: !(S.cfg().dayNight || {}).on }); qbar.appendChild(qdn);
+  const qfs = h('button', 'qtool', I.expand); qfs.title = 'Fullscreen'; qfs.dataset.qid = 'fullscreen'; qfs.onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {} }; qbar.appendChild(qfs);
+  function fxState() { qgrid.classList.toggle('is-on', !!(S.cfg().grid || {}).on); qsea.classList.toggle('is-on', !!(S.cfg().sea || {}).on); qcloud.classList.toggle('is-on', !!(S.cfg().clouds || {}).on); qdn.classList.toggle('is-on', !!(S.cfg().dayNight || {}).on); }
+  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') { fxState(); if (tool !== 'select' && !permits(tool)) setTool('select'); } }); fxState();   // live revoke: disarm instantly
+  // control-only tools — toggleable/reorderable like any bar button (qbar customiser)
+  if (window.APP_ROLE === 'control') {
+    const qtl = h('button', 'qtool', I.film); qtl.title = 'Movement timeline'; qtl.dataset.qid = 'timeline'; qtl.onclick = () => window.Timeline && Timeline.toggle(); qbar.appendChild(qtl);
+    const qmc = h('button', 'qtool', I.move); qmc.title = 'Model control HUD'; qmc.dataset.qid = 'mctl'; qmc.onclick = () => window.ModelControl && ModelControl.toggle(); qbar.appendChild(qmc);
+  }
+  document.body.appendChild(qbar);
+
+  /* hide presenter toolbar buttons the operator has disallowed (no-op for the control console) */
+  function applyPerms() {
+    Object.keys(qbtns).forEach(id => { qbtns[id].hidden = !permits(id); });
+    const noDraw = window.APP_ROLE !== 'control' && !S.cfg().permissions.canDraw;
+    qcolor.hidden = noDraw; qundo.hidden = noDraw;
+    if (noDraw && tool !== 'select') setTool('select');
+  }
+
+  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, openFlags, toggleFlags, deselect, applyPerms, pickAt, moveSelected, commitSelected, reposition() { if (selected) positionCtx(selected); }, get tool() { return tool; }, get hasSelection() { return !!selected; } };
+})();
+window.Draw = Draw;
