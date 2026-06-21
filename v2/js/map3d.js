@@ -10,8 +10,9 @@
   const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
   const D2R = Math.PI / 180;
   const KEY = 'tnFJbEP9ELhQqkA6rPY2';
-  // "wireframe" is a look (dark vector style + CSS filter on the canvas), not a real MapTiler map
-  const realStyle = id => (id === 'wireframe' ? 'toner-v2' : id);
+  // "wireframe" in 3D = a near-black vector base with glowing contour lines draped on the
+  // terrain (the lines follow the elevation, so mountains read as a topographic wireframe).
+  const realStyle = id => (id === 'wireframe' ? 'dataviz-dark' : id);
   const styleUrl = id => `https://api.maptiler.com/maps/${realStyle(id)}/style.json?key=${KEY}`;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
@@ -53,7 +54,35 @@
     addSceneLayers(); mirror(); mirrorOverlays(); applyLabels3D();
     try { if (window.Models3D) window.Models3D.attach3D(map); } catch (e) {}   // GLB model layer
     try { if (window.Tracking3D) window.Tracking3D.attach3D(map); } catch (e) {}   // live ships/planes as 3D
-    applyLight(); applyProjection(); applyPerf();
+    applyLight(); applyProjection(); applyPerf(); applyWireframe3D();
+  }
+
+  /* ---- 3D WIREFRAME: glowing contour lines draped over the terrain. The lines come
+     from MapTiler's vector contour tileset (zoom 9–14), so they only appear when zoomed
+     into a mountain/relief region — at that scale they hug the 3D surface and the peaks
+     read as a stacked topographic wireframe. Two layers give a neon glow: a wide blurred
+     halo under a crisp bright line, with index lines (every 5th/10th) emphasised. ---- */
+  const WF_SRC = 'wf-contours', WF_GLOW = 'wf-contour-glow', WF_LINE = 'wf-contour', WF_COL = '#3fd8ff';
+  function applyWireframe3D() {
+    if (!map) return;
+    const wf = (S.state.mapStyle || 'satellite') === 'wireframe';
+    document.body.classList.toggle('map-wireframe', wf);
+    try {
+      if (wf) {
+        if (!map.getSource(WF_SRC)) map.addSource(WF_SRC, { type: 'vector', url: `https://api.maptiler.com/tiles/contours-v2/tiles.json?key=${KEY}` });
+        // index lines (nth_line 5/10) brighter+thicker than the minor lines between them
+        const widthBy = ['interpolate', ['linear'], ['coalesce', ['get', 'nth_line'], 1], 1, 0.5, 5, 1.1, 10, 1.8];
+        if (!map.getLayer(WF_GLOW)) map.addLayer({ id: WF_GLOW, type: 'line', source: WF_SRC, 'source-layer': 'contour',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': WF_COL, 'line-blur': 1.6, 'line-width': ['*', widthBy, 1.8], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.06, 12, 0.12, 14, 0.18] } });
+        if (!map.getLayer(WF_LINE)) map.addLayer({ id: WF_LINE, type: 'line', source: WF_SRC, 'source-layer': 'contour',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': WF_COL, 'line-width': widthBy, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.4, 12, 0.7, 14, 0.9] } });
+      } else {
+        [WF_LINE, WF_GLOW].forEach(id => { try { if (map.getLayer(id)) map.removeLayer(id); } catch (e) {} });
+        try { if (map.getSource(WF_SRC)) map.removeSource(WF_SRC); } catch (e) {}
+      }
+    } catch (e) {}
   }
   // PERFORMANCE: on a retina display the GL terrain renders ~4× the pixels (devicePixelRatio 2 → 2²).
   // Cap to 1× by default (huge speedup for the heavy 3D + terrain scene); the operator can opt back
@@ -246,6 +275,7 @@
   S.on((st, evt) => {
     if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); applyPerf(); } return; }
     if (evt === 'light3d') { if (on && map) applyLight(); return; }
+    if (evt === 'mapstyle' || evt === 'sync') { if (on && map) { const cur = S.state.mapStyle || 'satellite'; if (builtStyle !== cur) { try { map.setStyle(styleUrl(cur)); builtStyle = cur; } catch (e) {} } } if (evt === 'mapstyle') return; }
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
     if (evt === 'models3d') { mirrorRoutes(); return; }
