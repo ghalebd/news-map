@@ -47,7 +47,15 @@ const GameMap = (() => {
 
   const drawn = L.layerGroup().addTo(map);   // rendered elements of the active scene live here
 
-  function setStyle(id) { base.options.maxNativeZoom = 20; underlay.options.maxNativeZoom = 3; base.setUrl(tile(id)); underlay.setUrl(tile(id)); }
+  // "wireframe" is a look, not a MapTiler map: render dark vector tiles + a glowing-line CSS
+  // filter on the tile pane only (so drawings/markers stay normal).
+  function setStyle(id) {
+    const wf = id === 'wireframe';
+    document.body.classList.toggle('map-wireframe', wf);
+    const real = wf ? 'toner-v2' : id;
+    base.options.maxNativeZoom = 20; underlay.options.maxNativeZoom = 3;
+    base.setUrl(tile(real)); underlay.setUrl(tile(real));
+  }
   function currentView() { const c = map.getCenter(); return { lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), zoom: +map.getZoom().toFixed(2) }; }
   function flyToView(view, t) {
     if (!view) return;

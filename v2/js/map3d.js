@@ -10,7 +10,9 @@
   const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
   const D2R = Math.PI / 180;
   const KEY = 'tnFJbEP9ELhQqkA6rPY2';
-  const styleUrl = id => `https://api.maptiler.com/maps/${id}/style.json?key=${KEY}`;
+  // "wireframe" is a look (dark vector style + CSS filter on the canvas), not a real MapTiler map
+  const realStyle = id => (id === 'wireframe' ? 'toner-v2' : id);
+  const styleUrl = id => `https://api.maptiler.com/maps/${realStyle(id)}/style.json?key=${KEY}`;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
 

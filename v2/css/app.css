@@ -19,6 +19,11 @@ body.is-tilted .skyhaze { opacity: clamp(0, calc(var(--tilt, 0) / 32), 1); }
 body.is-tilted::after { content: ''; position: fixed; inset: 0; z-index: 5; pointer-events: none;
   background: radial-gradient(140% 100% at 50% 118%, transparent 55%, rgba(2,5,10,.4) 100%); }
 .tiles-underlay img { image-rendering: auto; }
+/* WIREFRAME map style — glowing blue line-art from a dark vector base. Applied to the tile pane
+   only (2D) so drawings/markers stay normal; in 3D it tints the GL canvas for a cohesive look. */
+/* base = toner-v2 (black line-art on white); invert → white/blue lines on near-black */
+body.map-wireframe .leaflet-tile-pane { filter: invert(1) contrast(1.15) brightness(.92) sepia(.5) hue-rotate(170deg) saturate(2.2); }
+body.map-wireframe.mode-3d .maplibregl-canvas { filter: invert(1) contrast(1.12) brightness(.92) sepia(.5) hue-rotate(170deg) saturate(2.2); }
 button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer; }
 svg { display: block; }
 [hidden] { display: none !important; }
