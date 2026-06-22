@@ -64,7 +64,9 @@ const Store = (() => {
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
     overlayWipe: 0.5,        // global before/after wipe position (0..1)
     overlayWipeDir: 'v',     // wipe direction: v (vertical) | h (horizontal) | radial
-    // panel positions are NOT here — they live in a per-window local store (see LAYOUT_KEY)
+    // panel positions are NOT here — they live in a per-window local store (see LAYOUT_KEY).
+    // panel SIZE (scale) IS synced, so resizing a panel on the control reflects on the presenter:
+    panelScale: {},          // { '.sel': scale }
     qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'], pinned: [] },   // pinned = settings sections shown as quick "jump" buttons on the bar   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
@@ -124,6 +126,14 @@ const Store = (() => {
     // panel layout moved to a per-window local store: seed this window's layout from the old
     // synced positions once (preserve current look), then strip it out of the synced config.
     if (c.layout) { if (Object.keys(c.layout).length && !Object.keys(layoutMap).length) { layoutMap = JSON.parse(JSON.stringify(c.layout)); persistLayout(); } delete c.layout; }
+    // panel SIZE now syncs (config.panelScale); position stays local. Lift any scale that still
+    // sits inside the local layout entries up into the synced panelScale once.
+    if (!c._mig.panelScale) {
+      c.panelScale = c.panelScale || {}; let moved = false;
+      for (const k in layoutMap) { const e = layoutMap[k]; if (e && e.s && e.s !== 1) { if (c.panelScale[k] == null) c.panelScale[k] = e.s; delete e.s; moved = true; } }
+      if (moved) persistLayout();
+      c._mig.panelScale = true;
+    }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }
@@ -205,8 +215,9 @@ const Store = (() => {
   function setEasing(v) { state.config.easing = v; emit('config'); }
   function setFollow(patch) { if (!state.config.follow) state.config.follow = { on: false, kind: null, id: null, zoom: null }; Object.assign(state.config.follow, patch); emit('follow'); }
   function setDrawDefaults(patch) { Object.assign(state.config.drawDefaults, patch); emit('config'); }
-  function setLayout(sel, pos) { if (pos) layoutMap[sel] = pos; else delete layoutMap[sel]; persistLayout(); emit('layout', { silent: true }); }   // local-only — see LAYOUT_KEY
+  function setLayout(sel, pos) { if (pos) layoutMap[sel] = pos; else delete layoutMap[sel]; persistLayout(); emit('layout', { silent: true }); }   // local-only position — see LAYOUT_KEY
   function clearLayout() { layoutMap = {}; persistLayout(); emit('layout', { silent: true }); }
+  function setPanelScale(sel, s) { if (!state.config.panelScale) state.config.panelScale = {}; if (s && s !== 1) state.config.panelScale[sel] = s; else delete state.config.panelScale[sel]; emit('config'); }   // SYNCED — size reflects on the presenter
   function setQbar(patch) { if (!state.config.qbar) state.config.qbar = { order: [], hidden: [] }; Object.assign(state.config.qbar, patch); emit('config'); }
   function overlays() { if (!state.config.overlays) state.config.overlays = []; return state.config.overlays; }
   function addOverlay(o) { o.id = uid('ov'); if (o.on == null) o.on = true; if (o.opacity == null) o.opacity = 1; overlays().push(o); emit('overlays'); return o; }
@@ -254,7 +265,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight, setAnim,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, layout, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, layout, setLayout, clearLayout, setPanelScale, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
     models3d, addModel3d, updateModel3d, removeModel3d, clearModels3d,
     timeline, setTimeline, setTrack3d, setUI,

@@ -136,7 +136,7 @@ const bc=await p.evaluate(async()=>{const out=[];Store.setBanner({on:true,text:'
 bc.forEach(x=>rec('broadcast:'+x.k,x.ok,''));
 
 // ---------- MOVABLE ----------
-const mv=await p.evaluate(async()=>{Movable.setScale('.status',0.8);await new Promise(r=>setTimeout(r,150));const s=(Store.layout()['.status']||{}).s;Movable.snap('.status','tr');const lay=Store.layout()['.status'];Movable.resetPanel('.status');const reset=!Store.layout()['.status'];return {scaled:s===0.8, snapped:!!(lay&&lay.x!=null), reset};});
+const mv=await p.evaluate(async()=>{Movable.setScale('.status',0.8);await new Promise(r=>setTimeout(r,150));const s=(Store.cfg().panelScale||{})['.status'];Movable.snap('.status','tr');const lay=Store.layout()['.status'];Movable.resetPanel('.status');const reset=!Store.layout()['.status']&&!(Store.cfg().panelScale||{})['.status'];return {scaled:s===0.8, snapped:!!(lay&&lay.x!=null), reset};});
 rec('panel scale', mv.scaled, ''); rec('panel snap', mv.snapped, ''); rec('panel reset', mv.reset, '');
 
 // ---------- PIN TO BAR + FLYOUT ----------
