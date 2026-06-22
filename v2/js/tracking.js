@@ -314,9 +314,11 @@
     bFlights.querySelector('span').textContent = Flights.on ? `Flights ${Flights.flights.size}` : 'Flights';
   }
   function applyGate() {
-    // control window drives tracking from the side panel's "Live layers" card,
-    // so the floating bar only shows on the presenter.
-    bar.hidden = isControl || S.cfg().visibility.tracking === false;
+    // control window drives tracking from the side panel's "Live layers" card, so the floating
+    // bar normally only shows on the presenter — but in PRESENTER (live) mode the control mirrors
+    // the on-air chrome (WYSIWYG preview), so honour visibility.tracking there too.
+    const ctlPreview = isControl && S.state.mode === 'live';
+    bar.hidden = (isControl && !ctlPreview) || S.cfg().visibility.tracking === false;
     const can = isControl || S.cfg().permissions.canTrack !== false;
     bar.classList.toggle('is-locked', !can);
   }
@@ -339,7 +341,7 @@
   }
   let reT = null; const restyleDebounced = () => { clearTimeout(reT); reT = setTimeout(restyle, 140); };
   S.on((st, evt) => {
-    if (evt === 'tracking' || evt === 'sync' || evt === 'config') sync();
+    if (evt === 'tracking' || evt === 'sync' || evt === 'config' || evt === 'mode') sync();
     if (evt === 'config' || evt === 'sync') restyleDebounced();
     if (evt === 'trackfocus' || evt === 'sync') { if (Ships.on) Ships.applyFocus(S.state.trackFocus); }
   });

@@ -17,11 +17,16 @@
   };
 
   function applyVisibility() {
-    if (isControl) return;                       // full console: show all
     const v = S.cfg().visibility;
+    // Presenter: always honour the config.
+    // Control: full toolset in PREP (build); in PRESENTER (live) mode it becomes a true
+    // WYSIWYG preview of what airs — apply the same hiding — EXCEPT the mode switch, which
+    // stays so the operator can always step back to PREP.
+    const live = isControl && S.state.mode === 'live';
     Object.entries(VIS).forEach(([k, sel]) => {
       const el = document.querySelector(sel);
-      if (el) el.hidden = v[k] === false;
+      if (!el) return;
+      el.hidden = isControl ? (live && k !== 'modeSwitch' && v[k] === false) : (v[k] === false);
     });
   }
 
