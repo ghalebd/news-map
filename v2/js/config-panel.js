@@ -408,7 +408,7 @@
     const b4 = section('Spotlight', I.target, () => S.setSpotlight({ radiusKm: 400, feather: 40, dim: 66 }));
     b4.bd.appendChild(rowTog('Focus mask', !!sp.on, on => { const cv = window.GameMap.currentView(); S.setSpotlight(on ? { on: true, lat: cv.lat, lng: cv.lng } : { on: false }); }));
     b4.bd.appendChild(knobs(
-      knob('Radius', sp.radiusKm || 400, 50, 2000, 50, v => S.setSpotlight({ radiusKm: v })),
+      knob('Radius', sp.radiusKm || 400, 50, 8000, 50, v => S.setSpotlight({ radiusKm: v })),
       knob('Feather', sp.feather == null ? 40 : sp.feather, 0, 100, 5, v => S.setSpotlight({ feather: v })),
       knob('Dim', sp.dim == null ? 66 : sp.dim, 0, 95, 5, v => S.setSpotlight({ dim: v })),
     ));

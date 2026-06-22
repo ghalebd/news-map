@@ -108,9 +108,16 @@
         // moved (absolute) — local position + synced scale. Clamp against the SCALED size
         // (top-left origin) so a shrunk panel isn't pushed up/left off its spot.
         const w = el.offsetWidth * s, hh = el.offsetHeight * s;
-        const x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
         const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
-        styleAt(el, x, y, s);
+        if (meta[sel].axis === 'y') {
+          // vertical-only bar (the tool bar): it must NEVER take a horizontal position — keep its
+          // CSS left edge and only move vertically, so a stray saved x can't pull it to mid-screen.
+          el.style.left = el.style.right = el.style.bottom = ''; el.style.top = Math.round(y) + 'px';
+          el.style.transform = (s && s !== 1) ? `scale(${s})` : 'none'; el.style.transformOrigin = 'top left';
+        } else {
+          const x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
+          styleAt(el, x, y, s);
+        }
       } else if (s !== 1) {
         // scale ONLY (never moved) — keep the panel's CSS position, just scale around its centre.
         el.style.left = el.style.top = el.style.right = el.style.bottom = '';
