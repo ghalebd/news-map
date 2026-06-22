@@ -44,8 +44,13 @@
     if (!ws || ws.readyState !== 1 || applyingRemote) return;
     const data = localStorage.getItem(KEY) || '';
     if (!data) return;
-    const ts = Date.now();
-    localStorage.setItem(TSKEY, String(ts));
+    // Broadcast with the state's LAST-MODIFIED time (TSKEY), never a fresh Date.now(). A window
+    // that has never been edited (fresh browser, incognito, cleared cache, second device) has no
+    // TSKEY — it must STAY SILENT, otherwise its default config would carry a newest timestamp and
+    // wipe everyone else's real settings via last-writer-wins. Edits stamp TSKEY below, so a truly
+    // newer local state still wins; an unedited one simply receives the cloud state instead.
+    const ts = myTs();
+    if (!ts) return;
     try { ws.send(JSON.stringify({ type: 'snapshot', ts, data })); } catch (e) {}
   }
 
