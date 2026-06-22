@@ -45,9 +45,12 @@
     panel.appendChild(field('Lower third', ltt, lts));
   }
 
+  // presenter can hide the panel via the "Scene settings" presenter-visibility toggle; the
+  // operator console always keeps it (it is the scene editor).
+  const visOK = () => isControl || S.cfg().visibility.sceneSettings !== false;
   function render() {
     const s = S.activeScene();
-    const show = S.state.mode === 'build' && s && canEdit();
+    const show = S.state.mode === 'build' && s && canEdit() && visOK();
     if (!show) { panel.hidden = true; builtFor = null; return; }
     panel.hidden = false;
     if (builtFor !== s.id) { builtFor = s.id; build(s); }   // rebuild only on scene change

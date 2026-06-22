@@ -9,7 +9,7 @@
     // identity / layout
     'Theme': 'The presenter look. Accent colour sets the highlight colour; the knobs tune glass blur, distortion, corner radius, saturation, sheen, shadow, brightness and the slight 3D tilt. Touch mode enlarges every control for on-air touch screens.',
     'Logo': 'Upload the channel logo and set its size and on-screen position. Shown on the presenter output.',
-    'Presenter visibility': 'Show or hide each presenter element (brand, status, deck, mode switch, add button, tool bar, now/next, live tracking) without deleting it.',
+    'Presenter visibility': 'Show or hide each presenter element (brand, status, deck, mode switch, add button, tool bar, now/next, live tracking, scene settings) without deleting it.',
     'Vertical tool bar': 'Reorder, show or hide the buttons of the left vertical tool bar. Drag the handle to reorder; the eye toggles a button on the bar.',
     'Panel size & position': 'Resize each on-screen panel (50–170%) and snap it to any of the 9 screen anchors, or centre it. Per-panel.',
     // permissions / tools
