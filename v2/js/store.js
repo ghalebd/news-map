@@ -11,7 +11,7 @@ const Store = (() => {
 
   const DEFAULT_CONFIG = {
     style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14, sat: 1.7, sheen: 16, shadow: 1, brightness: 105 },
-    visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true, sceneSettings: true },
+    visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true, sceneSettings: true, attribution: true },
     permissions: {
       tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, frontline: true, country: true, erase: true, asset: true },
       canDraw: true, canEditScenes: false, canNavigate: true, canChangeStyle: false, canChangeMapStyle: true, canTrack: true,
@@ -64,7 +64,7 @@ const Store = (() => {
     overlays: [],            // georeferenced image layers { id,name,url,bounds:[[s,w],[n,e]],opacity,wipe,on }
     overlayWipe: 0.5,        // global before/after wipe position (0..1)
     overlayWipeDir: 'v',     // wipe direction: v (vertical) | h (horizontal) | radial
-    layout: {},              // freely-dragged panel positions  { '.sel': {x,y} }
+    // panel positions are NOT here — they live in a per-window local store (see LAYOUT_KEY)
     qbar: { order: [], hidden: ['tarrow', 'curve', 'circle', 'polygon', 'sketch', 'frontline', 'country', 'measure', 'flags', 'redo', 'hideui', 'grid', 'sea', 'clouds', 'daynight', 'fullscreen'], pinned: [] },   // pinned = settings sections shown as quick "jump" buttons on the bar   // vertical tool-bar: button order + hidden (extras off by default; add them from settings)
     places: [
       { id: 'pl1', name: 'Doha', lat: 25.29, lng: 51.53, zoom: 10 },
@@ -87,6 +87,14 @@ const Store = (() => {
     trackFocus: null,             // focused ship MMSI (route shown) — synced
     broadcast: { banner: { on: false, text: 'BREAKING NEWS' }, ticker: { on: false, text: '', speed: 60 }, tour: { playing: false, sec: 8 }, spotlight: { on: false, lat: 25, lng: 45, radiusKm: 400, feather: 40, dim: 66 }, anim: { ms: 700, loop: false, playing: false } },
   };
+
+  /* ---- panel layout is PER-WINDOW LOCAL, NOT synced: the control console and the presenter
+     keep their own dragged positions + per-panel scale, so moving a panel on one window never
+     moves it on the other. Stored under a role-specific localStorage key. ---- */
+  const LAYOUT_KEY = 'newsmap.v3.layout.' + (window.APP_ROLE === 'control' ? 'control' : 'presenter');
+  let layoutMap = (() => { try { return JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+  function persistLayout() { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layoutMap)); } catch (e) {} }
+  function layout() { return layoutMap; }
 
   /* ---- pub/sub + persistence + cross-window sync ---- */
   const subs = [];
@@ -113,11 +121,17 @@ const Store = (() => {
     if (!c._mig.wireframe) { c.mapStyles = c.mapStyles || []; if (!c.mapStyles.some(m => m.id === 'wireframe')) c.mapStyles.splice(1, 0, { id: 'wireframe', name: 'Wireframe', on: true }); c._mig.wireframe = true; }
     // raise the old 300 default ship cap so more live ships show
     if (!c._mig.maxShips1k) { if (c.trackStyle && (c.trackStyle.maxShips == null || c.trackStyle.maxShips === 300)) c.trackStyle.maxShips = 1000; c._mig.maxShips1k = true; }
+    // panel layout moved to a per-window local store: seed this window's layout from the old
+    // synced positions once (preserve current look), then strip it out of the synced config.
+    if (c.layout) { if (Object.keys(c.layout).length && !Object.keys(layoutMap).length) { layoutMap = JSON.parse(JSON.stringify(c.layout)); persistLayout(); } delete c.layout; }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }
   function importState(d) { applyData(d); emit('sync'); }
-  window.addEventListener('storage', e => { if (e.key === KEY) { load(); emit('sync', { silent: true }); } });
+  // The control console is authoritative and must NOT be overwritten by another window writing the
+  // shared key (e.g. a presenter tab in the same browser mirroring the cloud) — only the presenter
+  // reloads from cross-window writes. This mirrors the same guard in sync-client's onmessage.
+  window.addEventListener('storage', e => { if (e.key === KEY && window.APP_ROLE !== 'control') { load(); emit('sync', { silent: true }); } });
 
   /* ---- scenes ---- */
   const scenes = () => state.rundown.scenes;
@@ -191,8 +205,8 @@ const Store = (() => {
   function setEasing(v) { state.config.easing = v; emit('config'); }
   function setFollow(patch) { if (!state.config.follow) state.config.follow = { on: false, kind: null, id: null, zoom: null }; Object.assign(state.config.follow, patch); emit('follow'); }
   function setDrawDefaults(patch) { Object.assign(state.config.drawDefaults, patch); emit('config'); }
-  function setLayout(sel, pos) { if (!state.config.layout) state.config.layout = {}; if (pos) state.config.layout[sel] = pos; else delete state.config.layout[sel]; emit('config'); }
-  function clearLayout() { state.config.layout = {}; emit('config'); }
+  function setLayout(sel, pos) { if (pos) layoutMap[sel] = pos; else delete layoutMap[sel]; persistLayout(); emit('layout', { silent: true }); }   // local-only — see LAYOUT_KEY
+  function clearLayout() { layoutMap = {}; persistLayout(); emit('layout', { silent: true }); }
   function setQbar(patch) { if (!state.config.qbar) state.config.qbar = { order: [], hidden: [] }; Object.assign(state.config.qbar, patch); emit('config'); }
   function overlays() { if (!state.config.overlays) state.config.overlays = []; return state.config.overlays; }
   function addOverlay(o) { o.id = uid('ov'); if (o.on == null) o.on = true; if (o.opacity == null) o.opacity = 1; overlays().push(o); emit('overlays'); return o; }
@@ -240,7 +254,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight, setAnim,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, layout, setLayout, clearLayout, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
     models3d, addModel3d, updateModel3d, removeModel3d, clearModels3d,
     timeline, setTimeline, setTrack3d, setUI,

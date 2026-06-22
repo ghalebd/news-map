@@ -199,6 +199,18 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .qtools { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: var(--r); max-height: calc(100vh - 130px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 .qtools::-webkit-scrollbar { width: 0; }
 .qtools__sep { width: 24px; height: 1px; background: var(--stroke); margin: 2px 0; }
+
+/* global-sync status dot — docked at the BOTTOM of the vertical tool bar (sync-client badge()).
+   Falls back to a fixed bottom-left pip (.syncdot--float) only if the bar isn't present. */
+.syncdot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,.5); transition: background .3s; flex: 0 0 auto; align-self: center; margin-top: 6px; border-top: 0; }
+.qtools .syncdot { margin-top: 8px; }
+.syncdot--float { position: fixed; left: 8px; bottom: 8px; z-index: 9999; pointer-events: none; }
+
+/* map credit (attribution, bottom-right) — hidden when the "Map credit" presenter-visibility
+   toggle is off; covers both the Leaflet (2D) and MapLibre (3D) attribution controls. */
+body.attrib-off .leaflet-control-attribution,
+body.attrib-off .maplibregl-ctrl-attrib,
+body.attrib-off .maplibregl-ctrl-bottom-right { display: none !important; }
 .qtool { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen); transition: all var(--t-fast) var(--ease); }
 .qtool svg { width: 20px; height: 20px; }
 .qtool:hover { color: var(--text); border-color: var(--stroke-2); }

@@ -23,6 +23,10 @@
     try { ws = new WebSocket(ROOM_WS); } catch (e) { retry(); return; }
     ws.onopen = () => { if (IS_SENDER) send(); badge('live'); };
     ws.onmessage = ev => {
+      // The control console is the SINGLE SOURCE OF TRUTH and must never be overwritten by the
+      // cloud — otherwise a stale/default snapshot (e.g. left by a fresh window) keeps resetting the
+      // operator's carefully-set style. Only the presenter (a pure mirror) applies incoming state.
+      if (IS_SENDER) return;
       try {
         const j = JSON.parse(ev.data);
         if (!j || j.type !== 'snapshot' || typeof j.data !== 'string') return;
@@ -44,19 +48,18 @@
     if (!ws || ws.readyState !== 1 || applyingRemote) return;
     const data = localStorage.getItem(KEY) || '';
     if (!data) return;
-    // Broadcast with the state's LAST-MODIFIED time (TSKEY), never a fresh Date.now(). A window
-    // that has never been edited (fresh browser, incognito, cleared cache, second device) has no
-    // TSKEY — it must STAY SILENT, otherwise its default config would carry a newest timestamp and
-    // wipe everyone else's real settings via last-writer-wins. Edits stamp TSKEY below, so a truly
-    // newer local state still wins; an unedited one simply receives the cloud state instead.
-    const ts = myTs();
-    if (!ts) return;
+    // Only the control reaches here (the presenter never sends). As the source of truth it asserts
+    // a FRESH timestamp so it always wins last-writer-wins on the presenter and corrects any stale
+    // cloud snapshot — the control can no longer be reset, because it ignores incoming (see onmessage).
+    const ts = Date.now();
+    localStorage.setItem(TSKEY, String(ts));
     try { ws.send(JSON.stringify({ type: 'snapshot', ts, data })); } catch (e) {}
   }
 
   let t = null;
-  if (IS_SENDER && window.Store && Store.on) Store.on(() => {
+  if (IS_SENDER && window.Store && Store.on) Store.on((st, evt) => {
     if (applyingRemote) return;
+    if (evt === 'layout') return;   // panel positions are per-window local — never sync them
     // Claim a fresh timestamp SYNCHRONOUSLY on every local edit. Without this, TSKEY stayed
     // stale until the debounced send() ran 300ms later — leaving a window where an older cloud
     // snapshot satisfied `j.ts > myTs()` and overwrote freshly-added models/overlays/drawings.
@@ -66,7 +69,12 @@
 
   function badge(st) {
     let el = document.getElementById('syncdot');
-    if (!el) { el = document.createElement('div'); el.id = 'syncdot'; el.title = 'Global sync'; el.style.cssText = 'position:fixed;left:8px;bottom:8px;width:9px;height:9px;border-radius:50%;z-index:9999;box-shadow:0 0 6px rgba(0,0,0,.5);pointer-events:none;transition:background .3s'; document.body.appendChild(el); }
+    if (!el) { el = document.createElement('div'); el.id = 'syncdot'; el.className = 'syncdot'; el.title = 'Global sync'; }
+    // Dock the status dot at the bottom of the vertical tool bar; fall back to a fixed bottom-left
+    // pip only while the bar doesn't exist yet.
+    const bar = document.querySelector('.qtools');
+    if (bar) { if (el.parentNode !== bar) bar.appendChild(el); el.classList.remove('syncdot--float'); }
+    else if (!el.parentNode) { el.classList.add('syncdot--float'); document.body.appendChild(el); }
     el.style.background = st === 'live' ? '#34d399' : '#f59e0b';
   }
   connect();

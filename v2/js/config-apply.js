@@ -28,6 +28,10 @@
       if (!el) return;
       el.hidden = isControl ? (live && k !== 'modeSwitch' && v[k] === false) : (v[k] === false);
     });
+    // Map credit (bottom-right) is class-based: one toggle covers both the Leaflet (2D) and MapLibre
+    // (3D) attribution controls, including the 3D one that is created dynamically.
+    const hideCredit = isControl ? (live && v.attribution === false) : (v.attribution === false);
+    document.body.classList.toggle('attrib-off', hideCredit);
   }
 
   function applyPermissions() {
