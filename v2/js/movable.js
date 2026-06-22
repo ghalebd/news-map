@@ -28,17 +28,16 @@
     ['.tl', 'Timeline', 'both'],
   ];
   const meta = {}; PANELS.forEach(([sel, label, axis]) => meta[sel] = { label, axis });
+  // position {x,y} is per-window LOCAL (S.layout); SIZE is SYNCED (config.panelScale) so resizing a
+  // panel on the control reflects on the presenter.
+  const sclOf = sel => (S.cfg().panelScale || {})[sel] || 1;
   const els = {}; const handles = {};
   let pending = null;
-  let cfgOffset = 0;   // how far the open settings panel pushes left-side chrome right
-  const SHIFTED = ['.qtools', '.modesw', '.deck', '.nownext', '.status'];   // left-side chrome the settings panel pushes
-  // how much THIS panel is currently pushed right by the open settings panel
-  function shiftFor(sel) {
-    if (!cfgOffset) return 0;
-    const p = (S.layout() || {})[sel];
-    if (p && p.x != null) return p.x < cfgOffset ? cfgOffset : 0;
-    return SHIFTED.includes(sel) ? cfgOffset : 0;
-  }
+  let cfgOffset = 0;
+  // The settings drawer opens from the RIGHT, so left/centre chrome (tool bar, deck, status, …) is
+  // never covered by it — there is nothing to dodge. The old logic shoved this chrome RIGHT (toward
+  // the drawer), which flung the vertical tool bar to mid-screen when settings opened. No shift.
+  function shiftFor() { return 0; }
 
   /* the dot-grip sits on the panel's SHORTER edge: top for portrait panels,
      left for landscape panels — re-evaluated whenever layout might change */
@@ -58,17 +57,17 @@
   }
   function clearStyle(el) { el.style.left = el.style.top = el.style.right = el.style.bottom = el.style.transform = el.style.transformOrigin = ''; }
 
-  function commit(sel, x, y, h, s) {
+  function commit(sel, x, y, h) {
     if (sel === '.brand') { S.setBrand({ x: Math.round(x), y: Math.round(y + h / 2) }); }   // applyBrand re-centres via translateY(-50%)
-    else { const cur = (S.layout() || {})[sel] || {}; S.setLayout(sel, { x: Math.round(x), y: Math.round(y), s: s != null ? s : cur.s }); }
+    else { S.setLayout(sel, { x: Math.round(x), y: Math.round(y) }); }   // position only — scale is synced separately
   }
 
   function startDrag(el, sel, hd, e) {
     if (e.button != null && e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
     const axis = meta[sel].axis, rect = el.getBoundingClientRect();
-    const s = (S.layout() && S.layout()[sel] && S.layout()[sel].s) || 1;
-    const shift = shiftFor(sel);   // temporary open-shift to keep out of saved coords
+    const s = sclOf(sel);
+    const shift = 0;
     const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
     hd.classList.add('is-drag'); document.body.classList.add('mv-dragging');
     function mv(ev) {
@@ -103,22 +102,20 @@
     for (const [sel] of PANELS) {
       if (sel === '.brand') continue;            // handled by applyBrand
       const el = els[sel]; if (!el) continue;
-      const p = lay[sel];
+      const p = lay[sel];                         // LOCAL position {x,y}
+      const s = sclOf(sel);                       // SYNCED size
       if (p && (p.x != null || p.y != null)) {
-        // moved (absolute) — position + optional scale. Clamp against the SCALED size
+        // moved (absolute) — local position + synced scale. Clamp against the SCALED size
         // (top-left origin) so a shrunk panel isn't pushed up/left off its spot.
-        const sc = p.s || 1, w = el.offsetWidth * sc, hh = el.offsetHeight * sc;
-        let x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
+        const w = el.offsetWidth * s, hh = el.offsetHeight * s;
+        const x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
         const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
-        x = Math.min(x + shiftFor(sel), window.innerWidth - w);
-        styleAt(el, x, y, p.s || 1);
-      } else if (p && p.s && p.s !== 1) {
-        // scale ONLY (never moved) — keep the panel's CSS position, just scale around
-        // its centre, composing the centring + open-shift transforms so it doesn't jump.
+        styleAt(el, x, y, s);
+      } else if (s !== 1) {
+        // scale ONLY (never moved) — keep the panel's CSS position, just scale around its centre.
         el.style.left = el.style.top = el.style.right = el.style.bottom = '';
         el.style.transformOrigin = 'center';
-        const sh = shiftFor(sel);
-        el.style.transform = (sh ? `translateX(${sh}px) ` : '') + (meta[sel].axis === 'y' ? 'translateY(-50%) ' : '') + `scale(${p.s})`;
+        el.style.transform = (meta[sel].axis === 'y' ? 'translateY(-50%) ' : '') + `scale(${s})`;
       } else clearStyle(el);
     }
     reflow();
@@ -132,35 +129,34 @@
 
   window.Movable = {
     panels: PANELS.filter(([sel]) => sel !== '.brand').map(([sel, label]) => ({ sel, label, axis: meta[sel].axis })),
-    scaleOf(sel) { return ((S.layout() || {})[sel] || {}).s || 1; },
+    scaleOf(sel) { return sclOf(sel); },
     posOf(sel) { return (S.layout() || {})[sel] || null; },
     setScale(sel, s) {
-      const el = els[sel]; const cur = (S.layout() || {})[sel] || {};
-      const s0 = cur.s || 1;
-      let x = cur.x, y = cur.y;
-      const w = el ? el.offsetWidth : 0, hh = el ? el.offsetHeight : 0;
-      // only convert to absolute coords from a VISIBLE panel; if it's hidden (size 0,
-      // e.g. the tool bar in build mode) keep x/y unset so it stays CSS-centred — never
-      // snap it to 0,0 (which made it stick to the top).
-      if (w || hh) {
-        if (x == null) { const r = el.getBoundingClientRect(); x = Math.round(r.left - shiftFor(sel)); y = Math.round(r.top); }
-        x = Math.round(x - w * (s - s0) / 2); y = Math.round(y - hh * (s - s0) / 2);   // grow/shrink around centre
+      const el = els[sel];
+      const s0 = sclOf(sel);
+      S.setPanelScale(sel, s);                 // SYNCED size → reflects on the presenter
+      const cur = (S.layout() || {})[sel] || {};
+      // if the panel was moved, nudge its LOCAL position so it grows/shrinks around its centre;
+      // an un-moved panel stays CSS-centred and just scales (applyLayout's scale-only branch).
+      if (cur.x != null && el) {
+        const w = el.offsetWidth, hh = el.offsetHeight;
+        S.setLayout(sel, { x: Math.round(cur.x - w * (s - s0) / 2), y: Math.round((cur.y || 0) - hh * (s - s0) / 2) });
       }
-      S.setLayout(sel, { x, y, s });
     },
     // snap a panel to a screen anchor — code is V+H: t/m/b  +  l/c/r
     snap(sel, anchor) {
       const el = els[sel]; if (!el) return;
-      const cur = (S.layout() || {})[sel] || {}; const s = cur.s || 1, m = 18;
+      const s = sclOf(sel), m = 18;
       const w = el.offsetWidth * s, hh = el.offsetHeight * s, vw = window.innerWidth, vh = window.innerHeight;
       const v = anchor[0], hz = meta[sel].axis === 'y' ? 'l' : anchor[1];   // vertical-only bars keep their left
       let x = hz === 'l' ? m : hz === 'r' ? vw - w - m : (vw - w) / 2;
       let y = v === 't' ? m : v === 'b' ? vh - hh - m : (vh - hh) / 2;
+      const cur = (S.layout() || {})[sel] || {};
       if (meta[sel].axis === 'y') x = (cur.x != null ? cur.x : el.getBoundingClientRect().left);
-      S.setLayout(sel, { x: Math.round(x), y: Math.round(y), s });
+      S.setLayout(sel, { x: Math.round(x), y: Math.round(y) });   // position only — scale stays synced
     },
     center(sel) { this.snap(sel, 'mc'); },
-    resetPanel(sel) { S.setLayout(sel, null); },
+    resetPanel(sel) { S.setLayout(sel, null); S.setPanelScale(sel, 1); },
     reflow,
     attach,                      // wire a lazily-built panel (e.g. HUD / timeline) into the system
     refresh: applyLayout,        // re-apply saved layout after a panel appears
