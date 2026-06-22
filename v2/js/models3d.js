@@ -43,9 +43,24 @@
   // master is never mutated). 'wireframe' draws the mesh as a glowing wireframe.
   function applyStyle(obj, style) {
     const wire = style === 'wireframe';
+    // Convert PBR (MeshStandardMaterial) to a simple LIT material. PBR materials render black /
+    // invisible inside MapLibre's shared-context custom 3D layer (they rely on GL state the shared
+    // context doesn't provide) — while MeshLambertMaterial draws reliably (the same approach the
+    // live-ship layer uses). Colour / texture / transparency / emissive are preserved.
     obj.traverse(o => {
       if (o.isMesh && o.material) {
-        const conv = mm => { const c = mm.clone(); c.wireframe = wire; return c; };
+        const conv = mm => {
+          const lm = new THREE.MeshLambertMaterial({
+            color: mm.color ? mm.color.clone() : new THREE.Color(0xb9c2cc),
+            map: mm.map || null,
+            transparent: !!mm.transparent,
+            opacity: mm.opacity != null ? mm.opacity : 1,
+            emissive: mm.emissive ? mm.emissive.clone() : new THREE.Color(0x000000),
+            side: mm.side != null ? mm.side : THREE.FrontSide,
+          });
+          lm.wireframe = wire;
+          return lm;
+        };
         o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
       }
     });
@@ -193,6 +208,8 @@
       const matrix = (args && args.defaultProjectionData) ? args.defaultProjectionData.mainMatrix : args;
       this.cam.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
       this.renderer.resetState();
+      this.renderer.clearDepth();   // draw models ON TOP of the 3D terrain (terrain's depth buffer
+                                    // was occluding ground-placed models); self-occlusion stays correct.
       this.renderer.render(this.scene, this.cam);
     },
   };
