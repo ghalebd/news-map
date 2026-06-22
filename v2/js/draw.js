@@ -180,7 +180,7 @@ const Draw = (() => {
   const FREE = ['sketch', 'tarrow'];   // freehand: collect points while dragging
   function setTool(t) {
     tool = t;
-    if (t !== 'asset') assetPending = null; deselect(); closePalette(); closeFlags(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));
+    if (t !== 'asset') assetPending = null; deselect(); closePalette(); closeFlags(); closeMenu(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));   // closeMenu: the two tool surfaces never stay open at once
   }
   /* smoothing for freehand strokes — drop near-duplicate points then Chaikin-round corners */
   function decimate(pts, minM) { if (pts.length < 3) return pts; const out = [pts[0]]; for (let i = 1; i < pts.length; i++) { if (map.distance(L.latLng(out[out.length - 1][0], out[out.length - 1][1]), L.latLng(pts[i][0], pts[i][1])) >= minM) out.push(pts[i]); } if (out[out.length - 1] !== pts[pts.length - 1]) out.push(pts[pts.length - 1]); return out; }
@@ -347,7 +347,7 @@ const Draw = (() => {
     const cRow = h('div', 'qa__colors');
     COLORS.forEach(c => { const s = h('button', 'qa__sw' + (c === S.state.color ? ' is-on' : '')); s.style.background = c; s.onclick = () => { S.setColor(c); cRow.querySelectorAll('.qa__sw').forEach(x => x.classList.remove('is-on')); s.classList.add('is-on'); }; cRow.appendChild(s); });
     const grid = h('div', 'qa__tools');
-    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool', `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else if (id === 'flags') { e.stopPropagation(); openFlags(); } else setTool(id); }; grid.appendChild(b); });
+    TOOLS.filter(([id]) => permits(id)).forEach(([id, icon, label]) => { const b = h('button', 'qa__tool' + (id === tool ? ' is-on' : ''), `${icon}<span>${label}</span>`); b.onclick = e => { closeMenu(); if (id === 'asset') { e.stopPropagation(); openPalette(); } else if (id === 'flags') { e.stopPropagation(); openFlags(); } else setTool(id); }; grid.appendChild(b); });
     menu.append(h('div', 'qa__title', 'ADD'), cRow, grid);
     if (permits('marker')) {
       const iconRow = h('div', 'qa__icons');
@@ -399,6 +399,7 @@ const Draw = (() => {
   const qpop = h('div', 'qtools-pop lbar-pop'); qpop.hidden = true;
   ['#ff453a', '#ff9f0a', '#ffd60a', '#36ff9e', '#38e6ff', '#0a84ff', '#bf5af2', '#ffffff'].forEach(c => { const s = h('button', 'qtools-pop__sw'); s.style.background = c; s.onclick = () => { S.setColor(c); setDot(); qpop.hidden = true; }; qpop.appendChild(s); });
   qcolor.onclick = e => { e.stopPropagation(); window.LBar ? LBar.toggle(qcolor, qpop) : (qpop.hidden = !qpop.hidden); };
+  S.on((st, evt) => { if (evt === 'color' || evt === 'sync') setDot(); });   // keep the bar's colour dot in step with the FAB / context-bar colour
   document.addEventListener('click', e => { if (e.target !== qcolor && !qcolor.contains(e.target) && !qpop.contains(e.target)) qpop.hidden = true; });
   qbar.appendChild(qcolor); document.body.appendChild(qpop);
   // undo
