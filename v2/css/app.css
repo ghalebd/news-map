@@ -192,12 +192,12 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .ctxbar__btn svg { width: 14px; height: 14px; }
 .ctxbar__btn:hover { color: var(--accent); border-color: var(--accent); }
 
-/* presenter vertical toolbar */
-.qtools { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: none; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: var(--r); max-height: calc(100vh - 130px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+/* presenter vertical toolbar — shown by default; the [hidden] attribute (set by config-apply
+   from the "Tool bar" presenter-visibility toggle) hides it via [hidden]{display:none!important}.
+   This is why the toggle works on BOTH windows: the operator console always keeps it (config-apply
+   forces it visible in PREP), and the presenter honours the toggle instead of being CSS-locked off. */
+.qtools { position: fixed; left: 16px; top: 50%; transform: translateY(-50%); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: var(--r); max-height: calc(100vh - 130px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 .qtools::-webkit-scrollbar { width: 0; }
-/* Operator console (control.html): toolbar always available, in BOTH Prep and Presenter modes.
-   On-air output window (index.html, no role-control): stays hidden so the broadcast is clean. */
-body.role-control .qtools { display: flex; }
 .qtools__sep { width: 24px; height: 1px; background: var(--stroke); margin: 2px 0; }
 .qtool { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-sm); color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen); transition: all var(--t-fast) var(--ease); }
 .qtool svg { width: 20px; height: 20px; }
