@@ -49,6 +49,7 @@ const Store = (() => {
     easing: 'inout',         // motion easing for route + timeline playback: 'inout' (smooth) | 'linear'
     follow: { on: false, kind: null, id: null, zoom: null },   // camera follow: lock onto a moving target (model | ship | flight)
     drawDefaults: { color: '#ff453a', weight: 3 },   // default colour + stroke for new elements
+    markerScale: 1,          // global size multiplier for placed marker / targeting icons (synced)
     threeD: { exaggeration: 2.6, pitch: 62, labels3d: true, globe: false },   // 3D terrain defaults (MapLibre); globe = planet projection
     light3d: { on: true, az: 315, alt: 45, intensity: 1.9, ambient: 1.0, relief: 0.5, shadow: 55, tshadow: 55 },   // 3D sun: terrain hillshade + terrain shadow + GLB models + ground shadows
     timeline: { dur: 15, head: 0, playing: false, loop: false, t0: 0, cam: [], models: {} },   // keyframe choreography (camera + models), synced
@@ -215,6 +216,7 @@ const Store = (() => {
   function setEasing(v) { state.config.easing = v; emit('config'); }
   function setFollow(patch) { if (!state.config.follow) state.config.follow = { on: false, kind: null, id: null, zoom: null }; Object.assign(state.config.follow, patch); emit('follow'); }
   function setDrawDefaults(patch) { Object.assign(state.config.drawDefaults, patch); emit('config'); }
+  function setMarkerScale(v) { state.config.markerScale = v; emit('config'); }
   function setLayout(sel, pos) { if (pos) layoutMap[sel] = pos; else delete layoutMap[sel]; persistLayout(); emit('layout', { silent: true }); }   // local-only position — see LAYOUT_KEY
   function clearLayout() { layoutMap = {}; persistLayout(); emit('layout', { silent: true }); }
   function setPanelScale(sel, s) { if (!state.config.panelScale) state.config.panelScale = {}; if (s && s !== 1) state.config.panelScale[sel] = s; else delete state.config.panelScale[sel]; emit('config'); }   // SYNCED — size reflects on the presenter
@@ -265,7 +267,7 @@ const Store = (() => {
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight, setAnim,
     addElement, removeElement, updateElement, clearElements, undo, redo,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
-    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, layout, setLayout, clearLayout, setPanelScale, setQbar, addPlace, removePlace, resetConfig,
+    setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, setMarkerScale, layout, setLayout, clearLayout, setPanelScale, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,
     models3d, addModel3d, updateModel3d, removeModel3d, clearModels3d,
     timeline, setTimeline, setTrack3d, setUI,

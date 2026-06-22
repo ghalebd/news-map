@@ -309,8 +309,11 @@
     const D = Object.assign({ color: '#ff453a', weight: 3, markerIcon: '' }, C.drawDefaults || {});
     const { sec, bd } = section('Drawing defaults', I.sketch, () => S.setDrawDefaults(cp(S.DEFAULT_CONFIG.drawDefaults)));
     bd.append(field('Default colour', swatches(DCOLORS, D.color, c => { S.setDrawDefaults({ color: c }); S.setColor(c); })),
-      slider('Stroke weight', D.weight, 1, 8, 1, v => S.setDrawDefaults({ weight: v })));
-    bd.appendChild(h('div', 'hint', 'Applies to new shapes/lines. Per-element colour stays editable from the on-map context bar.'));
+      knobs(
+        slider('Stroke weight', D.weight, 1, 8, 1, v => S.setDrawDefaults({ weight: v })),
+        slider('Marker size', C.markerScale == null ? 1 : C.markerScale, 0.6, 3, 0.1, v => S.setMarkerScale(v)),
+      ));
+    bd.appendChild(h('div', 'hint', 'Marker size scales every placed marker / targeting reticle (synced to the presenter). Per-element colour stays editable from the on-map context bar.'));
     ct.appendChild(sec);
   }
   function tabMap(C, ct) {
