@@ -243,8 +243,10 @@ body.attrib-off .maplibregl-ctrl-bottom-right { display: none !important; }
 
 /* ---------- marker icons ---------- */
 .map-mkw { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.map-mk { display: flex; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
-.map-mk svg { width: 28px; height: 28px; }
+/* size comes from an inline width/height (px = 40 × markerScale); the SVG fills it. A coloured glow
+   (currentColor = the marker colour) plus a dark shadow makes targeting reticles read on any map. */
+.map-mk { display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .85)) drop-shadow(0 0 4px currentColor); }
+.map-mk svg { width: 100%; height: 100%; }
 .map-mk__dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
 .map-mk__lbl { background: rgba(8, 11, 18, .8); color: #fff; padding: 2px 7px; border-radius: 5px; font: 700 10px var(--font); letter-spacing: .3px; white-space: nowrap; text-transform: uppercase; border: 1px solid var(--accent); }
 
@@ -273,18 +275,32 @@ body.attrib-off .maplibregl-ctrl-bottom-right { display: none !important; }
 .el-sel { stroke-dasharray: 9 6 !important; animation: elFlow .8s linear infinite; }
 .mk-sel { filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 2px var(--accent)); }
 
-/* animated marker fx (targeting / live) */
+/* animated marker fx (broadcast targeting reticles) */
 .map-mk svg { overflow: visible; }
-.mkfx-ping { transform-origin: center; transform-box: fill-box; animation: mkPing 1.8s ease-out infinite; }
-.mkfx-ping-b { animation-delay: .9s; }
-@keyframes mkPing { 0% { transform: scale(.5); opacity: .9; } 100% { transform: scale(2.5); opacity: 0; } }
-.mkfx-spin { transform-origin: center; transform-box: fill-box; animation: mkSpin 2.2s linear infinite; }
-.mkfx-spin-slow { transform-origin: center; transform-box: fill-box; animation: mkSpin 8s linear infinite; }
+/* sonar ping — staggered expanding rings */
+.mkfx-ping { transform-origin: center; transform-box: fill-box; fill: none; animation: mkPing 2.1s cubic-bezier(.2,.55,.3,1) infinite; }
+.mkfx-ping-b { animation-delay: .7s; }
+.mkfx-ping-c { animation-delay: 1.4s; }
+@keyframes mkPing { 0% { transform: scale(.35); opacity: .95; } 70% { opacity: .12; } 100% { transform: scale(2.7); opacity: 0; } }
+/* rotation (radar sweep / reticle ring / loader arc) */
+.mkfx-spin { transform-origin: center; transform-box: fill-box; animation: mkSpin 2.4s linear infinite; }
+.mkfx-spin-slow { transform-origin: center; transform-box: fill-box; animation: mkSpin 7s linear infinite; }
 @keyframes mkSpin { to { transform: rotate(360deg); } }
-.mkfx-blink { animation: mkBlink 1.1s steps(1) infinite; }
-@keyframes mkBlink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: .15; } }
-.mkfx-pulse { transform-origin: center; transform-box: fill-box; animation: mkPulseS 1.6s ease-in-out infinite; }
-@keyframes mkPulseS { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.78); opacity: .55; } }
+/* strobe */
+.mkfx-blink { animation: mkBlink 1.05s steps(1) infinite; }
+@keyframes mkBlink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: .12; } }
+/* breathing centre dot */
+.mkfx-pulse { transform-origin: center; transform-box: fill-box; animation: mkPulseS 1.5s ease-in-out infinite; }
+@keyframes mkPulseS { 0%, 100% { transform: scale(.65); opacity: 1; } 50% { transform: scale(1.3); opacity: .55; } }
+/* threat-diamond breathe */
+.mkfx-pulse2 { transform-origin: center; transform-box: fill-box; animation: mkPulse2 1.7s ease-in-out infinite; }
+@keyframes mkPulse2 { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(.84); opacity: .5; } }
+/* lock-on brackets converging */
+.mkfx-lock { transform-origin: center; transform-box: fill-box; animation: mkLock 1.8s ease-in-out infinite; }
+@keyframes mkLock { 0%, 100% { transform: scale(1.14); opacity: .8; } 50% { transform: scale(.9); opacity: 1; } }
+/* beacon halo */
+.mkfx-halo { transform-origin: center; transform-box: fill-box; animation: mkHalo 1.9s ease-out infinite; }
+@keyframes mkHalo { 0% { transform: scale(.6); opacity: .75; } 100% { transform: scale(2.4); opacity: 0; } }
 
 /* ---------- map labels ---------- */
 .map-label span { display: inline-block; background: rgba(8, 11, 18, 0.78); color: var(--text); padding: 3px 8px; border-radius: 6px;

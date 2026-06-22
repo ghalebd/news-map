@@ -35,13 +35,16 @@ const Draw = (() => {
     airport: mk('<path d="M12 3c.7 0 1 .8 1 2v4.5l7 4v2l-7-2v4l2 1.5v1.5L12 19l-3 1.5V19l2-1.5v-4l-7 2v-2l7-4V5c0-1.2.3-2 1-2Z" fill="currentColor" stroke="none"/>'),
     port: mk('<path d="M12 5v14M12 5a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 12 5ZM6 11h12M6 11a6 6 0 0 0 12 0"/>'),
     target: mk('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>'),
-    // --- animated targeting / live markers ---
-    pulse:  mk('<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><circle class="mkfx-ping" cx="12" cy="12" r="5"/><circle class="mkfx-ping mkfx-ping-b" cx="12" cy="12" r="5"/>'),
-    radar:  mk('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><g class="mkfx-spin"><path d="M12 12 12 3"/><path d="M12 3a9 9 0 0 1 7.8 4.5L12 12Z" fill="currentColor" stroke="none" opacity=".22"/></g>'),
-    reticle: mk('<g class="mkfx-spin-slow"><circle cx="12" cy="12" r="9" stroke-dasharray="4 4"/></g><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
-    blink:  mk('<circle class="mkfx-blink" cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9" opacity=".4"/>'),
-    locked: mk('<g class="mkfx-pulse"><path d="M4 8V4h4"/><path d="M20 8V4h-4"/><path d="M4 16v4h4"/><path d="M20 16v4h-4"/></g><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>'),
-    spinner: mk('<g class="mkfx-spin"><circle cx="12" cy="12" r="8" stroke-dasharray="3 5"/></g><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
+    // --- animated targeting / live markers (broadcast reticles) ---
+    pulse:  mk('<circle class="mkfx-ping" cx="12" cy="12" r="6"/><circle class="mkfx-ping mkfx-ping-b" cx="12" cy="12" r="6"/><circle class="mkfx-ping mkfx-ping-c" cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="3.4" stroke="#fff" stroke-width="1"/>'),
+    radar:  mk('<circle cx="12" cy="12" r="10" opacity=".55"/><circle cx="12" cy="12" r="6.4" opacity=".32"/><g class="mkfx-spin"><path d="M12 12 L12 2 A10 10 0 0 1 20.5 7 Z" fill="currentColor" stroke="none" opacity=".3"/><line x1="12" y1="12" x2="12" y2="2"/></g><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>'),
+    reticle: mk('<g class="mkfx-spin-slow"><circle cx="12" cy="12" r="10" stroke-dasharray="3 5"/></g><circle cx="12" cy="12" r="5.6" opacity=".5"/><path d="M12 .5v4M12 19.5v4M.5 12h4M19.5 12h4"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>'),
+    blink:  mk('<circle cx="12" cy="12" r="10" opacity=".4"/><circle class="mkfx-blink" cx="12" cy="12" r="5.5" fill="currentColor" stroke="none"/>'),
+    locked: mk('<g class="mkfx-lock"><path d="M3.5 8V3.5H8"/><path d="M20.5 8V3.5H16"/><path d="M3.5 16v4.5H8"/><path d="M20.5 16v4.5H16"/></g><circle cx="12" cy="12" r="2.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>'),
+    spinner: mk('<circle cx="12" cy="12" r="6.5" opacity=".32"/><g class="mkfx-spin"><path d="M12 2.5A9.5 9.5 0 0 1 21.5 12" stroke-linecap="round"/></g><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/>'),
+    crosshair: mk('<circle cx="12" cy="12" r="9.5" opacity=".6"/><path d="M12 1.5v6M12 16.5v6M1.5 12h6M16.5 12h6"/><circle class="mkfx-pulse" cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>'),
+    diamond: mk('<g class="mkfx-pulse2"><path d="M12 2.5 21.5 12 12 21.5 2.5 12Z"/></g><path d="M12 7.5 16.5 12 12 16.5 7.5 12Z" opacity=".5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>'),
+    beacon: mk('<circle class="mkfx-halo" cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="3.4" stroke="#fff" stroke-width="1.1"/>'),
     // --- NATO / military unit symbols (APP-6 style; tinted by marker colour) ---
     mil_inf: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 7l16 10M20 7L4 17"/>'),
     mil_armor: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><ellipse cx="12" cy="12" rx="5" ry="2.6"/>'),
@@ -54,7 +57,7 @@ const Draw = (() => {
     mil_supply: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M4 12h16"/>'),
     mil_air: mk('<rect x="4" y="7" width="16" height="10" rx="1"/><path d="M12 7c-2 2-2 3 0 5 2-2 2-3 0-5z" fill="currentColor"/>'),
   };
-  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target', 'pulse', 'radar', 'reticle', 'blink', 'locked', 'spinner', 'mil_inf', 'mil_armor', 'mil_mech', 'mil_arty', 'mil_ad', 'mil_hq', 'mil_recon', 'mil_med', 'mil_supply', 'mil_air'];
+  const MICON_KEYS = ['', 'pin', 'flag', 'star', 'alert', 'fire', 'blast', 'capital', 'airport', 'port', 'target', 'pulse', 'radar', 'reticle', 'crosshair', 'locked', 'diamond', 'beacon', 'spinner', 'blink', 'mil_inf', 'mil_armor', 'mil_mech', 'mil_arty', 'mil_ad', 'mil_hq', 'mil_recon', 'mil_med', 'mil_supply', 'mil_air'];
 
   /* ---------------- render the active scene ---------------- */
   let lastScene = null, lastN = 0;
@@ -94,7 +97,7 @@ const Draw = (() => {
     const o = { color: el.color, weight: el.weight || dw(), opacity: 1 };
     switch (el.type) {
       case 'marker':  {
-        if (el.icon && MICONS[el.icon]) { const html = `<span class="map-mk" style="color:${el.color}">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [30, 30], iconAnchor: [15, 15] }) }); }
+        if (el.icon && MICONS[el.icon]) { const px = Math.round(40 * (S.cfg().markerScale || 1)); const html = `<span class="map-mk" style="color:${el.color};width:${px}px;height:${px}px">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [px, px], iconAnchor: [px / 2, px / 2] }) }); }
         if (el.label) return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html: `<span class="map-mk__dot" style="background:${el.color}"></span><span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>`, iconSize: [14, 14], iconAnchor: [7, 7] }) });
         return L.circleMarker(el.ll, { radius: 7, color: '#fff', weight: 2, fillColor: el.color, fillOpacity: 1 });
       }

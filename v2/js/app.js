@@ -194,7 +194,7 @@
     if (evt === 'mode') applyMode();
     if (evt === 'config' || evt === 'sync') { window.Theme && window.Theme.apply(S.cfg().style); applyBrand(); applyTilt(); }
     if (evt === 'scenes' || evt === 'active' || evt === 'elements' || evt === 'reveal' || evt === 'sync') { renderDeck(); renderNowNext(); }
-    if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync') window.Draw && window.Draw.render();
+    if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync' || evt === 'config') window.Draw && window.Draw.render();   // 'config' → marker-size changes redraw markers
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
     if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); applyAnim(); renderSpotlight(); }
     if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
