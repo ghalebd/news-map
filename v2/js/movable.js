@@ -35,7 +35,7 @@
   // how much THIS panel is currently pushed right by the open settings panel
   function shiftFor(sel) {
     if (!cfgOffset) return 0;
-    const p = (S.cfg().layout || {})[sel];
+    const p = (S.layout() || {})[sel];
     if (p && p.x != null) return p.x < cfgOffset ? cfgOffset : 0;
     return SHIFTED.includes(sel) ? cfgOffset : 0;
   }
@@ -60,14 +60,14 @@
 
   function commit(sel, x, y, h, s) {
     if (sel === '.brand') { S.setBrand({ x: Math.round(x), y: Math.round(y + h / 2) }); }   // applyBrand re-centres via translateY(-50%)
-    else { const cur = (S.cfg().layout || {})[sel] || {}; S.setLayout(sel, { x: Math.round(x), y: Math.round(y), s: s != null ? s : cur.s }); }
+    else { const cur = (S.layout() || {})[sel] || {}; S.setLayout(sel, { x: Math.round(x), y: Math.round(y), s: s != null ? s : cur.s }); }
   }
 
   function startDrag(el, sel, hd, e) {
     if (e.button != null && e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
     const axis = meta[sel].axis, rect = el.getBoundingClientRect();
-    const s = (S.cfg().layout && S.cfg().layout[sel] && S.cfg().layout[sel].s) || 1;
+    const s = (S.layout() && S.layout()[sel] && S.layout()[sel].s) || 1;
     const shift = shiftFor(sel);   // temporary open-shift to keep out of saved coords
     const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
     hd.classList.add('is-drag'); document.body.classList.add('mv-dragging');
@@ -99,7 +99,7 @@
   }
 
   function applyLayout() {
-    const lay = S.cfg().layout || {};
+    const lay = S.layout() || {};
     for (const [sel] of PANELS) {
       if (sel === '.brand') continue;            // handled by applyBrand
       const el = els[sel]; if (!el) continue;
@@ -126,16 +126,16 @@
 
   PANELS.forEach(([sel]) => attach(sel));
   applyLayout();
-  S.on((st, evt) => { if (evt === 'config' || evt === 'sync') applyLayout(); else if (evt === 'mode') reflow(); });
+  S.on((st, evt) => { if (evt === 'layout' || evt === 'config' || evt === 'sync') applyLayout(); else if (evt === 'mode') reflow(); });
   window.addEventListener('resize', applyLayout);
   setTimeout(reflow, 300);   // settle after fonts/layout
 
   window.Movable = {
     panels: PANELS.filter(([sel]) => sel !== '.brand').map(([sel, label]) => ({ sel, label, axis: meta[sel].axis })),
-    scaleOf(sel) { return ((S.cfg().layout || {})[sel] || {}).s || 1; },
-    posOf(sel) { return (S.cfg().layout || {})[sel] || null; },
+    scaleOf(sel) { return ((S.layout() || {})[sel] || {}).s || 1; },
+    posOf(sel) { return (S.layout() || {})[sel] || null; },
     setScale(sel, s) {
-      const el = els[sel]; const cur = (S.cfg().layout || {})[sel] || {};
+      const el = els[sel]; const cur = (S.layout() || {})[sel] || {};
       const s0 = cur.s || 1;
       let x = cur.x, y = cur.y;
       const w = el ? el.offsetWidth : 0, hh = el ? el.offsetHeight : 0;
@@ -151,7 +151,7 @@
     // snap a panel to a screen anchor — code is V+H: t/m/b  +  l/c/r
     snap(sel, anchor) {
       const el = els[sel]; if (!el) return;
-      const cur = (S.cfg().layout || {})[sel] || {}; const s = cur.s || 1, m = 18;
+      const cur = (S.layout() || {})[sel] || {}; const s = cur.s || 1, m = 18;
       const w = el.offsetWidth * s, hh = el.offsetHeight * s, vw = window.innerWidth, vh = window.innerHeight;
       const v = anchor[0], hz = meta[sel].axis === 'y' ? 'l' : anchor[1];   // vertical-only bars keep their left
       let x = hz === 'l' ? m : hz === 'r' ? vw - w - m : (vw - w) / 2;
