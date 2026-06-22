@@ -33,11 +33,7 @@
   const sclOf = sel => (S.cfg().panelScale || {})[sel] || 1;
   const els = {}; const handles = {};
   let pending = null;
-  let cfgOffset = 0;
-  // The settings drawer opens from the RIGHT, so left/centre chrome (tool bar, deck, status, …) is
-  // never covered by it — there is nothing to dodge. The old logic shoved this chrome RIGHT (toward
-  // the drawer), which flung the vertical tool bar to mid-screen when settings opened. No shift.
-  function shiftFor() { return 0; }
+  let cfgOffset = 0;   // width of the open settings drawer (control only) — the tool bar slides by it
 
   /* the dot-grip sits on the panel's SHORTER edge: top for portrait panels,
      left for landscape panels — re-evaluated whenever layout might change */
@@ -104,25 +100,38 @@
       const el = els[sel]; if (!el) continue;
       const p = lay[sel];                         // LOCAL position {x,y}
       const s = sclOf(sel);                       // SYNCED size
-      if (p && (p.x != null || p.y != null)) {
-        // moved (absolute) — local position + synced scale. Clamp against the SCALED size
-        // (top-left origin) so a shrunk panel isn't pushed up/left off its spot.
-        const w = el.offsetWidth * s, hh = el.offsetHeight * s;
-        const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
-        if (meta[sel].axis === 'y') {
-          // vertical-only bar (the tool bar): it must NEVER take a horizontal position — keep its
-          // CSS left edge and only move vertically, so a stray saved x can't pull it to mid-screen.
+      const axisY = meta[sel].axis === 'y';
+      const moved = !!(p && (p.x != null || p.y != null));
+      // CONTROL-only TRANSIENT shift: the vertical tool bar slides aside WITH the open settings
+      // drawer and slides back when it closes. Never saved — purely visual, so its position stays
+      // independent of the presenter (cfgOffset is always 0 on the presenter: no settings drawer).
+      const shiftX = axisY ? cfgOffset : 0;
+      if (axisY) {
+        // vertical-only bar: it NEVER takes a horizontal position (keeps its CSS left edge), so a
+        // stray saved x can't pull it to mid-screen; only the vertical offset + transient shift apply.
+        if (!shiftX && !moved && s === 1) { clearStyle(el); continue; }   // pure default → CSS centres it
+        const tf = [];
+        if (shiftX) tf.push(`translateX(${shiftX}px)`);
+        if (moved && p.y != null) {
+          const hh = el.offsetHeight * s, y = Math.max(0, Math.min(p.y, window.innerHeight - hh));
           el.style.left = el.style.right = el.style.bottom = ''; el.style.top = Math.round(y) + 'px';
-          el.style.transform = (s && s !== 1) ? `scale(${s})` : 'none'; el.style.transformOrigin = 'top left';
+          el.style.transformOrigin = 'top left';
         } else {
-          const x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
-          styleAt(el, x, y, s);
+          el.style.left = el.style.top = el.style.right = el.style.bottom = '';
+          el.style.transformOrigin = 'center'; tf.push('translateY(-50%)');
         }
+        if (s !== 1) tf.push(`scale(${s})`);
+        el.style.transform = tf.join(' ') || 'none';
+      } else if (moved) {
+        // moved (absolute) — local position + synced scale, clamped against the SCALED size.
+        const w = el.offsetWidth * s, hh = el.offsetHeight * s;
+        const x = p.x != null ? Math.max(0, Math.min(p.x, window.innerWidth - w)) : 0;
+        const y = p.y != null ? Math.max(0, Math.min(p.y, window.innerHeight - hh)) : 0;
+        styleAt(el, x, y, s);
       } else if (s !== 1) {
-        // scale ONLY (never moved) — keep the panel's CSS position, just scale around its centre.
+        // scale ONLY (never moved) — keep CSS position, scale around centre.
         el.style.left = el.style.top = el.style.right = el.style.bottom = '';
-        el.style.transformOrigin = 'center';
-        el.style.transform = (meta[sel].axis === 'y' ? 'translateY(-50%) ' : '') + `scale(${s})`;
+        el.style.transformOrigin = 'center'; el.style.transform = `scale(${s})`;
       } else clearStyle(el);
     }
     reflow();
