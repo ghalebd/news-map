@@ -70,12 +70,14 @@
   function badge(st) {
     let el = document.getElementById('syncdot');
     if (!el) { el = document.createElement('div'); el.id = 'syncdot'; el.className = 'syncdot'; el.title = 'Global sync'; }
-    // Dock the status dot at the bottom of the vertical tool bar; fall back to a fixed bottom-left
+    // Dock the status dot as the LAST item of the vertical tool bar (re-asserted each time so it
+    // always sits at the very bottom, never above the buttons); fall back to a fixed bottom-left
     // pip only while the bar doesn't exist yet.
     const bar = document.querySelector('.qtools');
-    if (bar) { if (el.parentNode !== bar) bar.appendChild(el); el.classList.remove('syncdot--float'); }
+    if (bar) { bar.appendChild(el); el.classList.remove('syncdot--float'); }
     else if (!el.parentNode) { el.classList.add('syncdot--float'); document.body.appendChild(el); }
-    el.style.background = st === 'live' ? '#34d399' : '#f59e0b';
+    el.classList.toggle('syncdot--live', st === 'live');
+    el.classList.toggle('syncdot--wait', st !== 'live');
   }
   connect();
 })();

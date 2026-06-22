@@ -200,11 +200,16 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .qtools::-webkit-scrollbar { width: 0; }
 .qtools__sep { width: 24px; height: 1px; background: var(--stroke); margin: 2px 0; }
 
-/* global-sync status dot — docked at the BOTTOM of the vertical tool bar (sync-client badge()).
+/* global-sync status dot — docked as the LAST item of the vertical tool bar (sync-client badge()).
    Falls back to a fixed bottom-left pip (.syncdot--float) only if the bar isn't present. */
-.syncdot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,.5); transition: background .3s; flex: 0 0 auto; align-self: center; margin-top: 6px; border-top: 0; }
-.qtools .syncdot { margin-top: 8px; }
-.syncdot--float { position: fixed; left: 8px; bottom: 8px; z-index: 9999; pointer-events: none; }
+.syncdot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; align-self: center; transition: background .3s, box-shadow .3s; }
+/* sit it clearly at the END of the bar, separated from the buttons by a centred hairline */
+.qtools .syncdot { margin-top: 14px; position: relative; }
+.qtools .syncdot::before { content: ''; position: absolute; left: 50%; top: -8px; transform: translateX(-50%); width: 24px; height: 1px; background: var(--stroke); }
+.syncdot--live { background: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.16), 0 0 9px 1px rgba(52,211,153,.65); animation: syncPulse 2.4s ease-in-out infinite; }
+.syncdot--wait { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.16), 0 0 9px 1px rgba(245,158,11,.55); }
+@keyframes syncPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(52,211,153,.16), 0 0 8px 1px rgba(52,211,153,.55); } 50% { box-shadow: 0 0 0 5px rgba(52,211,153,.05), 0 0 13px 2px rgba(52,211,153,.9); } }
+.syncdot--float { position: fixed; left: 8px; bottom: 8px; z-index: 9999; pointer-events: none; box-shadow: 0 0 6px rgba(0,0,0,.5); }
 
 /* map credit (attribution, bottom-right) — hidden when the "Map credit" presenter-visibility
    toggle is off; covers both the Leaflet (2D) and MapLibre (3D) attribution controls. */
