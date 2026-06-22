@@ -404,7 +404,7 @@ body.touch .mctl__b { height: 46px; }
    RESOLVE DIAL (.dknob) — the one numeric control everywhere
    ============================================================ */
 .dknob { display: inline-flex; flex-direction: column; align-items: center; width: 76px; padding: 4px 0 6px; vertical-align: top; }
-.dknob__dial { position: relative; width: 54px; height: 54px; cursor: ns-resize; border-radius: 50%; transition: filter .15s; }
+.dknob__dial { position: relative; width: 54px; height: 54px; cursor: ns-resize; border-radius: 50%; transition: filter .15s; touch-action: none; -webkit-user-select: none; user-select: none; }
 .dknob__dial:hover { filter: brightness(1.18); }
 .dknob__dial.is-drag { filter: brightness(1.3); }
 .dknob__dial svg { width: 100%; height: 100%; display: block; }

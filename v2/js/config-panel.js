@@ -153,20 +153,22 @@
     };
     const setV = nv => { nv = Math.max(min, Math.min(max, Math.round(nv / st) * st)); if (nv === v) return; v = nv; paint(); fn(v); };
     paint();
-    let drag = false, sy2 = 0, sv = 0;
-    dial.addEventListener('pointerdown', e => { if (e.target === num) return; drag = true; sy2 = e.clientY; sv = v; try { dial.setPointerCapture(e.pointerId); } catch (err) {} dial.classList.add('is-drag'); e.preventDefault(); });
-    dial.addEventListener('pointermove', e => { if (!drag) return; const fine = e.shiftKey ? 10 : 1; setV(sv + ((sy2 - e.clientY) / (150 * fine)) * (max - min)); });
-    const end = () => { drag = false; dial.classList.remove('is-drag'); };
-    dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
-    dial.addEventListener('wheel', e => { e.preventDefault(); setV(v + (e.deltaY < 0 ? st : -st) * (e.shiftKey ? 10 : 1)); }, { passive: false });
-    num.onclick = e => {
-      e.stopPropagation();
+    function openEdit() {
       const ed = h('input', 'dknob__edit'); ed.type = 'text'; ed.value = fmt(v);
       num.replaceWith(ed); ed.focus(); ed.select();
       const done = ok => { const nv = parseFloat(ed.value); ed.replaceWith(num); if (ok && !isNaN(nv)) setV(nv); else paint(); };
       ed.onkeydown = ev => { if (ev.key === 'Enter') done(true); if (ev.key === 'Escape') done(false); };
       ed.onblur = () => done(true);
-    };
+    }
+    // The WHOLE dial face is draggable (vertical = value), not just the thin ring — much easier to
+    // grab. A clean tap on the centred number (no drag) opens the type-in editor. touch-action:none
+    // (CSS) stops the settings panel from stealing the vertical gesture on touch screens / trackpads.
+    let drag = false, sy2 = 0, sv = 0, moved = false, onNum = false;
+    dial.addEventListener('pointerdown', e => { drag = true; moved = false; onNum = (e.target === num); sy2 = e.clientY; sv = v; try { dial.setPointerCapture(e.pointerId); } catch (err) {} dial.classList.add('is-drag'); e.preventDefault(); });
+    dial.addEventListener('pointermove', e => { if (!drag) return; if (Math.abs(e.clientY - sy2) > 3) moved = true; const fine = e.shiftKey ? 10 : 1; setV(sv + ((sy2 - e.clientY) / (150 * fine)) * (max - min)); });
+    const end = () => { if (!drag) return; drag = false; dial.classList.remove('is-drag'); if (!moved && onNum) openEdit(); };
+    dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
+    dial.addEventListener('wheel', e => { e.preventDefault(); setV(v + (e.deltaY < 0 ? st : -st) * (e.shiftKey ? 10 : 1)); }, { passive: false });
     return wrap;
   }
   /* knob() and slider() are the same Resolve dial — one visual language */
