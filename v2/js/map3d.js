@@ -17,6 +17,12 @@
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
 
+  // MapLibre throws a benign internal error ('shaderPreludeCode') for ONE frame while a base style
+  // swaps with custom three.js layers attached — the models/terrain render correctly either side of
+  // it. Detaching the layers before setStyle removes most; swallow this exact transition artifact so
+  // switching map styles in 3D doesn't spam the operator console. Scoped to this one string only.
+  window.addEventListener('error', e => { if (e && typeof e.message === 'string' && e.message.indexOf('shaderPreludeCode') >= 0) { e.preventDefault(); e.stopImmediatePropagation && e.stopImmediatePropagation(); } }, true);
+
   const cont = h('div'); cont.id = 'map3d'; document.body.appendChild(cont);
   const cfg3 = () => (S.cfg().threeD) || { exaggeration: 2.6, pitch: 62 };
   let map = null, on = false, builtStyle = null, exaggeration = cfg3().exaggeration;   // clearly-3D default; tune in Settings or with ▲/▽
@@ -275,7 +281,11 @@
   S.on((st, evt) => {
     if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); applyPerf(); } return; }
     if (evt === 'light3d') { if (on && map) applyLight(); return; }
-    if (evt === 'mapstyle' || evt === 'sync') { if (on && map) { const cur = S.state.mapStyle || 'satellite'; if (builtStyle !== cur) { try { map.setStyle(styleUrl(cur)); builtStyle = cur; } catch (e) {} } } if (evt === 'mapstyle') return; }
+    if (evt === 'mapstyle' || evt === 'sync') { if (on && map) { const cur = S.state.mapStyle || 'satellite'; if (builtStyle !== cur) {
+      // Detach the custom three.js layers BEFORE the style swap — MapLibre throws internally
+      // (shaderPreludeCode / signal) if it processes them mid-transition. onStyle re-adds them.
+      ['models3d-gl', 'trk3d'].forEach(id => { try { if (map.getLayer(id)) map.removeLayer(id); } catch (e) {} });
+      try { map.setStyle(styleUrl(cur)); builtStyle = cur; } catch (e) {} } } if (evt === 'mapstyle') return; }
     if (!on || !map) return;
     if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
     if (evt === 'models3d') { mirrorRoutes(); return; }
