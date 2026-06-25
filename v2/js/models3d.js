@@ -264,14 +264,45 @@
     });
     glmap.triggerRepaint();
   }
+  /* ---- GLOBE billboards: three.js custom layers can't project on the globe, so on the planet
+     view we show each model as its 2D billboard PNG via a native symbol layer (icons follow the
+     camera, like the live ship/plane icons). Reuses the same offscreen PNGs as the flat 2D map. ---- */
+  const M3D_ICO_SRC = 'm3d-ico', M3D_ICO_LYR = 'm3d-ico-sym';
+  const isGlobe = () => { try { return glmap && glmap.getProjection && glmap.getProjection().type === 'globe'; } catch (e) { return false; } };
+  function ensureIcoLayer() {
+    if (!glmap) return;
+    try {
+      if (!glmap.getSource(M3D_ICO_SRC)) glmap.addSource(M3D_ICO_SRC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      if (!glmap.getLayer(M3D_ICO_LYR)) glmap.addLayer({
+        id: M3D_ICO_LYR, type: 'symbol', source: M3D_ICO_SRC,
+        layout: { 'icon-image': ['get', 'img'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 5, 0.5, 8, 0.72], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'visibility': 'none' },
+      });
+    } catch (e) {}
+  }
+  async function updateGlobeIcons() {
+    if (!glmap || !glmap.getSource(M3D_ICO_SRC)) return;
+    const ms = models().filter(m => m.on !== false && m.mode !== '2d');
+    const feats = [];
+    for (const m of ms) {
+      const e = eff(m);
+      const imgId = 'm3dico:' + m.id + ':' + Math.round(e.rotZ || 0) + ':' + (m.style || 'solid');
+      if (!glmap.hasImage(imgId)) {
+        try { const url = await billboard(m, e.rotZ); if (url) await new Promise(res => { const im = new Image(); im.onload = () => { try { if (glmap && !glmap.hasImage(imgId)) glmap.addImage(imgId, im); } catch (er) {} res(); }; im.onerror = () => res(); im.src = url; }); } catch (er) {}
+      }
+      if (glmap.hasImage(imgId)) feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lng, e.lat] }, properties: { img: imgId } });
+    }
+    try { const s = glmap.getSource(M3D_ICO_SRC); if (s) s.setData({ type: 'FeatureCollection', features: feats }); } catch (e) {}
+  }
   function attach3D(map) {
     glmap = map;
     if (!map.getLayer('models3d-gl')) { try { map.addLayer(customLayer); } catch (e) { console.warn('Models3D 3D layer', e); return; } }
     layer = customLayer;
+    ensureIcoLayer();
     // scene is reused across style swaps — detach the previous groups before rebuilding
     if (customLayer.scene) groups.forEach(g => { customLayer.scene.remove(g.group); if (g.shadow) customLayer.scene.remove(g.shadow); });
     groups.clear();   // drop stale clone refs; masters stay cached and re-clone on rebuild
     update3D();
+    if (isGlobe()) { try { glmap.setLayoutProperty(M3D_ICO_LYR, 'visibility', 'visible'); } catch (e) {} updateGlobeIcons(); }
   }
 
   /* ---- wiring ---- */
@@ -285,7 +316,7 @@
     // automatically and size/position changes reuse the cached PNG — no global clear()
     // (which used to re-render every model's PNG on every slider tick).
     sync2D(); syncRoutes2D();
-    if (window.Map3D && Map3D.on) update3D();
+    if (window.Map3D && Map3D.on) { update3D(); if (isGlobe()) updateGlobeIcons(); }   // globe icons follow model add/move/rotate
   }
   S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') syncAll(); });
 
@@ -303,7 +334,10 @@
     attach3D,
     setLight,              // sync model lighting to the 3D sun (from map3d)
     tick, setPose, clearPoses,   // route/timeline playback / drag preview
-    setVisible(v) { hidden = !v; if (glmap) glmap.triggerRepaint(); },   // off on the globe projection
+    setVisible(v) {   // v=true flat (three.js models) · v=false globe (2D billboard icons instead)
+      hidden = !v;
+      if (glmap) { try { if (glmap.getLayer(M3D_ICO_LYR)) glmap.setLayoutProperty(M3D_ICO_LYR, 'visibility', v ? 'none' : 'visible'); } catch (e) {} if (!v) updateGlobeIcons(); glmap.triggerRepaint(); }
+    },
     project: (lng, lat) => (glmap ? glmap.project([lng, lat]) : null),   // for 3D selection/drag
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id
