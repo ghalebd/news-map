@@ -161,8 +161,9 @@ const Draw = (() => {
   // pick the nearest drawn element to a lat/lng (areas via point-in-polygon, others by
   // screen proximity), select it, or deselect if none. Works in 2D and 3D.
   function pickAt(latlng, tol) {
+    const sc = S.activeScene(); if (!sc) return null;
     const sp = screenPt(latlng.lat, latlng.lng), T = tol || 22; let best = null, bd = T;
-    (S.activeScene().elements || []).forEach(el => {
+    (sc.elements || []).forEach(el => {
       const geom = el.geom || (el.pts && (el.type === 'polygon' || el.type === 'country') ? { type: 'Polygon', coordinates: [el.pts.map(p => [p[1], p[0]])] } : null);
       if ((el.type === 'country' || el.type === 'polygon') && geomHit(geom, latlng.lng, latlng.lat)) { best = el; bd = 0; return; }
       const pts = []; if (el.ll) pts.push(el.ll); if (el.a) pts.push(el.a); if (el.b) pts.push(el.b); if (el.pts) el.pts.forEach(p => pts.push(p));
@@ -281,7 +282,7 @@ const Draw = (() => {
       ctx.appendChild(ctxBtn(ROT, 'Rotate', () => { const r = ((el.rot || 0) + 15) % 360; S.updateElement(el.id, { rot: r }); el.rot = r; }));
     }
     if (el.type === 'marker' || el.type === 'text') {
-      ctx.appendChild(ctxBtn(I.film, '→ Lower third', () => { const sc = S.activeScene(); if (!sc) return; const title = (el.label || el.text || '').trim() || 'Lower third'; S.setLowerThird(sc.id, { title, sub: (el.desc || '').trim() }); window.UI && UI.toast && UI.toast('Lower-third set from this ' + el.type); }));
+      ctx.appendChild(ctxBtn(I.film, '→ Lower third', () => { const sc = S.activeScene(); if (!sc) return; const title = (el.label || el.text || '').trim() || 'Lower third'; S.setLowerThird(sc.id, { title, subtitle: (el.desc || '').trim() }); window.UI && UI.toast && UI.toast('Lower-third set from this ' + el.type); }));
     }
     ctx.appendChild(ctxBtn(I.layers, 'Duplicate', () => { const copy = JSON.parse(JSON.stringify(el)); delete copy.id; S.addElement(copy); }));
     ctx.appendChild(ctxBtn(I.close, 'Delete', () => { S.removeElement(el.id); deselect(); }));
@@ -289,7 +290,7 @@ const Draw = (() => {
   }
   function ctxBtn(icon, title, fn) { const b = h('button', 'ctxbar__btn', icon); b.title = title; b.onclick = fn; return b; }
   function positionCtx(el) { const a = elAnchor(el); if (!a) return; const p = screenPt(a[0], a[1]); ctx.style.left = Math.max(10, Math.min(p.x - ctx.offsetWidth / 2, innerWidth - ctx.offsetWidth - 10)) + 'px'; ctx.style.top = Math.max(60, p.y - ctx.offsetHeight - 14) + 'px'; }
-  function refreshCtx() { if (!selected) return; const fresh = S.activeScene().elements.find(e => e.id === selected.id); if (!fresh) { deselect(); return; } selected = fresh; selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); }
+  function refreshCtx() { if (!selected) return; const sc = S.activeScene(); if (!sc) { deselect(); return; } const fresh = sc.elements.find(e => e.id === selected.id); if (!fresh) { deselect(); return; } selected = fresh; selLayer = findLayer(selected.id); highlight(selLayer, true); positionCtx(selected); }
   map.on('move zoom', () => { if (selected) positionCtx(selected); });
 
   /* ---------------- asset library (image placement) ---------------- */
