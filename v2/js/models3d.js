@@ -239,7 +239,11 @@
         let ground = 0; try { ground = glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([e.lng, e.lat]) || 0) : 0; } catch (er) {}
         const mc = maplibregl.MercatorCoordinate.fromLngLat([e.lng, e.lat], ground + (e.alt || 0));
         const mpu = mc.meterInMercatorCoordinateUnits();      // mercator units per metre at this latitude
-        const meters = Math.max(10, (e.scale || 1) * 1000);   // scale slider ≈ size in km
+        // Size = the slider's real km when zoomed in, but NEVER smaller than ~52 screen px so an
+        // asset can't shrink to an invisible speck when zoomed out (the #1 "models don't show in 3D"
+        // cause — 2D billboards are fixed-pixel so they always showed, 3D used raw geographic size).
+        const mPerPx = 156543.03392 * Math.cos(e.lat * D2R) / Math.pow(2, glmap.getZoom());
+        const meters = Math.max(10, (e.scale || 1) * 1000, 52 * mPerPx);   // scale slider ≈ size in km
         g.group.position.set(mc.x, mc.y, mc.z);
         g.group.scale.set(meters * mpu, meters * mpu, meters * mpu);
         g.group.rotation.x = Math.PI / 2;                     // Y-up model -> Z-up world (stand upright)
