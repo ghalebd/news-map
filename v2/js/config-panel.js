@@ -581,8 +581,10 @@
       // build ALL items once; category chip + search filter them in place (keeps focus, no rebuild)
       const grid = h('div', 'cfg-cat3d');
       CAT.forEach(m => {
-        const b = h('button', 'cfg-cat3d__i', `<span>${esc(m.name)}</span><small>${esc(m.cat)}</small>`);
+        const b = h('button', 'cfg-cat3d__i', `<span class="cfg-cat3d__thumb"></span><span class="cfg-cat3d__nm">${esc(m.name)}</span><small>${esc(m.cat)}</small>`);
         b.dataset.cat = m.cat; b.dataset.q = (m.name + ' ' + m.cat + ' ' + m.file).toLowerCase().replace(/[^a-z0-9]/g, '');
+        // lazy 3D preview thumbnail (offscreen-rendered GLB PNG) — render when first scrolled near
+        if (window.Models3D && Models3D.thumb) { const th = b.querySelector('.cfg-cat3d__thumb'); const draw = () => Models3D.thumb(m.file).then(url => { if (url) th.style.backgroundImage = `url(${url})`; }).catch(() => {}); b._drawThumb = draw; }
         b.title = 'Add “' + m.name + '” at the current map centre';
         b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: m3dScale(m.cat, m.file), rotZ: 0, pitch: 0, roll: 0, alt: 0, mode: 'both', style: 'solid', on: true }); renderTab(); };
         grid.appendChild(b);
@@ -591,6 +593,12 @@
       srch.oninput = () => { m3dSearch = srch.value; filterGrid(); };
       filterGrid();
       lb.bd.appendChild(grid);
+      // render the 3D preview thumbnails lazily as items scroll into view (69 models — don't render
+      // every GLB offscreen at once). Each thumb is cached by file, so re-opens are instant.
+      try {
+        const io = new IntersectionObserver((ents) => ents.forEach(e => { if (e.isIntersecting && e.target._drawThumb) { e.target._drawThumb(); e.target._drawThumb = null; io.unobserve(e.target); } }), { rootMargin: '120px' });
+        grid.querySelectorAll('.cfg-cat3d__i').forEach(it => io.observe(it));
+      } catch (e) { grid.querySelectorAll('.cfg-cat3d__i').forEach(it => it._drawThumb && it._drawThumb()); }
       lb.bd.appendChild(h('div', 'hint', CAT.length + ' built-in military models (aircraft, naval, armour, missiles, air-defence, drones). Search or filter, then click one to drop it at the map centre and steer it with the control HUD.'));
       ct.appendChild(lb.sec);
     }
