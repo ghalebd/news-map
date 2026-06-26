@@ -362,7 +362,11 @@
       try {
         const e = eff(m);
         let ground = 0; try { ground = glmap.queryTerrainElevation ? (glmap.queryTerrainElevation([e.lng, e.lat]) || 0) : 0; } catch (er) {}
-        const mc = maplibregl.MercatorCoordinate.fromLngLat([e.lng, e.lat], ground + (e.alt || 0));
+        // AIRBORNE assets (aircraft/drones/missiles with altitude) fly at a STABLE absolute altitude so
+        // they don't bob up and down following the terrain underneath as they move along a route ("مطبات").
+        // Ground assets (tanks/ships, or a grounded aircraft) hug the terrain. The shadow still uses `ground`.
+        const airborne = (e.alt || 0) > 0 && /aircraft|drone|uav|missile|rocket|jet|helicop/i.test(String(e.kind || e.cat || ''));
+        const mc = maplibregl.MercatorCoordinate.fromLngLat([e.lng, e.lat], airborne ? (e.alt || 0) : (ground + (e.alt || 0)));
         const mpu = mc.meterInMercatorCoordinateUnits();      // mercator units per metre at this latitude
         // Size = the slider's real km when zoomed in, but NEVER smaller than ~52 screen px so an
         // asset can't shrink to an invisible speck when zoomed out (the #1 "models don't show in 3D"
@@ -396,12 +400,29 @@
   /* ---- GLOBE billboards: three.js custom layers can't project on the globe, so on the planet
      view we show each model as its 2D billboard PNG via a native symbol layer (icons follow the
      camera, like the live ship/plane icons). Reuses the same offscreen PNGs as the flat 2D map. ---- */
-  const M3D_ICO_SRC = 'm3d-ico', M3D_ICO_LYR = 'm3d-ico-sym';
+  const M3D_ICO_SRC = 'm3d-ico', M3D_ICO_LYR = 'm3d-ico-sym', M3D_ICO_SHADOW = 'm3d-ico-shadow';
   const isGlobe = () => { try { return glmap && glmap.getProjection && glmap.getProjection().type === 'globe'; } catch (e) { return false; } };
+  function ensureShadowImg() {
+    if (!glmap || glmap.hasImage('m3d-shadow')) return;
+    try {
+      const SZ = 64, cv = document.createElement('canvas'); cv.width = cv.height = SZ; const cx = cv.getContext('2d');
+      const gr = cx.createRadialGradient(SZ / 2, SZ / 2, 1, SZ / 2, SZ / 2, SZ / 2); gr.addColorStop(0, 'rgba(0,0,0,0.6)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.32)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = gr; cx.beginPath(); cx.ellipse(SZ / 2, SZ / 2, SZ / 2, SZ / 2 * 0.6, 0, 0, Math.PI * 2); cx.fill();   // flattened blob = ground contact
+      glmap.addImage('m3d-shadow', { width: SZ, height: SZ, data: cx.getImageData(0, 0, SZ, SZ).data });
+    } catch (e) {}
+  }
+  function setIcoVis(v) { [M3D_ICO_SHADOW, M3D_ICO_LYR].forEach(id => { try { if (glmap && glmap.getLayer(id)) glmap.setLayoutProperty(id, 'visibility', v); } catch (e) {} }); }
   function ensureIcoLayer() {
     if (!glmap) return;
     try {
       if (!glmap.getSource(M3D_ICO_SRC)) glmap.addSource(M3D_ICO_SRC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      ensureShadowImg();
+      // soft ground shadow UNDER the icons (added first → drawn beneath) so globe models read as grounded
+      if (!glmap.getLayer(M3D_ICO_SHADOW)) glmap.addLayer({
+        id: M3D_ICO_SHADOW, type: 'symbol', source: M3D_ICO_SRC,
+        layout: { 'icon-image': 'm3d-shadow', 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.3, 5, 0.46, 8, 0.66], 'icon-offset': [0, 13], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'icon-rotation-alignment': 'viewport', 'visibility': 'none' },
+        paint: { 'icon-opacity': 0.55 },
+      });
       if (!glmap.getLayer(M3D_ICO_LYR)) glmap.addLayer({
         id: M3D_ICO_LYR, type: 'symbol', source: M3D_ICO_SRC,
         layout: { 'icon-image': ['get', 'img'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 5, 0.5, 8, 0.72], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'visibility': 'none' },
@@ -431,7 +452,7 @@
     if (customLayer.scene) groups.forEach(g => { customLayer.scene.remove(g.group); if (g.shadow) customLayer.scene.remove(g.shadow); });
     groups.clear();   // drop stale clone refs; masters stay cached and re-clone on rebuild
     update3D();
-    if (isGlobe()) { try { glmap.setLayoutProperty(M3D_ICO_LYR, 'visibility', 'visible'); } catch (e) {} updateGlobeIcons(); }
+    if (isGlobe()) { setIcoVis('visible'); updateGlobeIcons(); }
   }
 
   /* ---- wiring ---- */
@@ -465,7 +486,7 @@
     tick, setPose, clearPoses,   // route/timeline playback / drag preview
     setVisible(v) {   // v=true flat (three.js models) · v=false globe (2D billboard icons instead)
       hidden = !v;
-      if (glmap) { try { if (glmap.getLayer(M3D_ICO_LYR)) glmap.setLayoutProperty(M3D_ICO_LYR, 'visibility', v ? 'none' : 'visible'); } catch (e) {} if (!v) updateGlobeIcons(); glmap.triggerRepaint(); }
+      if (glmap) { setIcoVis(v ? 'none' : 'visible'); if (!v) updateGlobeIcons(); glmap.triggerRepaint(); }
     },
     project: (lng, lat) => (glmap ? glmap.project([lng, lat]) : null),   // for 3D selection/drag
     refresh: syncAll,
