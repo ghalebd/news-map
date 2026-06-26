@@ -22,7 +22,9 @@
   // transient per-instance render override (route playback / 3D drag preview) — does
   // NOT touch the Store, so animation never spams persistence/sync.
   const poses = new Map();   // id -> { lat, lng, rotZ?, pitch?, roll?, alt? }
-  const eff = m => { const p = poses.get(m.id); return p ? Object.assign({}, m, p) : m; };
+  // effective render props: live route pose over the stored metadata, plus a persistent per-model
+  // heading correction (headOff) the operator can set to flip/nudge any model the auto-orient misjudges.
+  const eff = m => { const e = Object.assign({}, m, poses.get(m.id) || {}); if (m.headOff) e.rotZ = (e.rotZ || 0) + m.headOff; return e; };
 
   /* ---- shared GLB loading (model -> Promise<THREE.Object3D raw scene>).
      Source is either a bundled catalog file (m.src URL) or an uploaded blob
@@ -48,6 +50,18 @@
     // context doesn't provide) — while MeshLambertMaterial draws reliably (the same approach the
     // live-ship layer uses). Colour / texture / transparency / emissive are preserved.
     obj.traverse(o => {
+      if (o.isMesh) {
+        // sanitise geometry so a lit material can render it: some catalog GLBs ship meshes with no
+        // normals (lighting needs them — without, three.js crashes reading a null attribute, which is
+        // why e.g. the Saar-5 corvette never appeared) or no positions at all (empty helper meshes).
+        const g = o.geometry;
+        if (!g || !g.attributes || !g.attributes.position) { o.visible = false; return; }
+        // drop attributes explicitly set to null — three.js's `null !== undefined` guard lets them
+        // through and then crashes reading `.isGLBufferAttribute` on null (the Saar-5's broken UVs).
+        for (const k in g.attributes) if (g.attributes[k] == null) delete g.attributes[k];
+        if (g.morphAttributes) for (const k in g.morphAttributes) if (g.morphAttributes[k] == null) delete g.morphAttributes[k];
+        if (!g.attributes.normal) { try { g.computeVertexNormals(); } catch (e) {} }
+      }
       if (o.isMesh && o.material) {
         const conv = mm => {
           const lm = new THREE.MeshLambertMaterial({
@@ -69,8 +83,78 @@
   // a unit-sized, origin-centred, Y-up clone of the model, styled.
   // NOTE: clone(true) SHARES geometry/material/textures with the master, so this
   // clone must NEVER be disposed — only the master (rawCache) owns GPU resources.
+  // CANONICAL ORIENTATION — every catalog GLB models its vehicle facing a different local axis,
+  // so a single heading offset can't be right for all of them (the bug: F-16 flew nose-first but
+  // the drone flew backward and others sideways). We derive each model's nose direction ONCE from
+  // its geometry and rotate it to a shared canonical forward (nose → -Z), so afterwards ONE heading
+  // convention is correct for every model across all views (2D top-down, flat-3D, globe, thumbnail).
+  // Long axis = PCA of the top-down (XZ) footprint; nose = the NARROWER tip of that axis (planes,
+  // drones, ships, missiles all taper to a point at the front). Cached on the master; per-model
+  // `headOff` (degrees) lets the operator flip/nudge the rare model the heuristic misjudges.
+  function canonicalOrient(raw) {
+    if (raw.userData && raw.userData.canonRot) return raw.userData.canonRot;
+    let rx = 0, deg = 0;
+    try {
+      raw.updateMatrixWorld(true);
+      const xs = [], ys = [], zs = []; const v = new THREE.Vector3();
+      raw.traverse(o => {
+        if (!o.isMesh || !o.geometry || !o.geometry.attributes || !o.geometry.attributes.position) return;
+        const pos = o.geometry.attributes.position, stride = Math.max(1, Math.floor(pos.count / 1500));
+        for (let i = 0; i < pos.count; i += stride) { v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); xs.push(v.x); ys.push(v.y); zs.push(v.z); }
+      });
+      const n = xs.length;
+      if (n >= 8) {
+        // STANDING model? If the vertical (Y) extent is the largest, the GLB was authored on its tail
+        // (e.g. the Bayraktar: 485×1692×50) — lay it flat (rotate -90° about X: y→z, z→-y) before the
+        // heading pass. Tall-masted ships are safe: their length still exceeds their height, so Y isn't max.
+        let exX = ext(xs), exY = ext(ys), exZ = ext(zs);
+        if (exY > exX && exY > exZ) { rx = -Math.PI / 2; for (let i = 0; i < n; i++) { const z = zs[i]; zs[i] = -ys[i]; ys[i] = z; } }
+        let cx = 0, cz = 0; for (let i = 0; i < n; i++) { cx += xs[i]; cz += zs[i]; } cx /= n; cz /= n;
+        let Cxx = 0, Cxz = 0, Czz = 0;
+        for (let i = 0; i < n; i++) { const dx = xs[i] - cx, dz = zs[i] - cz; Cxx += dx * dx; Cxz += dx * dz; Czz += dz * dz; }
+        const a0 = 0.5 * Math.atan2(2 * Cxz, Cxx - Czz);          // PCA major axis angle in XZ
+        // Measure both candidate axes (major + perpendicular). The FORWARD axis is the fuselage/hull,
+        // identified by its dissimilar tips (pointed nose vs blunt tail); the wing/beam axis has
+        // near-identical tips. So pick the axis with the greater tip-width asymmetry, then nose = narrower tip.
+        const tipStats = (a) => {
+          const ux = Math.cos(a), uz = Math.sin(a);
+          let tmin = 1e9, tmax = -1e9;
+          for (let i = 0; i < n; i++) { const t = (xs[i] - cx) * ux + (zs[i] - cz) * uz; if (t < tmin) tmin = t; if (t > tmax) tmax = t; }
+          const band = 0.18 * ((tmax - tmin) || 1);
+          let sLo = 0, nLo = 0, sHi = 0, nHi = 0;
+          for (let i = 0; i < n; i++) {
+            const dx = xs[i] - cx, dz = zs[i] - cz; const t = dx * ux + dz * uz, p = Math.abs(-dx * uz + dz * ux);
+            if (t <= tmin + band) { sLo += p; nLo++; } else if (t >= tmax - band) { sHi += p; nHi++; }
+          }
+          const wLo = nLo ? sLo / nLo : 1e9, wHi = nHi ? sHi / nHi : 1e9;
+          return { ux, uz, wLo, wHi, len: tmax - tmin, asym: Math.abs(wHi - wLo) / ((wHi + wLo) || 1) };
+        };
+        const A = tipStats(a0), B = tipStats(a0 + Math.PI / 2);
+        // forward axis: if one axis is clearly the longer (hull/fuselage of a ship, tank, missile,
+        // most jets → aspect ≥ 1.6) trust LENGTH; only for near-square footprints (delta drones,
+        // flying wings, wide-span UAVs where span ≈ length) fall back to the more-asymmetric axis.
+        // (Asymmetry alone misfires — e.g. a corvette's beam reads more asymmetric than its length.)
+        const longer = A.len >= B.len ? A : B, shorter = A.len >= B.len ? B : A;
+        const F = (longer.len / (shorter.len || 1) >= 1.6) ? longer : (A.asym >= B.asym ? A : B);
+        const noseAtMax = F.wHi < F.wLo;                                   // narrower tip is the nose
+        const nx = (noseAtMax ? 1 : -1) * F.ux, nz = (noseAtMax ? 1 : -1) * F.uz;
+        deg = -Math.atan2(-nx, -nz) * 180 / Math.PI;                      // rotate nose → -Z (canonical fwd)
+        deg = ((Math.round(deg) % 360) + 360) % 360;
+      }
+    } catch (e) {}
+    const rot = { rx, ry: deg * D2R };
+    if (raw.userData) raw.userData.canonRot = rot;
+    return rot;
+  }
+  function ext(arr) { let lo = 1e30, hi = -1e30; for (let i = 0; i < arr.length; i++) { if (arr[i] < lo) lo = arr[i]; if (arr[i] > hi) hi = arr[i]; } return hi - lo; }
   function buildInner(raw, style) {
     const obj = raw.clone(true);
+    // apply canonical orientation FIRST (lay-down rx, then heading-align ry), then re-centre + scale
+    // the oriented result so the model sits centred and unit-sized regardless of how it was authored.
+    const cr = canonicalOrient(raw);
+    const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), cr.rx);
+    const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), cr.ry);
+    obj.quaternion.premultiply(qy.multiply(qx));   // qx (lay flat) first, then qy (nose → -Z)
     const box = new THREE.Box3().setFromObject(obj);
     const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
     const maxd = Math.max(sz.x, sz.y, sz.z) || 1;
@@ -147,7 +231,7 @@
     routeLayer.clearLayers();
     models().forEach(m => { const r = m.route; if (m.on !== false && m.mode !== '3d' && r && (r.pts || []).length >= 2) { L.polyline(r.pts, { color: '#ffb020', weight: 2, opacity: 0.75, dashArray: '5 5', interactive: false }).addTo(routeLayer); r.pts.forEach(p => L.circleMarker(p, { radius: 2.5, color: '#ffb020', weight: 0, fillColor: '#ffb020', fillOpacity: 0.9, interactive: false }).addTo(routeLayer)); } });
   }
-  function px(m) { return Math.max(28, Math.min(200, Math.round(60 * ((m.scale || 1) / 10 + 0.4)))); }
+  function px(m) { return Math.max(46, Math.min(280, Math.round(96 * ((m.scale || 1) / 10 + 0.52)))); }   // 2D-map icon size (fixed px) — enlarged: models read too small on the flat map
   const BLANK = L.divIcon({ className: 'm3d-billboard', html: '<span class="m3d-wait"><i></i></span>', iconSize: [34, 34], iconAnchor: [17, 17] });
   async function place2D(m) {
     // reserve the marker SYNCHRONOUSLY so a second sync2D (e.g. a 'models3d' emit
