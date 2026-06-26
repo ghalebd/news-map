@@ -262,7 +262,7 @@
     update();
   }
 
-  setInterval(() => { if (window.Map3D && Map3D.on) update(); }, 600);
+  setInterval(() => { if (window.Map3D && Map3D.on) update(); }, 2500);   // safety poll only — live data already drives update() via the Store 'tracking' handler + the eased rAF
   S.on((st, evt) => { if ((evt === 'tracking' || evt === 'config' || evt === 'sync' || evt === 'track3d') && window.Map3D && Map3D.on) update(); });
 
   window.Tracking3D = {

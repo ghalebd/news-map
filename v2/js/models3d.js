@@ -210,12 +210,16 @@
   const billboards = new Map();   // `${id}:${rotZ}:${style}:${view}` -> Promise<dataURL>
   function billboard(m, rotZ, view) {
     const top = view === 'top';
-    const key = m.id + ':' + Math.round(rotZ || 0) + ':' + (m.style || 'solid') + ':' + (view || 'hero');
+    // quantise the top-down heading to 6° buckets: a model animating along a route changes rotZ every
+    // frame, and each distinct value used to trigger a fresh offscreen render + synchronous toDataURL
+    // PNG encode. 60 cached variants are visually indistinguishable on a small icon and reused instantly.
+    const rz = top ? Math.round((rotZ || 0) / 6) * 6 : Math.round(rotZ || 0);
+    const key = m.id + ':' + rz + ':' + (m.style || 'solid') + ':' + (view || 'hero');
     if (billboards.has(key)) return billboards.get(key);
     const p = (async () => {
       if (!ensureOffscreen()) return null;
       const raw = await loadRaw(m); const obj = buildInner(raw, m.style);
-      obj.rotation.y = ((rotZ || 0) + (top ? TOP_OFF : 0)) * D2R;
+      obj.rotation.y = (rz + (top ? TOP_OFF : 0)) * D2R;
       const root = new THREE.Group(); root.add(obj); bscene.add(root);
       try { rdr.render(bscene, top ? bcamTop : bcam); return rdr.domElement.toDataURL('image/png'); }
       finally { bscene.remove(root); }
@@ -382,7 +386,7 @@
     const feats = [];
     for (const m of ms) {
       const e = eff(m);
-      const imgId = 'm3dico:' + m.id + ':' + Math.round(e.rotZ || 0) + ':' + (m.style || 'solid');
+      const imgId = 'm3dico:' + m.id + ':' + (Math.round((e.rotZ || 0) / 6) * 6) + ':' + (m.style || 'solid');   // 6° buckets — match billboard()'s quantisation so the GL atlas holds ≤60 images, not 360
       if (!glmap.hasImage(imgId)) {
         try { const url = await billboard(m, e.rotZ, 'top'); if (url) await new Promise(res => { const im = new Image(); im.onload = () => { try { if (glmap && !glmap.hasImage(imgId)) glmap.addImage(imgId, im); } catch (er) {} res(); }; im.onerror = () => res(); im.src = url; }); } catch (er) {}
       }
