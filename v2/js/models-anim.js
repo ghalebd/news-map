@@ -38,9 +38,8 @@
   function ease(t) { if (easeMode() !== 'inout') return t; t = Math.max(0, Math.min(1, t)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 
   const lastPoses = {};   // id -> current animated pose (for the follow camera)
-  let prevActive = new Set(), raf = null;
+  let prevActive = new Set(), raf = null, idleFrames = 0;
   function frame() {
-    raf = requestAnimationFrame(frame);
     const now = Date.now(), pm = {}, active = new Set();
     let any = false;
     // while the timeline is playing keyframes for a model, IT owns that model's pose — the route
@@ -65,8 +64,15 @@
     prevActive.forEach(id => { if (!active.has(id)) { pm[id] = null; delete lastPoses[id]; } });
     prevActive = active;
     if (Object.keys(pm).length) window.Models3D.tick(pm);
+    // self-gating: keep running while anything moves; coast ~0.5s after the last motion (to flush the
+    // final pose + clear stopped models), then stop the loop — no idle 60fps when nothing is animating.
+    idleFrames = any ? 0 : idleFrames + 1;
+    if (idleFrames < 30) raf = requestAnimationFrame(frame); else raf = null;
   }
-  frame();
+  function kick() { if (raf == null) { idleFrames = 0; raf = requestAnimationFrame(frame); } }
+  // start the loop when a route begins (here or synced from control); it self-stops when idle
+  S.on((st, evt) => { if ((evt === 'models3d' || evt === 'sync') && models().some(m => m.route && m.route.play)) kick(); });
+  if (models().some(m => m.route && m.route.play)) kick();
 
   // expose start/stop helpers (used by the HUD / settings)
   window.ModelsAnim = {
