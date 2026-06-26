@@ -30,7 +30,13 @@ body.is-tilted::after { content: ''; position: fixed; inset: 0; z-index: 5; poin
   background: linear-gradient(115deg, transparent 38%, rgba(95,140,205,.06) 50%, transparent 62%);
   background-size: 280% 280%; animation: tileSheen 3s linear infinite; }
 @keyframes tileSheen { 0% { background-position: 100% 0%; } 100% { background-position: 0% 100%; } }
-body.ui-hidden #map::before { display: none; }   /* clean on-air output: no sheen */
+body.ui-hidden #map::before, body.mode-3d #map::before { display: none; }   /* no sheen in clean output / 3D */
+
+/* ---------- PERF: in 3D the GL canvas fully covers the 2D Leaflet map, yet the browser keeps
+   painting it (tiles, sheen, el-pulse/el-flow animations) behind the opaque canvas. Stop painting
+   it via visibility:hidden — layout is KEPT so Leaflet's projection still works for 3D drawing/
+   picking, but the compositor no longer redraws the hidden map every frame. Big GPU win on-device. */
+body.mode-3d #map { visibility: hidden; }
 /* WIREFRAME map style. 2D: glowing blue line-art via a CSS filter on the tile pane (base =
    toner-v2, black line-art on white; invert → white/blue lines on near-black), drawings stay
    normal. 3D: NOT a filter — real glowing contour lines draped on the terrain (see map3d.js
