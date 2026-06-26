@@ -17,19 +17,41 @@
   const cosMid = (a, b) => Math.cos((a[0] + b[0]) / 2 * Math.PI / 180);
   function segLen(a, b) { const dx = (b[1] - a[1]) * cosMid(a, b), dy = b[0] - a[0]; return Math.hypot(dx, dy); }
   function bearing(a, b) { const dLng = (b[1] - a[1]) * cosMid(a, b), dLat = b[0] - a[0]; return (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360; }
-  function alongPath(pts, t, auto) {
-    const segs = []; let total = 0;
-    for (let i = 0; i < pts.length - 1; i++) { const d = segLen(pts[i], pts[i + 1]); segs.push(d); total += d; }
-    if (total === 0) return { lat: pts[0][0], lng: pts[0][1] };
-    let target = t * total, acc = 0, i = 0;
+  // position at normalised path param u∈[0,1] (loop wraps so the seam is continuous)
+  function posAt(pts, segs, total, u, loop) {
+    if (total === 0) return [pts[0][0], pts[0][1]];
+    u = loop ? (u - Math.floor(u)) : Math.max(0, Math.min(1, u));
+    let target = u * total, acc = 0, i = 0;
     while (i < segs.length && acc + segs[i] < target) { acc += segs[i]; i++; }
     if (i >= segs.length) i = segs.length - 1;
     const f = segs[i] ? (target - acc) / segs[i] : 0;
     const a = pts[i], b = pts[i + 1];
-    const pose = { lat: a[0] + (b[0] - a[0]) * f, lng: a[1] + (b[1] - a[1]) * f };
-    // +180: the catalog GLBs' nose sits on the model's -Y axis (same calibration the live ship/plane
-    // layer uses, SHIP_FWD/PLANE_FWD=180), so a raw bearing makes them travel TAIL-FIRST. Lead with the nose.
-    if (auto) pose.rotZ = (bearing(a, b) + 180) % 360;
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  }
+  function alongPath(pts, t, auto, loop) {
+    const segs = []; let total = 0;
+    for (let i = 0; i < pts.length - 1; i++) { const d = segLen(pts[i], pts[i + 1]); segs.push(d); total += d; }
+    if (total === 0) return { lat: pts[0][0], lng: pts[0][1], rotZ: 0 };
+    const here = posAt(pts, segs, total, t, loop);
+    const pose = { lat: here[0], lng: here[1] };
+    if (auto) {
+      // Heading = the AVERAGE direction of travel over a window of the path centred on t, not the single
+      // tiny current segment. Dense/jittery freehand points used to make the model wobble wildly
+      // ("تسرح وتمرح", ±40°/frame) — each micro-segment pointed a different way. We sample the window and
+      // sum UNIT step-vectors (robust to segment length + noise) → one stable direction of travel.
+      // Deterministic (function of t only) → control and presenter stay in lockstep. +180: catalog GLB
+      // noses sit on -Y, so a raw bearing would fly the model tail-first.
+      const SPAN = 0.18, N = 9; let sx = 0, sy = 0;
+      let prev = posAt(pts, segs, total, t - SPAN / 2, loop);
+      for (let k = 1; k <= N; k++) {
+        const cur = posAt(pts, segs, total, t - SPAN / 2 + SPAN * k / N, loop);
+        const dLng = (cur[1] - prev[1]) * cosMid(prev, cur), dLat = cur[0] - prev[0];
+        const len = Math.hypot(dLng, dLat); if (len > 1e-9) { sx += dLng / len; sy += dLat / len; }
+        prev = cur;
+      }
+      const head = (sx === 0 && sy === 0) ? bearing(here, posAt(pts, segs, total, t + SPAN, loop)) : (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
+      pose.rotZ = (head + 180) % 360;
+    }
     return pose;
   }
 
@@ -54,7 +76,7 @@
       const dur = Math.max(0.5, r.dur || 10);
       let p = ((now - (r.t0 || now)) / 1000) / dur, done = false;
       if (r.loop) { p = p - Math.floor(p); } else { if (p >= 1) { p = 1; done = true; } if (p < 0) p = 0; }
-      const pose = alongPath(r.pts, ease(p), r.heading !== false);
+      const pose = alongPath(r.pts, ease(p), r.heading !== false, r.loop);
       pm[m.id] = pose; lastPoses[m.id] = pose; active.add(m.id);
       if (done && isCtrl) {   // finalize once, only from the control window
         S.updateModel3d(m.id, { lat: +pose.lat.toFixed(6), lng: +pose.lng.toFixed(6), rotZ: Math.round(pose.rotZ || m.rotZ || 0), route: Object.assign({}, r, { play: false, t0: 0 }) });
