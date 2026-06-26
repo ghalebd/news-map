@@ -25,7 +25,12 @@
       else step();
     }, leg * 1000);
   }
-  function start() { if (running) return; if (!cp().frames.length) return; running = true; idx = 0; step(); }
+  function start() {
+    if (running) return; if (!cp().frames.length) return;
+    // last deliberate camera action wins — release follow + timeline so they don't fight the path
+    if (window.APP_ROLE === 'control') { const c = S.cfg(); if (c.follow && c.follow.on) S.setFollow({ on: false }); if (c.timeline && c.timeline.playing) S.setTimeline({ playing: false }); }
+    running = true; idx = 0; step();
+  }
   function stop(finished) {
     running = false; clearTimeout(timer); timer = null;
     if (finished && window.APP_ROLE === 'control' && (S.cfg().campath || {}).playing) S.setCampath({ playing: false });

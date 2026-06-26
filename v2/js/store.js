@@ -155,7 +155,15 @@ const Store = (() => {
   }
   function removeScene(id) { const i = sceneIndex(id); if (i < 0) return; scenes().splice(i, 1); if (state.rundown.activeId === id) state.rundown.activeId = (scenes()[i] || scenes()[i - 1] || {}).id || null; emit('scenes'); }
   function moveScene(id, dir) { const i = sceneIndex(id), j = i + dir; if (i < 0 || j < 0 || j >= scenes().length) return; const a = scenes();[a[i], a[j]] = [a[j], a[i]]; emit('scenes'); }
-  function setActive(id) { state.rundown.activeId = id; revealReset(id); emit('active'); }
+  function setActive(id) {
+    state.rundown.activeId = id; revealReset(id);
+    // a scene switch is a fresh shot: release the camera-owning animations so they don't fight the
+    // scene's own camera move (fixes the snap-then-drag-back the operator saw on every cut).
+    if (state.config.follow && state.config.follow.on) setFollow({ on: false, id: null, kind: null });
+    if (state.config.campath && state.config.campath.playing) setCampath({ playing: false });
+    if (timeline().playing) setTimeline({ playing: false });
+    emit('active');
+  }
   function nextScene() { const i = sceneIndex(state.rundown.activeId); if (i < scenes().length - 1) setActive(scenes()[i + 1].id); }
   function prevScene() { const i = sceneIndex(state.rundown.activeId); if (i > 0) setActive(scenes()[i - 1].id); }
   function renameScene(id, title) { const s = scenes().find(x => x.id === id); if (s) { s.title = title; emit('scenes'); } }

@@ -60,7 +60,7 @@
   frame();
 
   /* ---- transport ---- */
-  function play() { const tl = TL(); const from = tl.head >= tl.dur ? 0 : (tl.head || 0); S.setTimeline({ playing: true, head: from, t0: Date.now() - from * 1000 }); }
+  function play() { const tl = TL(); const from = tl.head >= tl.dur ? 0 : (tl.head || 0); const c = S.cfg(); if (c.follow && c.follow.on) S.setFollow({ on: false }); if (c.campath && c.campath.playing) S.setCampath({ playing: false }); S.setTimeline({ playing: true, head: from, t0: Date.now() - from * 1000 }); }
   function pause() { const tl = TL(); const t = Math.min(tl.dur, (Date.now() - (tl.t0 || Date.now())) / 1000); S.setTimeline({ playing: false, head: t }); }
   function stop() { S.setTimeline({ playing: false, head: 0 }); applyAt(0); }
   function seek(t) { S.setTimeline({ playing: false, head: Math.max(0, Math.min(TL().dur, t)) }); }

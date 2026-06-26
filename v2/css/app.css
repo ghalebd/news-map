@@ -224,7 +224,7 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 /* sit it clearly at the END of the bar, separated from the buttons by a centred hairline */
 .qtools .syncdot { margin-top: 14px; position: relative; }
 .qtools .syncdot::before { content: ''; position: absolute; left: 50%; top: -8px; transform: translateX(-50%); width: 24px; height: 1px; background: var(--stroke); }
-.syncdot--live { background: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.16), 0 0 9px 1px rgba(52,211,153,.65); animation: syncPulse 2.4s ease-in-out infinite; }
+.syncdot--live { background: var(--ok); box-shadow: 0 0 0 3px rgba(52,211,153,.16), 0 0 9px 1px rgba(52,211,153,.65); animation: syncPulse 2.4s ease-in-out infinite; }
 .syncdot--wait { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.16), 0 0 9px 1px rgba(245,158,11,.55); }
 @keyframes syncPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(52,211,153,.16), 0 0 8px 1px rgba(52,211,153,.55); } 50% { box-shadow: 0 0 0 5px rgba(52,211,153,.05), 0 0 13px 2px rgba(52,211,153,.9); } }
 .syncdot--float { position: fixed; left: 8px; bottom: 8px; z-index: 9999; pointer-events: none; box-shadow: 0 0 6px rgba(0,0,0,.5); }
@@ -435,7 +435,7 @@ body.attrib-off .maplibregl-ctrl-bottom-right { display: none !important; }
 .lt-box .lthird__bar { display: none; }
 .lt-box .lthird__tx { background: var(--accent); border-radius: var(--r-sm); }
 .lt-box .lthird__t { color: var(--accent-ink); }
-.lt-box .lthird__s { color: rgba(0, 0, 0, 0.66); }
+.lt-box .lthird__s { color: rgba(6, 18, 43, 0.82); }   /* was rgba(0,0,0,.66) ≈2.6:1 — unreadable subtitle on the accent fill; now ≥5:1 */
 .lt-minimal .lthird__bar { display: none; }
 .lt-minimal .lthird__tx { background: transparent; padding-left: 0; border-bottom: 2px solid var(--accent); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .lt-bold .lthird__bar { width: 11px; }
@@ -592,7 +592,7 @@ body.ui-hidden .d3ctrl { display: none !important; }
 .ov-wipe.is-drag .ov-wipe__line { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
 .ov-wipe.is-drag .ov-wipe__ring { border-color: var(--accent); }
 .ov-wipe.is-drag .ov-wipe__grip { border-color: var(--accent); }
-.ov-handle { display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; color: #fff; background: rgba(91, 157, 255, .92); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, .55); cursor: move; }
+.ov-handle { display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; color: #fff; background: color-mix(in srgb, var(--accent) 92%, transparent); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, .55); cursor: move; }
 .ov-handle--size { cursor: nesw-resize; border-radius: 7px; }
 .ov-handle svg { width: 15px; height: 15px; }
 body.touch .ov-handle svg { width: 19px; height: 19px; }
