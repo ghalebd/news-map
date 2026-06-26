@@ -19,6 +19,18 @@ body.is-tilted .skyhaze { opacity: clamp(0, calc(var(--tilt, 0) / 32), 1); }
 body.is-tilted::after { content: ''; position: fixed; inset: 0; z-index: 5; pointer-events: none;
   background: radial-gradient(140% 100% at 50% 118%, transparent 55%, rgba(2,5,10,.4) 100%); }
 .tiles-underlay img { image-rendering: auto; }
+
+/* ---------- graceful map-tile loading (no ugly white squares) ----------
+   • a dark base behind the tiles so loading gaps read as deep space, never white checker
+   • each tile fades in smoothly instead of popping
+   • a faint diagonal sheen drifts behind the tiles, so a partly-loaded map looks intentional */
+.leaflet-container, .maplibregl-canvas { background-color: #081019; }
+.leaflet-tile { transition: opacity .5s ease; }
+#map::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(95,140,205,.06) 50%, transparent 62%);
+  background-size: 280% 280%; animation: tileSheen 3s linear infinite; }
+@keyframes tileSheen { 0% { background-position: 100% 0%; } 100% { background-position: 0% 100%; } }
+body.ui-hidden #map::before { display: none; }   /* clean on-air output: no sheen */
 /* WIREFRAME map style. 2D: glowing blue line-art via a CSS filter on the tile pane (base =
    toner-v2, black line-art on white; invert → white/blue lines on near-black), drawings stay
    normal. 3D: NOT a filter — real glowing contour lines draped on the terrain (see map3d.js
@@ -530,7 +542,9 @@ body.ui-hidden .compass { display: none !important; }
 .leaflet-control-scale-line, .maplibregl-ctrl-scale { background: var(--glass-2) !important; color: var(--text) !important; border: 1px solid var(--stroke) !important; border-top: 1px solid var(--stroke) !important; border-radius: 5px; padding: 1px 7px; font-size: 10px; font-weight: 600; box-shadow: var(--sheen); }
 .m3d-billboard { filter: drop-shadow(0 6px 9px rgba(0,0,0,.55)); cursor: grab; }
 .m3d-billboard:active { cursor: grabbing; }
-.m3d-sel { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; filter: drop-shadow(0 0 7px var(--accent)) drop-shadow(0 6px 9px rgba(0,0,0,.55)); }
+/* selected 3D model: NO bounding box — just a soft glow pooled UNDER the body so it reads as the
+   selected object without an ugly rectangle. */
+.m3d-sel { filter: drop-shadow(0 5px 7px var(--accent)) drop-shadow(0 2px 13px var(--accent)) drop-shadow(0 7px 9px rgba(0,0,0,.5)); }
 /* tiny "?" help button + shared popover */
 .help-dot { width: 14px; height: 14px; min-width: 14px; padding: 0; border-radius: 50%; font-size: 9px; line-height: 1; font-weight: 800; color: var(--text-2); background: var(--glass-2); border: 1px solid var(--stroke); cursor: help; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; transition: all var(--t-fast) var(--ease); }
 .help-dot:hover { color: var(--accent); border-color: var(--accent); }
