@@ -564,6 +564,9 @@
   let m3dCat = 'All', m3dSearch = '';   // persisted catalog filter/search across re-renders
   // sensible default on-map size (km) by type so a carrier ≠ a missile
   const m3dScale = (cat, file) => { const f = file || ''; if (/carrier|lincoln|eisenhower|cvn/.test(f)) return 12; if (cat === 'Naval') return 6; if (cat === 'Aircraft') return /c-130|hercules|a-3|707|boein|awacs|e-3|sentry|b-2|spirit|b21|tu160|legacy|embraer/.test(f) ? 4.5 : 2.2; if (cat === 'Drones / UAV') return 1.4; if (cat === 'Air defense / Radar') return 2; if (cat === 'Missiles / Rockets') return 1; if (cat === 'Armor / Vehicles') return 1.4; return 2.5; };
+  // sensible DEFAULT altitude by category so assets land in the right layer: aircraft in the air,
+  // ships/armor/ground on the surface (alt 0 → models3d grounds them on the terrain/sea). Tunable later.
+  const m3dAlt = (cat) => cat === 'Aircraft' ? 9000 : cat === 'Drones / UAV' ? 3000 : cat === 'Missiles / Rockets' ? 1500 : 0;
   function tabModels3d(C, ct) {
     const list = C.models3d || [];
 
@@ -586,7 +589,7 @@
         // lazy 3D preview thumbnail (offscreen-rendered GLB PNG) — render when first scrolled near
         if (window.Models3D && Models3D.thumb) { const th = b.querySelector('.cfg-cat3d__thumb'); const draw = () => Models3D.thumb(m.file).then(url => { if (url) th.style.backgroundImage = `url(${url})`; }).catch(() => {}); b._drawThumb = draw; }
         b.title = 'Add “' + m.name + '” at the current map centre';
-        b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: m3dScale(m.cat, m.file), rotZ: 0, pitch: 0, roll: 0, alt: 0, mode: 'both', style: 'solid', on: true }); renderTab(); };
+        b.onclick = () => { const cv = window.GameMap.currentView(); S.addModel3d({ src: 'assets3d/' + m.file, name: m.name, cat: m.cat, lat: cv.lat, lng: cv.lng, scale: m3dScale(m.cat, m.file), rotZ: 0, pitch: 0, roll: 0, alt: m3dAlt(m.cat), kind: m.cat, mode: 'both', style: 'solid', on: true }); renderTab(); };
         grid.appendChild(b);
       });
       function filterGrid() { const q = m3dSearch.toLowerCase().replace(/[^a-z0-9]/g, ''); grid.querySelectorAll('.cfg-cat3d__i').forEach(it => { const ok = (m3dCat === 'All' || it.dataset.cat === m3dCat) && (!q || it.dataset.q.indexOf(q) >= 0); it.style.display = ok ? '' : 'none'; }); }
