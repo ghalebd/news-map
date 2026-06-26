@@ -47,20 +47,21 @@
     if (Object.keys(pm).length && window.Models3D) window.Models3D.tick(pm);
   }
 
-  /* ---- playback loop (both windows) ---- */
+  /* ---- playback loop (both windows) — self-gating: only runs WHILE playing, then stops (no idle 60fps) ---- */
   let raf = null;
   function frame() {
+    const tl = TL();
+    if (!tl.playing) { raf = null; return; }   // stop the loop when playback ends
     raf = requestAnimationFrame(frame);
-    const tl = TL(); if (!tl.playing) return;
     let t = (Date.now() - (tl.t0 || Date.now())) / 1000;
     if (t >= tl.dur) { if (tl.loop) t = t % tl.dur; else { t = tl.dur; if (isCtrl) S.setTimeline({ playing: false, head: tl.dur }); } }
     applyAt(t);
     if (isCtrl && bar) renderHead(t);
   }
-  frame();
+  function kick() { if (raf == null && TL().playing) raf = requestAnimationFrame(frame); }
 
   /* ---- transport ---- */
-  function play() { const tl = TL(); const from = tl.head >= tl.dur ? 0 : (tl.head || 0); const c = S.cfg(); if (c.follow && c.follow.on) S.setFollow({ on: false }); if (c.campath && c.campath.playing) S.setCampath({ playing: false }); S.setTimeline({ playing: true, head: from, t0: Date.now() - from * 1000 }); }
+  function play() { const tl = TL(); const from = tl.head >= tl.dur ? 0 : (tl.head || 0); const c = S.cfg(); if (c.follow && c.follow.on) S.setFollow({ on: false }); if (c.campath && c.campath.playing) S.setCampath({ playing: false }); S.setTimeline({ playing: true, head: from, t0: Date.now() - from * 1000 }); kick(); }
   function pause() { const tl = TL(); const t = Math.min(tl.dur, (Date.now() - (tl.t0 || Date.now())) / 1000); S.setTimeline({ playing: false, head: t }); }
   function stop() { S.setTimeline({ playing: false, head: 0 }); applyAt(0); }
   function seek(t) { S.setTimeline({ playing: false, head: Math.max(0, Math.min(TL().dur, t)) }); }
@@ -130,7 +131,8 @@
   S.on((st, evt) => {
     if (evt === 'timeline' || evt === 'sync') {
       const tl = TL();
-      if (!tl.playing && tl.head !== lastApplied) { lastApplied = tl.head; applyAt(tl.head || 0); }
+      if (tl.playing) kick();   // playback started (here or synced from control) → ensure the loop runs
+      else if (tl.head !== lastApplied) { lastApplied = tl.head; applyAt(tl.head || 0); }
       if (isCtrl && open) renderUI();
     }
     if (evt === 'models3d' && isCtrl && open) renderUI();   // model added/removed → refresh tracks

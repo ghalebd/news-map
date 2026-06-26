@@ -24,7 +24,7 @@
     // light-cyan caustic highlights that ride over the flat water tint drawn in frame()
     const mtx = `0 0 0 0 0.78  0 0 0 0 0.92  0 0 0 0 1  0 0 0 1.9 -0.78`;
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='${bf}' numOctaves='2' seed='4' stitchTiles='stitch'/><feColorMatrix type='matrix' values='${mtx}'/></filter><rect width='256' height='256' filter='url(#c)'/></svg>`;
-    const img = new Image(); img.onload = () => { tile = img; pat = null; ready = true; }; img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
+    const img = new Image(); img.onload = () => { tile = img; pat = null; ready = true; kick(); }; img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
   }
 
   function bbox(c) { if (c._bb) return c._bb; let mnx = 180, mny = 90, mxx = -180, mxy = -90; const polys = c.g.type === 'Polygon' ? [c.g.coordinates] : c.g.coordinates; polys.forEach(p => p[0].forEach(([x, y]) => { if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; })); return c._bb = [mnx, mny, mxx, mxy]; }
@@ -56,8 +56,8 @@
   }
 
   function frame() {
+    if (!ready || !on()) { raf = null; return; }   // self-gating: stop the loop when the sea effect is off (default) — no idle 60fps
     raf = requestAnimationFrame(frame);
-    if (!ready || !on()) return;
     if (dirty) { buildMask(); dirty = false; }   // re-mask in step with rendering → stays glued to the map, no blink
     const s = cfg(), W = cv.width, H = cv.height, I = (s.intensity == null ? 45 : s.intensity) / 100;
     off += 0.18 * Math.max(0.2, 60 / (s.speed || 26));
@@ -75,11 +75,12 @@
   }
 
   function show(v) { cv.style.opacity = v ? '1' : '0'; }
-  function refresh() { if (!on()) { cv.style.display = 'none'; return; } cv.style.display = ''; dirty = true; show(true); }
+  function kick() { if (raf == null && ready && on()) raf = requestAnimationFrame(frame); }
+  function refresh() { if (!on()) { cv.style.display = 'none'; return; } cv.style.display = ''; dirty = true; show(true); kick(); }
 
   // mark the mask dirty on any view change; frame() rebuilds it once per frame
   // while moving, so the water tracks the map continuously without blinking.
-  map.on('move zoom moveend zoomend resize', () => { if (on()) dirty = true; });
+  map.on('move zoom moveend zoomend resize', () => { if (on()) { dirty = true; kick(); } });
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync') { makeTile(); refresh(); } });
-  makeTile(); refresh(); frame();
+  makeTile(); refresh();   // refresh() kicks the loop only when the sea effect is on (default off → no idle loop)
 })();

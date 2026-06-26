@@ -24,8 +24,8 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   let raf = null;
   function tick() {
+    const f = cfg(); if (!f.on) { raf = null; return; }   // self-gating: stop the loop when follow is off
     raf = requestAnimationFrame(tick);
-    const f = cfg(); if (!f.on) return;
     // CAMERA PRIORITY: a deliberately-playing timeline or camera-path owns the camera — yield to it
     // so the two don't fight over the centre every frame (the visible jitter the operator reported).
     const c = S.cfg(); if ((c.timeline && c.timeline.playing) || (c.campath && c.campath.playing)) return;
@@ -45,7 +45,10 @@
       }
     } catch (e) {}
   }
-  tick();
+  function kick() { if (raf == null && cfg().on) raf = requestAnimationFrame(tick); }
+  kick();
+  // start/stop the loop in lockstep with the synced follow flag (presenter mirrors control)
+  S.on((st, evt) => { if (evt === 'follow' || evt === 'sync') kick(); });
 
   // public helpers for the HUD / settings
   window.Follow = {
