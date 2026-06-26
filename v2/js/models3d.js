@@ -36,7 +36,8 @@
     const p = (async () => {
       const url = m.src ? m.src : await window.Assets3D.url(id);
       if (!url) throw new Error('no-glb');
-      return new Promise((res, rej) => loader.load(url, g => res(g.scene), undefined, rej));
+      const scene = await new Promise((res, rej) => loader.load(url, g => res(g.scene), undefined, rej));
+      return deskin(scene);   // bake any rig to a static rest-pose mesh ONCE, so orientation analysis + render agree
     })();
     rawCache.set(id, p);
     return p;
@@ -147,8 +148,35 @@
     return rot;
   }
   function ext(arr) { let lo = 1e30, hi = -1e30; for (let i = 0; i < arr.length; i++) { if (arr[i] < lo) lo = arr[i]; if (arr[i] > hi) hi = arr[i]; } return hi - lo; }
+  // DE-SKIN — some catalog GLBs ship as rigged SkinnedMeshes (e.g. rampage-missile). Skinned vertices
+  // are posed by the skeleton in WORLD space and ignore their parent's transform, so heading rotation
+  // had no effect (the model rendered the same at every rotZ). We never play the rig, so bake the bind
+  // (rest) pose into a static Mesh that follows its parent normally. Helps any rigged model.
+  function deskin(root) {
+    const skins = []; root.traverse(o => { if (o.isSkinnedMesh) skins.push(o); });
+    if (!skins.length) return root;
+    try { root.updateMatrixWorld(true); } catch (e) {}
+    for (const sk of skins) {
+      try {
+        if (sk.skeleton && sk.skeleton.update) sk.skeleton.update();
+        const g = sk.geometry, pos = g.attributes && g.attributes.position; if (!pos) continue;
+        const n = pos.count, arr = new Float32Array(n * 3), v = new THREE.Vector3();
+        const fn = sk.applyBoneTransform ? 'applyBoneTransform' : (sk.boneTransform ? 'boneTransform' : null);
+        for (let i = 0; i < n; i++) { v.fromBufferAttribute(pos, i); if (fn) sk[fn](i, v); arr[i * 3] = v.x; arr[i * 3 + 1] = v.y; arr[i * 3 + 2] = v.z; }
+        const baked = new THREE.BufferGeometry();
+        baked.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+        if (g.attributes.uv) baked.setAttribute('uv', g.attributes.uv.clone());
+        if (g.index) baked.setIndex(g.index.clone());
+        baked.computeVertexNormals();
+        const mesh = new THREE.Mesh(baked, sk.material);
+        mesh.position.copy(sk.position); mesh.quaternion.copy(sk.quaternion); mesh.scale.copy(sk.scale);
+        if (sk.parent) { sk.parent.add(mesh); sk.parent.remove(sk); }
+      } catch (e) {}
+    }
+    return root;
+  }
   function buildInner(raw, style) {
-    const obj = raw.clone(true);
+    const obj = raw.clone(true);   // master is already de-skinned (loadRaw); clone is a plain static hierarchy
     // apply canonical orientation FIRST (lay-down rx, then heading-align ry), then re-centre + scale
     // the oriented result so the model sits centred and unit-sized regardless of how it was authored.
     const cr = canonicalOrient(raw);
