@@ -454,7 +454,7 @@
   function tick(poseMap) {
     for (const id in poseMap) { const p = poseMap[id]; if (p) poses.set(id, p); else poses.delete(id); }
     for (const id in poseMap) { const m = models().find(x => x.id === id); if (m && m.on !== false && m.mode !== '3d') place2D(m); }
-    if (window.Map3D && Map3D.on) update3D();
+    if (window.Map3D && Map3D.on) { update3D(); if (isGlobe()) updateGlobeIcons(); }   // on the GLOBE the model is a billboard icon — refresh it each frame so it moves + turns with the route (was frozen)
   }
   function setPose(id, pose) { tick({ [id]: pose }); }
   function clearPoses() { const o = {}; poses.forEach((_, id) => o[id] = null); if (Object.keys(o).length) tick(o); }
