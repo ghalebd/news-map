@@ -25,6 +25,14 @@
   // effective render props: live route pose over the stored metadata, plus a persistent per-model
   // heading correction (headOff) the operator can set to flip/nudge any model the auto-orient misjudges.
   const eff = m => { const e = Object.assign({}, m, poses.get(m.id) || {}); if (m.headOff) e.rotZ = (e.rotZ || 0) + m.headOff; return e; };
+  // BAKED per-file heading corrections (degrees): front/back is geometrically ambiguous for some GLBs
+  // (a transport's tail-cone is as pointy as its nose), so the auto-orient faces them wrong. These are
+  // calibrated once per catalog file and folded into the canonical orientation, fixing every view at once.
+  const HEADING_FIX = {
+    'a-330.glb': 180, 'a-340.glb': 180, 'boein707.glb': 180, 'c-130-hercules.glb': 180, 'c-130-hercules-1.glb': 180,
+    'embraer-legacy-650-fbx.glb': 270,
+  };
+  const fileOf = s => (s || '').split('/').pop();
 
   /* ---- shared GLB loading (model -> Promise<THREE.Object3D raw scene>).
      Source is either a bundled catalog file (m.src URL) or an uploaded blob
@@ -37,7 +45,9 @@
       const url = m.src ? m.src : await window.Assets3D.url(id);
       if (!url) throw new Error('no-glb');
       const scene = await new Promise((res, rej) => loader.load(url, g => res(g.scene), undefined, rej));
-      return deskin(scene);   // bake any rig to a static rest-pose mesh ONCE, so orientation analysis + render agree
+      const sc = deskin(scene);   // bake any rig to a static rest-pose mesh ONCE, so orientation analysis + render agree
+      try { sc.userData.__file = fileOf(m.src); } catch (e) {}   // remember the catalog filename for the baked HEADING_FIX
+      return sc;
     })();
     rawCache.set(id, p);
     return p;
@@ -134,15 +144,18 @@
         // forward axis: if one axis is clearly the longer (hull/fuselage of a ship, tank, missile,
         // most jets → aspect ≥ 1.6) trust LENGTH; only for near-square footprints (delta drones,
         // flying wings, wide-span UAVs where span ≈ length) fall back to the more-asymmetric axis.
-        // (Asymmetry alone misfires — e.g. a corvette's beam reads more asymmetric than its length.)
         const longer = A.len >= B.len ? A : B, shorter = A.len >= B.len ? B : A;
         const F = (longer.len / (shorter.len || 1) >= 1.6) ? longer : (A.asym >= B.asym ? A : B);
-        const noseAtMax = F.wHi < F.wLo;                                   // narrower tip is the nose
+        // nose = narrower tip — a heuristic; front/back is geometrically ambiguous for some models (a
+        // transport's tail-cone is as pointy as its nose), so the wrong ones are corrected per-file in
+        // the catalog's baked HEADING_FIX list and via the Flip button.
+        const noseAtMax = F.wHi < F.wLo;
         const nx = (noseAtMax ? 1 : -1) * F.ux, nz = (noseAtMax ? 1 : -1) * F.uz;
         deg = -Math.atan2(-nx, -nz) * 180 / Math.PI;                      // rotate nose → -Z (canonical fwd)
         deg = ((Math.round(deg) % 360) + 360) % 360;
       }
     } catch (e) {}
+    deg = ((deg + (HEADING_FIX[raw.userData && raw.userData.__file] || 0)) % 360 + 360) % 360;   // baked per-file correction
     const rot = { rx, ry: deg * D2R };
     if (raw.userData) raw.userData.canonRot = rot;
     return rot;

@@ -31,9 +31,9 @@
   function altBy(dir) { const m = sel(); if (!m) return; const step = Math.max(50, (m.scale || 1) * 100); S.updateModel3d(m.id, { alt: Math.round((m.alt || 0) + dir * step) }); }
   function dropGround() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { alt: 0 }); }
   function resetAttitude() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { rotZ: 0, pitch: 0, roll: 0, headOff: 0 }); }
-  // persistent 180° nose correction — survives route playback (which overwrites rotZ each frame), so
-  // it's the fix for the rare model whose auto-orientation faces the wrong way along its path.
-  function flip() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { headOff: ((m.headOff || 0) + 180) % 360 }); }
+  // persistent nose correction that CYCLES 0→90→180→270 — survives route playback (which overwrites
+  // rotZ each frame), so it fixes any model the auto-orientation faces wrong (90° sideways OR 180° back).
+  function flip() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { headOff: ((m.headOff || 0) + 90) % 360 }); }
   function flyTo() { const m = sel(); if (!m) return; const g = gl(); if (g) g.flyTo({ center: [m.lng, m.lat], zoom: Math.max(g.getZoom(), 8), duration: 900 }); else window.GameMap.flyToView({ lat: m.lat, lng: m.lng, zoom: 9 }, { type: 'flyTo', duration: 1 }); }
   async function duplicate() { const m = sel(); if (!m) return; try { const id = S.uid('m3d'); if (!m.src) { const blob = await window.Assets3D.get(m.id); if (blob) await window.Assets3D.put(id, blob); } const [hh] = span(); const c = Object.assign({}, m, { id, name: (m.name || 'Model') + ' copy', lat: m.lat + hh * 0.06 }); S.addModel3d(c); select(id); } catch (e) {} }
   function del() { const m = sel(); if (!m) return; try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} const rest = models().filter(x => x.id !== m.id); S.removeModel3d(m.id); const nxt = rest[0]; nxt ? select(nxt.id) : hide(); }
@@ -192,7 +192,7 @@
     act.append(
       B(I.target + '<span>Fly</span>', 'Fly camera to model', flyTo),
       B(I.layers + '<span>Copy</span>', 'Duplicate model', duplicate),
-      B(I.rotR + '<span>Flip</span>', 'Flip the model 180° (fix one that travels backward) — sticks during route playback', flip),
+      B(I.rotR + '<span>Turn 90°</span>', 'Turn the model 90° each press (fix one that faces wrong on its route) — sticks during route playback', flip),
       B(I.undo + '<span>Reset</span>', 'Reset heading/pitch/roll', resetAttitude),
       routeB, playB, followB,
       B(I.close + '<span>Delete</span>', 'Delete model', del, 'mctl__b--danger'),
