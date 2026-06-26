@@ -345,6 +345,7 @@
     project: (lng, lat) => (glmap ? glmap.project([lng, lat]) : null),   // for 3D selection/drag
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id
+    thumb: (file, style) => billboard({ id: 'thumb:' + file, src: 'assets3d/' + file, style: style || 'solid' }, 0),   // catalog preview PNG (offscreen render, cached)
     has2D: id => markers.has(id),
     marker: id => markers.get(id) || null,   // for the control HUD's selection highlight
     nearestId(point, px) { if (!glmap) return null; let best = null, bd = px || 60; models().forEach(m => { if (m.on === false || m.mode === '2d') return; try { const p = glmap.project([m.lng, m.lat]); const d = Math.hypot(p.x - point.x, p.y - point.y); if (d < bd) { bd = d; best = m.id; } } catch (e) {} }); return best; },
