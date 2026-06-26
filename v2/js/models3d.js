@@ -102,7 +102,11 @@
 
   /* ============ 2D billboard: offscreen three.js -> PNG ============ */
   const BB = 256;
-  let rdr = null, bscene = null, bcam = null;
+  // heading calibration for the TOP-DOWN map/globe billboard: rotZ already carries the route
+  // bearing as (bearing+180); this offset turns the top-down render so the model's NOSE points
+  // along the travel bearing on screen (north-up). Tuned empirically against the F-16 planform.
+  const TOP_OFF = 0;
+  let rdr = null, bscene = null, bcam = null, bcamTop = null;
   function ensureOffscreen() {
     if (rdr) return true;
     try {
@@ -111,20 +115,25 @@
       bscene = new THREE.Scene();
       const hemi = new THREE.HemisphereLight(0xffffff, 0x223044, 1.15); bscene.add(hemi);
       const dir = new THREE.DirectionalLight(0xffffff, 1.5); dir.position.set(2, 4, 3); bscene.add(dir);
+      // hero 3/4 view — used for catalog thumbnails (recognisable, no heading)
       bcam = new THREE.PerspectiveCamera(32, 1, 0.01, 100); bcam.position.set(1.5, 1.25, 1.9); bcam.lookAt(0, 0, 0);
+      // top-down view — used for MAP markers + globe icons so the nose reads cleanly along the
+      // travel direction (broadcast-standard). up = -Z maps world-north to screen-up.
+      bcamTop = new THREE.PerspectiveCamera(32, 1, 0.01, 100); bcamTop.up.set(0, 0, -1); bcamTop.position.set(0, 2.72, 0); bcamTop.lookAt(0, 0, 0);
     } catch (e) { console.warn('Models3D offscreen failed', e); return false; }
     return true;
   }
-  const billboards = new Map();   // `${id}:${rotZ}:${style}` -> Promise<dataURL>
-  function billboard(m, rotZ) {
-    const key = m.id + ':' + Math.round(rotZ || 0) + ':' + (m.style || 'solid');
+  const billboards = new Map();   // `${id}:${rotZ}:${style}:${view}` -> Promise<dataURL>
+  function billboard(m, rotZ, view) {
+    const top = view === 'top';
+    const key = m.id + ':' + Math.round(rotZ || 0) + ':' + (m.style || 'solid') + ':' + (view || 'hero');
     if (billboards.has(key)) return billboards.get(key);
     const p = (async () => {
       if (!ensureOffscreen()) return null;
       const raw = await loadRaw(m); const obj = buildInner(raw, m.style);
-      obj.rotation.y = (rotZ || 0) * D2R;
+      obj.rotation.y = ((rotZ || 0) + (top ? TOP_OFF : 0)) * D2R;
       const root = new THREE.Group(); root.add(obj); bscene.add(root);
-      try { rdr.render(bscene, bcam); return rdr.domElement.toDataURL('image/png'); }
+      try { rdr.render(bscene, top ? bcamTop : bcam); return rdr.domElement.toDataURL('image/png'); }
       finally { bscene.remove(root); }
     })().catch(() => null);
     billboards.set(key, p);
@@ -152,14 +161,14 @@
     }
     const e = eff(m);
     mk.setLatLng([e.lat, e.lng]);
-    const url = await billboard(m, e.rotZ);
+    const url = await billboard(m, e.rotZ, 'top');
     if (markers.get(m.id) !== mk || !url) return;   // deleted/replaced while rendering
     const s = px(e);
     const pop = !mk._revealed; mk._revealed = true;   // soft drop-in on FIRST reveal only
     mk.setIcon(L.divIcon({
       className: 'm3d-billboard',
       html: `<img src="${url}" class="m3d-img${pop ? ' m3d-pop' : ''}" style="width:${s}px;height:${s}px" draggable="false">`,
-      iconSize: [s, s], iconAnchor: [s / 2, Math.round(s * 0.82)],
+      iconSize: [s, s], iconAnchor: [s / 2, s / 2],   // top-down render is centred in its frame → anchor on centre (sits exactly on its lat/lng)
     }));
   }
   function sync2D() {
@@ -291,7 +300,7 @@
       const e = eff(m);
       const imgId = 'm3dico:' + m.id + ':' + Math.round(e.rotZ || 0) + ':' + (m.style || 'solid');
       if (!glmap.hasImage(imgId)) {
-        try { const url = await billboard(m, e.rotZ); if (url) await new Promise(res => { const im = new Image(); im.onload = () => { try { if (glmap && !glmap.hasImage(imgId)) glmap.addImage(imgId, im); } catch (er) {} res(); }; im.onerror = () => res(); im.src = url; }); } catch (er) {}
+        try { const url = await billboard(m, e.rotZ, 'top'); if (url) await new Promise(res => { const im = new Image(); im.onload = () => { try { if (glmap && !glmap.hasImage(imgId)) glmap.addImage(imgId, im); } catch (er) {} res(); }; im.onerror = () => res(); im.src = url; }); } catch (er) {}
       }
       if (glmap.hasImage(imgId)) feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lng, e.lat] }, properties: { img: imgId } });
     }
