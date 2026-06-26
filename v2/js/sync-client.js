@@ -16,26 +16,49 @@
   // (receive-only). A mirror must NEVER push its possibly-stale state back, or it can clobber
   // the operator's fresh edits.
   const IS_SENDER = window.APP_ROLE === 'control';
-  let ws = null, applyingRemote = false, retryT = null;
+  // A control that ALREADY has saved work on this browser is the authoritative source of truth (it must
+  // never be reset by the cloud). A FRESH control (nothing saved on this browser yet) instead ADOPTS the
+  // room's current state once on connect — so opening the console on a new browser/device shows the live
+  // broadcast style instead of a blank default — and only then becomes authoritative. The presenter
+  // always mirrors. Any local edit immediately promotes a control to authoritative.
+  let authoritative = IS_SENDER && !!localStorage.getItem(KEY);
+  let ws = null, applyingRemote = false, retryT = null, adoptT = null;
+  const startT = Date.now();
   const myTs = () => parseInt(localStorage.getItem(TSKEY) || '0', 10);
 
   function connect() {
     try { ws = new WebSocket(ROOM_WS); } catch (e) { retry(); return; }
-    ws.onopen = () => { if (IS_SENDER) send(); badge('live'); };
+    ws.onopen = () => {
+      if (IS_SENDER && authoritative) send();
+      else {
+        // ANY window that isn't already the source of truth (a presenter, or a fresh control) asks the
+        // room for the current state on connect — the cloud is a relay, not a store, so a late joiner
+        // gets nothing until it requests it. A fresh control then ADOPTS the reply; a presenter mirrors it.
+        try { ws.send(JSON.stringify({ type: 'request' })); } catch (e) {}
+        if (IS_SENDER) { clearTimeout(adoptT); adoptT = setTimeout(() => { if (!authoritative) { authoritative = true; send(); } }, 3500); }   // empty room → promote + publish
+      }
+      badge('live');
+    };
     ws.onmessage = ev => {
-      // The control console is the SINGLE SOURCE OF TRUTH and must never be overwritten by the
-      // cloud — otherwise a stale/default snapshot (e.g. left by a fresh window) keeps resetting the
-      // operator's carefully-set style. Only the presenter (a pure mirror) applies incoming state.
-      if (IS_SENDER) return;
+      let j; try { j = JSON.parse(ev.data); } catch (e) { return; }
+      if (!j) return;
+      if (j.type === 'request') { if (IS_SENDER && authoritative) send(); return; }   // a new window asked for the state — the source-of-truth control replies
+      if (IS_SENDER && authoritative) return;   // the source-of-truth control is never overwritten by the cloud
       try {
-        const j = JSON.parse(ev.data);
-        if (!j || j.type !== 'snapshot' || typeof j.data !== 'string') return;
+        if (j.type !== 'snapshot' || typeof j.data !== 'string') return;
         if (!(j.ts > myTs())) return;                       // older or same → ignore (protects local work)
-        if (j.data === localStorage.getItem(KEY)) { localStorage.setItem(TSKEY, String(j.ts)); return; }
+        if (j.data === localStorage.getItem(KEY)) { localStorage.setItem(TSKEY, String(j.ts)); if (IS_SENDER) authoritative = true; return; }
         applyingRemote = true;
         localStorage.setItem(KEY, j.data);
         localStorage.setItem(TSKEY, String(j.ts));
-        window.dispatchEvent(new StorageEvent('storage', { key: KEY, newValue: j.data }));
+        if (IS_SENDER) {
+          // fresh control adopting the room state: apply it straight into the Store (the control's own
+          // storage-event listener is intentionally inert), then lock in as the source of truth.
+          try { if (window.Store && Store.importState) Store.importState(JSON.parse(j.data)); } catch (e) {}
+          authoritative = true; clearTimeout(adoptT);
+        } else {
+          window.dispatchEvent(new StorageEvent('storage', { key: KEY, newValue: j.data }));
+        }
         applyingRemote = false;
       } catch (e) { applyingRemote = false; }
     };
@@ -45,7 +68,7 @@
   function retry() { clearTimeout(retryT); retryT = setTimeout(connect, 2500); }
 
   function send() {
-    if (!ws || ws.readyState !== 1 || applyingRemote) return;
+    if (!ws || ws.readyState !== 1 || applyingRemote || (IS_SENDER && !authoritative)) return;
     const data = localStorage.getItem(KEY) || '';
     if (!data) return;
     // Only the control reaches here (the presenter never sends). As the source of truth it asserts
@@ -60,6 +83,9 @@
   if (IS_SENDER && window.Store && Store.on) Store.on((st, evt) => {
     if (applyingRemote) return;
     if (evt === 'layout') return;   // panel positions are per-window local — never sync them
+    // a genuine operator edit (after the initial load settles) takes control of the room; early init
+    // emits in the first moment don't, so a fresh control can still adopt the live state first.
+    if (Date.now() - startT > 1500) authoritative = true;
     // Claim a fresh timestamp SYNCHRONOUSLY on every local edit. Without this, TSKEY stayed
     // stale until the debounced send() ran 300ms later — leaving a window where an older cloud
     // snapshot satisfied `j.ts > myTs()` and overwrote freshly-added models/overlays/drawings.
