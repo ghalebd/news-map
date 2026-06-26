@@ -43,9 +43,14 @@
     raf = requestAnimationFrame(frame);
     const now = Date.now(), pm = {}, active = new Set();
     let any = false;
+    // while the timeline is playing keyframes for a model, IT owns that model's pose — the route
+    // animation steps aside so the two don't both write Models3D.tick and flicker.
+    const tl = S.timeline ? S.timeline() : null;
+    const tlOwns = id => !!(tl && tl.playing && tl.models && tl.models[id] && tl.models[id].length);
     models().forEach(m => {
       const r = m.route;
       if (!(r && r.play && r.pts && r.pts.length >= 2)) return;
+      if (tlOwns(m.id)) return;
       any = true;
       const dur = Math.max(0.5, r.dur || 10);
       let p = ((now - (r.t0 || now)) / 1000) / dur, done = false;

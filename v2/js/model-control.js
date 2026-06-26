@@ -55,6 +55,7 @@
       if (routeMode) return;
       const t = window.Draw && Draw.tool; if (t && t !== 'select') return;
       const m = nearest(e.point, 60); if (!m) return;
+      if (m.route && m.route.play && window.ModelsAnim) ModelsAnim.stop(m.id);   // taking manual control stops route playback
       select(m.id); dragId = m.id; e.preventDefault();   // grab the model (cancels map pan)
     });
     g.on('mousemove', e => { if (dragId) window.Models3D.setPose(dragId, { lat: e.lngLat.lat, lng: e.lngLat.lng }); });

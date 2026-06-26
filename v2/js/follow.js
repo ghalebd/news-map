@@ -26,6 +26,9 @@
   function tick() {
     raf = requestAnimationFrame(tick);
     const f = cfg(); if (!f.on) return;
+    // CAMERA PRIORITY: a deliberately-playing timeline or camera-path owns the camera — yield to it
+    // so the two don't fight over the centre every frame (the visible jitter the operator reported).
+    const c = S.cfg(); if ((c.timeline && c.timeline.playing) || (c.campath && c.campath.playing)) return;
     const pos = targetPos(); if (!pos || pos.lat == null) return;
     const k = 0.14;   // smoothing — camera eases toward the target each frame
     try {
@@ -46,7 +49,7 @@
 
   // public helpers for the HUD / settings
   window.Follow = {
-    set(kind, id, opts) { S.setFollow(Object.assign({ on: true, kind, id }, opts || {})); },
+    set(kind, id, opts) { const c = S.cfg(); if (c.timeline && c.timeline.playing) S.setTimeline({ playing: false }); if (c.campath && c.campath.playing) S.setCampath({ playing: false }); S.setFollow(Object.assign({ on: true, kind, id }, opts || {})); },
     stop() { S.setFollow({ on: false, id: null, kind: null }); },
     isFollowing(kind, id) { const f = cfg(); return !!(f.on && f.kind === kind && f.id === id); },
     active() { return !!cfg().on; },

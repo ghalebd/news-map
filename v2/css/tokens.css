@@ -26,7 +26,7 @@
   /* ---- text ---- */
   --text: #f4f7fc;
   --text-2: #aab3c5;
-  --text-3: #6c7686;
+  --text-3: #828d9f;   /* was #6c7686 (3.9:1, failed AA on glass) — lifted to ~4.6:1 for TV legibility */
 
   /* ---- semantic ---- */
   --live: #ff453a;
