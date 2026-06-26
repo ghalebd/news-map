@@ -151,6 +151,7 @@
        that is currently in view (throttled + capped for performance) */
     ensureRoute(s) {
       if (!this.on || !this.route || !window.searoute) return;
+      if (window.Map3D && Map3D.on) return;   // 2D map is hidden in 3D — skip the expensive sea-lane (searoute) computation; routes redraw on return to 2D
       const inView = viewBounds().contains([s.lat, s.lng]);
       if (!s.destPort || !inView || !TS().showRoutes) { if (s.routeLine) { this.route.removeLayer(s.routeLine); s.routeLine = null; } return; }
       const now = Date.now();
