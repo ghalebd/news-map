@@ -259,7 +259,11 @@ body.touch .tl__b { width: 32px; height: 32px; } body.touch .tl__key { width: 28
 .rdraw__b:hover { border-color: var(--stroke-2); }
 .rdraw__b--go { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .rdraw__b--x:hover { color: #ff6b6b; border-color: #ff6b6b; }
-body.rdrawing #map, body.rdrawing #map3d { cursor: crosshair; }
+body.rdrawing #map, body.rdrawing #map3d, body.rdrawing .maplibregl-canvas { cursor: crosshair; }
+/* live freehand-path overlay — drawn in screen space while the operator drags, above the maps but
+   below panels; never intercepts pointer events (the stroke is captured on document). */
+.rdraw-svg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 99999; pointer-events: none; }
+.rdraw-svg polyline { filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
 /* ---- Model control HUD ---- */
 /* right: 84px clears the right-edge zoom bar (.zoomctl), same as .sceneins — never overlap it */
 .mctl { position: fixed; right: 84px; bottom: 96px; z-index: var(--z-flyout, 60); width: 236px; padding: 10px; display: flex; flex-direction: column; gap: 8px; border-radius: var(--r); user-select: none; }

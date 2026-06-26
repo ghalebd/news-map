@@ -59,50 +59,79 @@
     });
     g.on('mousemove', e => { if (dragId) window.Models3D.setPose(dragId, { lat: e.lngLat.lat, lng: e.lngLat.lng }); });
     g.on('mouseup', e => { if (!dragId) return; const id = dragId; dragId = null; S.updateModel3d(id, { lat: e.lngLat.lat, lng: e.lngLat.lng }); window.Models3D.setPose(id, null); });
-    g.on('click', e => { if (routeMode) addRoutePoint([e.lngLat.lat, e.lngLat.lng]); });   // selection handled on mousedown (no double-select)
+    // (route drawing is freehand now — see onFhDown; selection handled on mousedown)
   }
 
-  /* ---- route drawing (click points on either map) ---- */
-  let routeMode = null, rbar = null;   // { id, pts:[], line, dots:[] } + on-screen toolbar
-  function on2DClick(e) { if (routeMode) addRoutePoint([e.latlng.lat, e.latlng.lng]); }
-  function onRouteKey(e) { if (!routeMode) return; if (e.key === 'Enter') finishRoute(); else if (e.key === 'Escape') cancelRoute(); }
+  /* ---- route drawing: FREEHAND — drag a continuous stroke on EITHER map (2D Leaflet or 3D MapLibre).
+     The stroke is captured in screen pixels with a live SVG preview, then converted to lat/lng on
+     release, lightly smoothed + decimated, and committed as the movement path. ---- */
+  let routeMode = null, rbar = null, rsvg = null, fh = null;
+  function onRouteKey(e) { if (!routeMode) return; if (e.key === 'Escape') cancelRoute(); else if (e.key === 'Enter') finishRoute(); }
+  function evtToLatLng(cx, cy) {
+    const g = gl();
+    if (g) { const r = g.getContainer().getBoundingClientRect(); const p = g.unproject([cx - r.left, cy - r.top]); return [p.lat, p.lng]; }
+    const r = L2.getContainer().getBoundingClientRect(); const ll = L2.containerPointToLatLng(L.point(cx - r.left, cy - r.top)); return [ll.lat, ll.lng];
+  }
+  function setMapDrag(on) { const g = gl(); try { if (g) { on ? g.dragPan.enable() : g.dragPan.disable(); } else { on ? L2.dragging.enable() : L2.dragging.disable(); } } catch (e) {} }
+  function ensureSvg() { if (rsvg) return rsvg; rsvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); rsvg.setAttribute('class', 'rdraw-svg'); rsvg.innerHTML = '<polyline fill="none" stroke="#ffb020" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 7"/>'; document.body.appendChild(rsvg); return rsvg; }
+  function clearSvg() { if (rsvg) { rsvg.remove(); rsvg = null; } }
   function routeBar() {
     if (rbar) return rbar;
     rbar = h('div', 'rdraw glass'); rbar.hidden = true;
-    rbar.innerHTML = '<span class="rdraw__t">Click points on the map to draw the flight path</span><span class="rdraw__n">0</span>';
-    const undo = h('button', 'rdraw__b', I.undo); undo.title = 'Undo last point'; undo.onclick = undoRoutePoint;
-    const ok = h('button', 'rdraw__b rdraw__b--go', I.target + '<span>Finish</span>'); ok.title = 'Finish (need ≥ 2 points)'; ok.onclick = finishRoute;
-    const cancel = h('button', 'rdraw__b rdraw__b--x', I.close + '<span>Cancel</span>'); cancel.title = 'Cancel'; cancel.onclick = cancelRoute;
-    rbar.append(undo, ok, cancel); document.body.appendChild(rbar);
+    rbar.innerHTML = '<span class="rdraw__t">✏️ Draw the path — press and drag across the map, then release</span>';
+    const cancel = h('button', 'rdraw__b rdraw__b--x', I.close + '<span>Done</span>'); cancel.title = 'Close (Esc)'; cancel.onclick = cancelRoute;
+    rbar.append(cancel); document.body.appendChild(rbar);
     return rbar;
   }
-  function updateRouteBar() { if (!rbar) return; const n = routeMode ? routeMode.pts.length : 0; const c = rbar.querySelector('.rdraw__n'); if (c) c.textContent = n; }
+  function updateRouteBar() {}
   function drawRoute() {
     const m = sel(); if (!m) return; cancelRoute();
-    routeMode = { id: m.id, pts: [], line: null, dots: [] };
-    L2.on('click', on2DClick); document.addEventListener('keydown', onRouteKey);
-    document.body.classList.add('rdrawing'); routeBar().hidden = false; updateRouteBar(); renderVals();
+    routeMode = { id: m.id, pts: [], line: null };
+    document.addEventListener('pointerdown', onFhDown, true); document.addEventListener('keydown', onRouteKey);
+    document.body.classList.add('rdrawing'); routeBar().hidden = false; renderVals();
   }
-  function addRoutePoint(ll) {
-    if (!routeMode) return; routeMode.pts.push(ll);
-    if (!routeMode.line) routeMode.line = L.polyline(routeMode.pts, { color: '#ffb020', weight: 3, dashArray: '6 5' }).addTo(L2); else routeMode.line.setLatLngs(routeMode.pts);
-    routeMode.dots.push(L.circleMarker(ll, { radius: 4, color: '#fff', weight: 1.5, fillColor: '#ffb020', fillOpacity: 1 }).addTo(L2));
-    updateRouteBar();
+  function onFhDown(e) {
+    if (!routeMode) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (!(e.target.closest && e.target.closest('#map, .maplibregl-map, .leaflet-container'))) return;   // only strokes that start on a map
+    fh = { scr: [] }; setMapDrag(false);
+    addScreenPt(e.clientX, e.clientY, true); e.preventDefault();
+    window.addEventListener('pointermove', onFhMove, { passive: false });
+    window.addEventListener('pointerup', onFhUp, { passive: false });
   }
-  function undoRoutePoint() {
-    if (!routeMode || !routeMode.pts.length) return;
-    routeMode.pts.pop(); const d = routeMode.dots.pop(); if (d) L2.removeLayer(d);
-    if (routeMode.line) routeMode.line.setLatLngs(routeMode.pts);
-    updateRouteBar();
+  function addScreenPt(cx, cy, force) {
+    if (!fh) return; const last = fh.scr[fh.scr.length - 1];
+    if (!force && last && Math.hypot(cx - last[0], cy - last[1]) < 7) return;   // throttle ~7px
+    fh.scr.push([cx, cy]);
+    ensureSvg().firstChild.setAttribute('points', fh.scr.map(p => p.join(',')).join(' '));
   }
+  function onFhMove(e) { if (!fh) return; addScreenPt(e.clientX, e.clientY); e.preventDefault(); }
+  function onFhUp() {
+    window.removeEventListener('pointermove', onFhMove); window.removeEventListener('pointerup', onFhUp); setMapDrag(true);
+    if (!fh) return; const scr = fh.scr; fh = null;
+    if (scr.length < 2) { clearSvg(); return; }   // a tap, not a stroke
+    let pts = smoothPath(decimate(scr.map(s => evtToLatLng(s[0], s[1])), 80));
+    routeMode.pts = pts; clearSvg();
+    if (routeMode.line) { L2.removeLayer(routeMode.line); } routeMode.line = L.polyline(pts, { color: '#ffb020', weight: 3, dashArray: '6 5' }).addTo(L2);
+    finishRoute();   // a drawn stroke commits on release
+  }
+  function decimate(pts, max) { if (pts.length <= max) return pts; const out = [], step = pts.length / max; for (let i = 0; i < pts.length; i += step) out.push(pts[Math.floor(i)]); out.push(pts[pts.length - 1]); return out; }
+  function smoothPath(pts) { if (pts.length < 3) return pts; const out = [pts[0]]; for (let i = 1; i < pts.length - 1; i++) { const a = pts[i - 1], b = pts[i], c = pts[i + 1]; out.push([(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4]); } out.push(pts[pts.length - 1]); return out; }
   function finishRoute() {
     if (!routeMode) return; const m = models().find(x => x.id === routeMode.id);
-    if (!m || routeMode.pts.length < 2) { window.UI && UI.toast && UI.toast('Add at least 2 points'); return; }
+    if (!m || routeMode.pts.length < 2) { window.UI && UI.toast && UI.toast('Drag across the map to draw a path'); return; }
     const r = m.route || {}; S.updateModel3d(routeMode.id, { lat: routeMode.pts[0][0], lng: routeMode.pts[0][1], route: { pts: routeMode.pts, dur: r.dur || 20, loop: !!r.loop, heading: r.heading !== false, play: false, t0: 0 } });
+    if (window.UI && UI.toast) UI.toast('Path set — press Play');
     endRouteMode();
   }
   function cancelRoute() { endRouteMode(); }
-  function endRouteMode() { if (!routeMode) return; if (routeMode.line) L2.removeLayer(routeMode.line); routeMode.dots.forEach(d => L2.removeLayer(d)); L2.off('click', on2DClick); document.removeEventListener('keydown', onRouteKey); document.body.classList.remove('rdrawing'); if (rbar) rbar.hidden = true; routeMode = null; renderVals(); }
+  function endRouteMode() {
+    if (!routeMode) return;
+    window.removeEventListener('pointermove', onFhMove); window.removeEventListener('pointerup', onFhUp); setMapDrag(true);
+    fh = null; clearSvg(); if (routeMode.line) L2.removeLayer(routeMode.line);
+    document.removeEventListener('pointerdown', onFhDown, true); document.removeEventListener('keydown', onRouteKey);
+    document.body.classList.remove('rdrawing'); if (rbar) rbar.hidden = true; routeMode = null; renderVals();
+  }
   function togglePlay() { const m = sel(); if (!m) return; if (!(m.route && (m.route.pts || []).length >= 2)) { drawRoute(); return; } if (window.ModelsAnim) { ModelsAnim.playing(m.id) ? ModelsAnim.stop(m.id) : ModelsAnim.play(m.id); } renderVals(); }
 
   /* ---- HUD ---- */
