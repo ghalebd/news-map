@@ -27,7 +27,9 @@
     const f = segs[i] ? (target - acc) / segs[i] : 0;
     const a = pts[i], b = pts[i + 1];
     const pose = { lat: a[0] + (b[0] - a[0]) * f, lng: a[1] + (b[1] - a[1]) * f };
-    if (auto) pose.rotZ = bearing(a, b);
+    // +180: the catalog GLBs' nose sits on the model's -Y axis (same calibration the live ship/plane
+    // layer uses, SHIP_FWD/PLANE_FWD=180), so a raw bearing makes them travel TAIL-FIRST. Lead with the nose.
+    if (auto) pose.rotZ = (bearing(a, b) + 180) % 360;
     return pose;
   }
 
