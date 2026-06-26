@@ -181,15 +181,17 @@ const p4=await p.evaluate(async()=>{const out=[];const push=(n,ok,i)=>out.push({
  const id=Store.models3d()[0].id;
  // 2D billboard marker present
  push('2D billboard marker', !!(window.Models3D&&Models3D.marker&&Models3D.marker(id)));
- // route draw
+ // route draw — FREEHAND: dispatch a pointer-drag stroke across the map (new interaction)
  ModelControl.select(id);ModelControl.drawPath(id);
- const map=GameMap.map;[[25,50],[25,55],[28,58]].forEach(ll=>map.fire('click',{latlng:L.latLng(ll[0],ll[1])}));
- await new Promise(r=>setTimeout(r,100));
- const fin=[...document.querySelectorAll('.rdraw__b')].find(b=>/Finish/.test(b.textContent));fin&&fin.click();await new Promise(r=>setTimeout(r,150));
+ await new Promise(r=>setTimeout(r,120));
+ const cont=document.querySelector('.leaflet-container')||document.getElementById('map');
+ const pe=(type,x,y,el)=>{const ev=new PointerEvent(type,{pointerType:'mouse',button:0,bubbles:true,cancelable:true,clientX:x,clientY:y});(el||window).dispatchEvent(ev);};
+ pe('pointerdown',300,400,cont);[[360,380],[430,375],[500,390],[560,420]].forEach(([x,y])=>pe('pointermove',x,y));pe('pointerup',560,420);
+ await new Promise(r=>setTimeout(r,200));
  const m=Store.models3d().find(x=>x.id===id);push('route draw (on-screen)', !!(m.route&&m.route.pts&&m.route.pts.length>=2), 'pts='+(m.route&&m.route.pts?m.route.pts.length:0));
- // route play moves it
- const lat0=m.lat;Store.setEasing('linear');ModelsAnim.play(id);await new Promise(r=>setTimeout(r,3000));const mk=Models3D.marker(id);const lngNow=mk?mk.getLatLng().lng:null;const moved=mk&&Math.abs(lngNow-50)>0.5;ModelsAnim.stop(id);Store.setEasing('inout');
- push('route playback moves model', moved, 'lng '+(lngNow!=null?lngNow.toFixed(2):'no-marker'));
+ // route play moves it (relative to the drawn start, wherever the map was viewing)
+ const startLng=m.lng;Store.setEasing('linear');ModelsAnim.play(id);await new Promise(r=>setTimeout(r,3000));const mk=Models3D.marker(id);const lngNow=mk?mk.getLatLng().lng:null;const moved=mk&&lngNow!=null&&Math.abs(lngNow-startLng)>0.05;ModelsAnim.stop(id);Store.setEasing('inout');
+ push('route playback moves model', moved, 'dlng '+(lngNow!=null?(lngNow-startLng).toFixed(3):'no-marker'));
  // 3D drag pose
  await new Promise(r=>setTimeout(r,200));
  return out;});
