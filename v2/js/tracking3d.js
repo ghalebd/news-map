@@ -54,7 +54,8 @@
 
   /* ---- GLOBE fallback: native billboard icons (3D meshes can't render in the globe projection,
         so on the globe we show flat icons that always face the camera and rotate to heading) ---- */
-  const ICO_SRC = 'trk3d-ico', ICO_LYR = 'trk3d-ico-sym';
+  const ICO_SRC = 'trk3d-ico', ICO_LYR = 'trk3d-ico-sym', ICO_CL = 'trk3d-ico-cl', ICO_CLN = 'trk3d-ico-cln';
+  const ICO_ALL = () => [ICO_LYR, ICO_CL, ICO_CLN];
   function drawIcon(kind, color) {
     const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'); x.scale(2, 2);
     x.lineJoin = x.lineCap = 'round'; x.strokeStyle = 'rgba(3,10,20,.92)'; x.lineWidth = 3; x.fillStyle = color;
@@ -84,8 +85,10 @@
   }
   function ensureIcons(map) {
     const TS = S.cfg().trackStyle || {};
+    // FLAT top-down silhouettes (not the 3/4 3D sprite): they never look tilted on the globe and
+    // rotate cleanly to each target's heading like a radar track. (sprites/spriteFromGeo unused now.)
     [['trk-ship', 'ship', TS.shipColor || '#36c8ff'], ['trk-plane', 'plane', TS.flightColor || '#ffcf4d']].forEach(([id, k, c]) => {
-      const img = sprites[k] || drawIcon(k, c);   // prefer the 3D-rendered sprite; flat icon as fallback
+      const img = drawIcon(k, c);
       try { if (map.hasImage(id)) map.removeImage(id); } catch (e) {} try { map.addImage(id, img, { pixelRatio: 2 }); } catch (e) {}
     });
   }
@@ -176,11 +179,11 @@
       try {
         const ts = (S.cfg().trackStyle || {}); if ((ts.shipColor || '') + (ts.flightColor || '') !== layer._ic) { ensureIcons(glmap); layer._ic = (ts.shipColor || '') + (ts.flightColor || ''); }
         const src = glmap.getSource(ICO_SRC); if (src) src.setData(icoFeatures());
-        if (glmap.getLayer(ICO_LYR)) glmap.setLayoutProperty(ICO_LYR, 'visibility', 'visible');
+        ICO_ALL().forEach(id => { if (glmap.getLayer(id)) glmap.setLayoutProperty(id, 'visibility', 'visible'); });
       } catch (e) {}
       glmap.triggerRepaint(); return;
     }
-    try { if (glmap.getLayer(ICO_LYR)) glmap.setLayoutProperty(ICO_LYR, 'visibility', 'none'); } catch (e) {}
+    try { ICO_ALL().forEach(id => { if (glmap.getLayer(id)) glmap.setLayoutProperty(id, 'visibility', 'none'); }); } catch (e) {}
     const c = cfg(), T = window.Tracking;
     let i = 0, j = 0;
     if (c.on && T) {
@@ -201,15 +204,30 @@
     layer = customLayer;
     try {
       ensureIcons(map);
-      if (!map.getSource(ICO_SRC)) map.addSource(ICO_SRC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      // CLUSTER the source: dense targets collapse into one count bubble (no more catastrophic
+      // pile-up), and clusters are deterministic per-zoom — so rotating/tilting the globe no longer
+      // reshuffles which icons show (the old allow-overlap:false declutter did that on every move).
+      if (!map.getSource(ICO_SRC)) map.addSource(ICO_SRC, { type: 'geojson', cluster: true, clusterRadius: 38, clusterMaxZoom: 7, data: { type: 'FeatureCollection', features: [] } });
+      // cluster bubble + count (shown when many targets are close)
+      if (!map.getLayer(ICO_CL)) map.addLayer({
+        id: ICO_CL, type: 'circle', source: ICO_SRC, filter: ['has', 'point_count'],
+        paint: { 'circle-color': 'rgba(16,34,60,.85)', 'circle-stroke-color': 'rgba(150,200,255,.9)', 'circle-stroke-width': 1.5,
+          'circle-radius': ['step', ['get', 'point_count'], 13, 10, 17, 50, 22, 200, 28] },
+      });
+      if (!map.getLayer(ICO_CLN)) map.addLayer({
+        id: ICO_CLN, type: 'symbol', source: ICO_SRC, filter: ['has', 'point_count'],
+        layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12, 'text-allow-overlap': true },
+        paint: { 'text-color': '#eaf6ff', 'text-halo-color': '#0a1320', 'text-halo-width': 1 },
+      });
+      // individual targets (only where NOT clustered) — flat silhouette rotated to its heading
       if (!map.getLayer(ICO_LYR)) map.addLayer({
-        id: ICO_LYR, type: 'symbol', source: ICO_SRC,
+        id: ICO_LYR, type: 'symbol', source: ICO_SRC, filter: ['!', ['has', 'point_count']],
         layout: {
           'icon-image': ['match', ['get', 'kind'], 'plane', 'trk-plane', 'trk-ship'],
-          // small + zoom-responsive so they don't dominate the globe
-          'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.13, 5, 0.22, 8, 0.34],
-          'icon-pitch-alignment': 'viewport',   // face the camera (billboard); NO heading rotation (avoids the flipped look)
-          'icon-allow-overlap': false, 'icon-ignore-placement': false,   // let MapLibre declutter overlapping icons
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.16, 5, 0.26, 8, 0.4],
+          'icon-rotate': ['get', 'hdg'],        // point the silhouette along the target's heading (radar style)
+          'icon-rotation-alignment': 'viewport', 'icon-pitch-alignment': 'viewport',   // upright, facing the camera → never tilted
+          'icon-allow-overlap': true, 'icon-ignore-placement': true,   // clustering already handles density; keep individuals stable
           'visibility': 'none',
         },
       });
