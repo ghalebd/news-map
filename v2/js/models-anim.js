@@ -41,15 +41,19 @@
       // sum UNIT step-vectors (robust to segment length + noise) → one stable direction of travel.
       // Deterministic (function of t only) → control and presenter stay in lockstep. +180: catalog GLB
       // noses sit on -Y, so a raw bearing would fly the model tail-first.
-      const SPAN = 0.18, N = 9; let sx = 0, sy = 0;
-      let prev = posAt(pts, segs, total, t - SPAN / 2, loop);
+      // The window is biased AHEAD of t (look where you're going, only a little behind for stability):
+      // it anticipates turns so the model banks smoothly into them instead of snapping at the corner,
+      // and a forward window of all-forward steps doesn't cancel the way a centred one does across a
+      // reversal (which used to make the heading flip 180° in a single frame mid-route).
+      const SPAN = 0.18, N = 9, t0 = t - SPAN * 0.25; let sx = 0, sy = 0;
+      let prev = posAt(pts, segs, total, t0, loop);
       for (let k = 1; k <= N; k++) {
-        const cur = posAt(pts, segs, total, t - SPAN / 2 + SPAN * k / N, loop);
+        const cur = posAt(pts, segs, total, t0 + SPAN * k / N, loop);
         const dLng = (cur[1] - prev[1]) * cosMid(prev, cur), dLat = cur[0] - prev[0];
         const len = Math.hypot(dLng, dLat); if (len > 1e-9) { sx += dLng / len; sy += dLat / len; }
         prev = cur;
       }
-      const head = (sx === 0 && sy === 0) ? bearing(here, posAt(pts, segs, total, t + SPAN, loop)) : (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
+      const head = (Math.hypot(sx, sy) < 0.5) ? bearing(here, posAt(pts, segs, total, t + SPAN, loop)) : (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
       pose.rotZ = (head + 180) % 360;
     }
     return pose;
