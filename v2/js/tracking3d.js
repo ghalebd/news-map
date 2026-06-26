@@ -184,18 +184,45 @@
       glmap.triggerRepaint(); return;
     }
     try { ICO_ALL().forEach(id => { if (glmap.getLayer(id)) glmap.setLayoutProperty(id, 'visibility', 'none'); }); } catch (e) {}
-    const c = cfg(), T = window.Tracking;
-    let i = 0, j = 0;
+    if (placeFlat()) kickAnim();   // eased placement; if anything is still moving, run the smooth loop
+  }
+  // ---- SMOOTH MOTION: each target's RENDERED position eases toward its live data position, so
+  // ships/planes GLIDE instead of jumping on every data update. The rAF runs only while something is
+  // actually moving and stops once settled — zero continuous repaint cost when targets are static. ----
+  const sm = new Map();   // key -> { lat, lng, hdg }
+  function placeFlat() {
+    if (!layer || !glmap) return false;
+    const c = cfg(), T = window.Tracking, EASE = 0.16;
+    let i = 0, j = 0, moved = false; const live = new Set();
+    const step = (key, tLat, tLng, tHdg) => {
+      let s = sm.get(key);
+      if (!s) { s = { lat: tLat, lng: tLng, hdg: tHdg }; sm.set(key, s); return s; }
+      const dl = tLat - s.lat, dg = tLng - s.lng; const dh = ((tHdg - s.hdg + 540) % 360) - 180;
+      if (Math.abs(dl) + Math.abs(dg) > 1.5) { s.lat = tLat; s.lng = tLng; s.hdg = tHdg; return s; }   // teleport / first fix: snap, don't slide across the map
+      if (Math.abs(dl) > 1e-6 || Math.abs(dg) > 1e-6 || Math.abs(dh) > 0.4) { s.lat += dl * EASE; s.lng += dg * EASE; s.hdg += dh * EASE; moved = true; }
+      return s;
+    };
     if (c.on && T) {
       if (layer.ships && T.Ships && T.Ships.on && T.Ships.ships)
-        for (const [, s] of T.Ships.ships) { if (i >= MAXS) break; if (s.lat == null) continue; setInst(layer.ships, i, s.lat, s.lng, 0, s.course != null ? s.course : (s.heading || 0), (c.shipKm || 5) * SHIP_MUL, SHIP_FWD); i++; }
+        for (const [k, s] of T.Ships.ships) { if (i >= MAXS) break; if (s.lat == null) continue; const key = 's:' + k; live.add(key); const r = step(key, s.lat, s.lng, s.course != null ? s.course : (s.heading || 0)); setInst(layer.ships, i, r.lat, r.lng, 0, r.hdg, (c.shipKm || 5) * SHIP_MUL, SHIP_FWD); i++; }
       if (layer.planes && T.Flights && T.Flights.on && T.Flights.flights)
-        for (const [, f] of T.Flights.flights) { if (j >= MAXF) break; if (f.lat == null) continue; setInst(layer.planes, j, f.lat, f.lng, Math.min((f.alt || 0) * 0.3048, PLANE_ALT_CAP), f.heading || 0, (c.planeKm || 4) * PLANE_MUL, PLANE_FWD); j++; }
+        for (const [k, f] of T.Flights.flights) { if (j >= MAXF) break; if (f.lat == null) continue; const key = 'f:' + k; live.add(key); const r = step(key, f.lat, f.lng, f.heading || 0); setInst(layer.planes, j, r.lat, r.lng, Math.min((f.alt || 0) * 0.3048, PLANE_ALT_CAP), r.hdg, (c.planeKm || 4) * PLANE_MUL, PLANE_FWD); j++; }
     }
+    for (const key of sm.keys()) if (!live.has(key)) sm.delete(key);
     if (layer.ships) { layer.ships.count = i; layer.ships.instanceMatrix.needsUpdate = true; }
     if (layer.planes) { layer.planes.count = j; layer.planes.instanceMatrix.needsUpdate = true; }
     if (i || j || layer._n) glmap.triggerRepaint();
     layer._n = i + j;
+    return moved;
+  }
+  let animRaf = null, idle = 0;
+  function kickAnim() { idle = 0; if (animRaf == null) animRaf = requestAnimationFrame(animTick); }
+  function animTick() {
+    animRaf = null;
+    let globe = false; try { globe = !!(glmap && glmap.getProjection && glmap.getProjection().type === 'globe'); } catch (e) {}
+    if (!layer || !glmap || globe || !(window.Map3D && Map3D.on)) return;   // stop when not in flat 3D
+    idle = placeFlat() ? 0 : idle + 1;
+    if (idle < 8) animRaf = requestAnimationFrame(animTick);   // ride a few frames past "settled", then stop
   }
 
   function attach3D(map) {
