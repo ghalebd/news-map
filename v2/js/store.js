@@ -137,6 +137,9 @@ const Store = (() => {
     }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
+  // true when the look hasn't been customised — lets the sync layer tell a FRESH window (which should
+  // adopt the live room style) from a configured source-of-truth (which must not be reset).
+  function isDefaultStyle() { try { return JSON.stringify(state.config.style) === JSON.stringify(DEFAULT_CONFIG.style); } catch (e) { return false; } }
   function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }
   function importState(d) { applyData(d); emit('sync'); }
   // The control console is authoritative and must NOT be overwritten by another window writing the
@@ -268,7 +271,7 @@ const Store = (() => {
   load();
 
   return {
-    state, on, emit, uid, load, exportState, importState, DEFAULT_CONFIG,
+    state, on, emit, uid, load, exportState, importState, isDefaultStyle, DEFAULT_CONFIG,
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene, setSceneView,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
