@@ -1,33 +1,28 @@
-// Realtime sync room: the dashboard broadcasts state changes, every connected presenter screen
-// receives them instantly — across the world. Uses the WebSocket HIBERNATION API so the Durable
-// Object sleeps while connections are idle and is evicted from memory between messages — otherwise a
-// long-lived broadcast room keeps the DO active 24/7 and blows the free-tier duration budget (which
-// made every request throw "Exceeded allowed duration"). The last full snapshot is persisted and
-// replayed to any screen that joins later, so a new browser/device immediately gets the live state.
-export class SyncRoom {
-  constructor(state, env) { this.state = state; }
-  async fetch(req) {
-    if (req.headers.get('Upgrade') !== 'websocket') return new Response('sync room', { status: 200 });
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair);
-    this.state.acceptWebSocket(server);                       // hibernatable — no duration spent while idle
-    try { const snap = await this.state.storage.get('snapshot'); if (snap) server.send(snap); } catch (e) {}
-    return new Response(null, { status: 101, webSocket: client });
-  }
-  async webSocketMessage(ws, message) {
-    const msg = typeof message === 'string' ? message : null;   // clients send JSON strings
-    if (msg == null) return;
-    try { const j = JSON.parse(msg); if (j && j.type === 'snapshot') await this.state.storage.put('snapshot', msg); } catch (e) {}
-    for (const c of this.state.getWebSockets()) { if (c !== ws) { try { c.send(msg); } catch (e) {} } }
-  }
-  webSocketClose(ws) { try { ws.close(); } catch (e) {} }
-  webSocketError(ws) { try { ws.close(); } catch (e) {} }
-}
+// Realtime-ish state sync, Durable-Object-FREE. The dashboard POSTs its full snapshot to KV on each
+// edit; every screen GET-polls the snapshot a few times a second... well, every few seconds, and adopts
+// it if newer. No DO means no DO-duration limit (which had taken the old worker down on the free tier).
+// CORS is open so the broadcast site (any origin) can fetch it. Snapshot is one KV key per room.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400',
+};
 export default {
   async fetch(req, env) {
-    const u = new URL(req.url);
-    const room = (u.searchParams.get('room') || 'default').slice(0, 64);
-    const id = env.ROOM.idFromName(room);
-    return env.ROOM.get(id).fetch(req);
-  }
+    if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+    const room = (new URL(req.url).searchParams.get('room') || 'default').slice(0, 64);
+    const key = 'snap:' + room;
+    if (req.method === 'POST') {
+      const body = await req.text();
+      if (body && body.length < 2_000_000) { try { await env.SYNC_KV.put(key, body); } catch (e) {} }
+      return new Response('ok', { headers: CORS });
+    }
+    if (req.method === 'GET') {
+      let snap = '';
+      try { snap = (await env.SYNC_KV.get(key)) || ''; } catch (e) {}
+      return new Response(snap, { headers: { ...CORS, 'content-type': 'application/json', 'cache-control': 'no-store' } });
+    }
+    return new Response('sync up', { headers: CORS });
+  },
 };

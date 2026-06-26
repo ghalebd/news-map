@@ -2,9 +2,14 @@ name = "newsmap-sync"
 main = "sync.js"
 compatibility_date = "2026-05-01"
 
-[durable_objects]
-bindings = [{ name = "ROOM", class_name = "SyncRoom" }]
+# DO-free design: state lives in KV (one snapshot per room). No Durable Objects → no DO-duration limit
+# (the old WebSocket SyncRoom DO blew the free-tier daily budget and took the worker down).
+kv_namespaces = [{ binding = "SYNC_KV", id = "289eaa5e090148438d3e0fcdc1c1db67" }]
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SyncRoom"]
+
+[[migrations]]
+tag = "v2"
+deleted_classes = ["SyncRoom"]
