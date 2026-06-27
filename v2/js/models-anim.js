@@ -45,15 +45,25 @@
       // it anticipates turns so the model banks smoothly into them instead of snapping at the corner,
       // and a forward window of all-forward steps doesn't cancel the way a centred one does across a
       // reversal (which used to make the heading flip 180° in a single frame mid-route).
-      const SPAN = 0.18, N = 9, t0 = t - SPAN * 0.25; let sx = 0, sy = 0;
-      let prev = posAt(pts, segs, total, t0, loop);
+      // The heading window must NEVER cross the loop seam. An OPEN route played with loop:true teleports
+      // end->start each cycle; averaging across that jump made the model violently spin/point backward at
+      // the end of every lap ("كارثي عند الحركة"). So sample the window with NON-wrapping (clamped)
+      // posAt unless the route is a genuine CLOSED loop (its ends actually meet) — then wrapping is smooth.
+      const closed = loop && segLen(pts[0], pts[pts.length - 1]) < total * 0.05;
+      const SPAN = 0.18, N = 9;
+      const t0 = closed ? (t - SPAN * 0.25) : Math.max(0, Math.min(1 - SPAN, t - SPAN * 0.25));
+      let sx = 0, sy = 0, prev = posAt(pts, segs, total, t0, closed);
       for (let k = 1; k <= N; k++) {
-        const cur = posAt(pts, segs, total, t0 + SPAN * k / N, loop);
+        const cur = posAt(pts, segs, total, t0 + SPAN * k / N, closed);
         const dLng = (cur[1] - prev[1]) * cosMid(prev, cur), dLat = cur[0] - prev[0];
         const len = Math.hypot(dLng, dLat); if (len > 1e-9) { sx += dLng / len; sy += dLat / len; }
         prev = cur;
       }
-      const head = (Math.hypot(sx, sy) < 0.5) ? bearing(here, posAt(pts, segs, total, t + SPAN, loop)) : (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
+      let head;
+      if (Math.hypot(sx, sy) < 0.5) {                       // window too short/degenerate → clamped local tangent
+        const a = posAt(pts, segs, total, Math.max(0, t - 0.02), closed), c = posAt(pts, segs, total, Math.min(1, t + 0.02), closed);
+        head = bearing(a, c);
+      } else head = (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
       pose.rotZ = (head + 180) % 360;
     }
     return pose;
