@@ -394,7 +394,11 @@
         g.group.scale.set(meters * mpu, meters * mpu, meters * mpu);
         g.group.rotation.x = Math.PI / 2;                     // Y-up model -> Z-up world (stand upright)
         g.inner.rotation.order = 'YXZ';                       // heading → pitch → roll (aircraft attitude)
-        g.inner.rotation.set((e.pitch || 0) * D2R, (e.rotZ || 0) * D2R, (e.roll || 0) * D2R);
+        // YAW IS NEGATED: MapLibre's mercator world has +Y pointing SOUTH (left-handed vs three.js),
+        // so a +rotZ here turned the model COUNTER-clockwise on screen — east/west came out mirrored
+        // (north/south are on the flip axis so they looked fine, which hid the bug). Negating rotZ makes
+        // the flat-3D heading match the 2D map + globe exactly. (pitch/roll unaffected — about other axes.)
+        g.inner.rotation.set((e.pitch || 0) * D2R, (-(e.rotZ || 0)) * D2R, (e.roll || 0) * D2R);
         g.group.visible = true;
         // ground shadow: a soft blob on the terrain below the model, cast away from
         // the sun and lengthened when the sun is low (so azimuth/height read visibly)
@@ -442,10 +446,12 @@
       });
       if (!glmap.getLayer(M3D_ICO_LYR)) glmap.addLayer({
         id: M3D_ICO_LYR, type: 'symbol', source: M3D_ICO_SRC,
-        // The icon image is rendered NORTH-facing once; the heading is applied with a MAP-ALIGNED
-        // icon-rotate so it points the true compass bearing on the curved globe (local north varies by
-        // position — baking the heading into the PNG made the model appear to tilt/turn wrong as it moved).
-        layout: { 'icon-image': ['get', 'img'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 5, 0.5, 8, 0.72], 'icon-rotate': ['get', 'hdg'], 'icon-rotation-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'visibility': 'none' },
+        // The icon image is rendered NORTH-facing once; heading comes from a VIEWPORT-aligned icon-rotate
+        // (radar style, matching the live ship/plane tracking icons — the only alignment that actually
+        // rotates on the globe projection: 'map' alignment left the icon FROZEN at its baked orientation,
+        // so models pointed backward/wrong on the globe). icon-pitch-alignment:viewport keeps it flat-facing
+        // the camera so it never tilts into the terrain. hdg = (e.rotZ+180) → nose along the travel bearing.
+        layout: { 'icon-image': ['get', 'img'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 5, 0.5, 8, 0.72], 'icon-rotate': ['get', 'hdg'], 'icon-rotation-alignment': 'viewport', 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'visibility': 'none' },
       });
     } catch (e) {}
   }
