@@ -22,17 +22,19 @@
   // transient per-instance render override (route playback / 3D drag preview) — does
   // NOT touch the Store, so animation never spams persistence/sync.
   const poses = new Map();   // id -> { lat, lng, rotZ?, pitch?, roll?, alt? }
-  // effective render props: live route pose over the stored metadata, plus a persistent per-model
-  // heading correction (headOff) the operator can set to flip/nudge any model the auto-orient misjudges.
-  const eff = m => { const e = Object.assign({}, m, poses.get(m.id) || {}); if (m.headOff) e.rotZ = (e.rotZ || 0) + m.headOff; return e; };
-  // BAKED per-file heading corrections (degrees): front/back is geometrically ambiguous for some GLBs
-  // (a transport's tail-cone is as pointy as its nose), so the auto-orient faces them wrong. These are
-  // calibrated once per catalog file and folded into the canonical orientation, fixing every view at once.
-  const HEADING_FIX = {
-    'a-330.glb': 180, 'a-340.glb': 180, 'boein707.glb': 180, 'c-130-hercules.glb': 180, 'c-130-hercules-1.glb': 180,
-    'embraer-legacy-650-fbx.glb': 270,
-  };
   const fileOf = s => (s || '').split('/').pop();
+  const keyOf = m => (S.modelKey ? S.modelKey(m) : (m.src ? fileOf(m.src) : ('id:' + m.id)));   // stable per-model key (catalog=file, upload=id)
+  // effective render props: live route pose over the stored metadata, plus the persistent heading
+  // correction — a PER-MODEL fix (Store.config.modelFix, keyed by modelKey, synced, set by the
+  // calibrator / Turn button, seeded for the few catalog GLBs the heuristic faces wrong) and an
+  // optional per-instance headOff. Front/back is geometrically ambiguous for many GLBs, so this
+  // table — applied identically in all 3 view modes — not the geometry heuristic, is the cure.
+  const eff = m => {
+    const e = Object.assign({}, m, poses.get(m.id) || {});
+    const off = (m.headOff || 0) + (((S.cfg && S.cfg().modelFix) || {})[keyOf(m)] || 0);
+    if (off) e.rotZ = (e.rotZ || 0) + off;
+    return e;
+  };
 
   /* ---- shared GLB loading (model -> Promise<THREE.Object3D raw scene>).
      Source is either a bundled catalog file (m.src URL) or an uploaded blob
@@ -155,7 +157,9 @@
         deg = ((Math.round(deg) % 360) + 360) % 360;
       }
     } catch (e) {}
-    deg = ((deg + (HEADING_FIX[raw.userData && raw.userData.__file] || 0)) % 360 + 360) % 360;   // baked per-file correction
+    // NOTE: per-file heading correction is NO LONGER baked here. The geometric heuristic above is
+    // front/back ambiguous for many GLBs, so the correction lives in eff() via config.modelFix
+    // (synced + operator-adjustable via the HUD's "Turn" button), not baked into the canonical mesh.
     const rot = { rx, ry: deg * D2R };
     if (raw.userData) raw.userData.canonRot = rot;
     return rot;
@@ -438,7 +442,10 @@
       });
       if (!glmap.getLayer(M3D_ICO_LYR)) glmap.addLayer({
         id: M3D_ICO_LYR, type: 'symbol', source: M3D_ICO_SRC,
-        layout: { 'icon-image': ['get', 'img'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 5, 0.5, 8, 0.72], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'visibility': 'none' },
+        // The icon image is rendered NORTH-facing once; the heading is applied with a MAP-ALIGNED
+        // icon-rotate so it points the true compass bearing on the curved globe (local north varies by
+        // position — baking the heading into the PNG made the model appear to tilt/turn wrong as it moved).
+        layout: { 'icon-image': ['get', 'img'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.34, 5, 0.5, 8, 0.72], 'icon-rotate': ['get', 'hdg'], 'icon-rotation-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-pitch-alignment': 'viewport', 'visibility': 'none' },
       });
     } catch (e) {}
   }
@@ -448,11 +455,13 @@
     const feats = [];
     for (const m of ms) {
       const e = eff(m);
-      const imgId = 'm3dico:' + m.id + ':' + (Math.round((e.rotZ || 0) / 6) * 6) + ':' + (m.style || 'solid');   // 6° buckets — match billboard()'s quantisation so the GL atlas holds ≤60 images, not 360
+      // ONE north-facing image per model+style (the heading comes from the map-aligned icon-rotate
+      // below, not from the PNG) → correct heading on the globe + far fewer offscreen renders.
+      const imgId = 'm3dico:' + m.id + ':N:' + (m.style || 'solid');
       if (!glmap.hasImage(imgId)) {
-        try { const url = await billboard(m, e.rotZ, 'top'); if (url) await new Promise(res => { const im = new Image(); im.onload = () => { try { if (glmap && !glmap.hasImage(imgId)) glmap.addImage(imgId, im); } catch (er) {} res(); }; im.onerror = () => res(); im.src = url; }); } catch (er) {}
+        try { const url = await billboard(m, 180, 'top'); if (url) await new Promise(res => { const im = new Image(); im.onload = () => { try { if (glmap && !glmap.hasImage(imgId)) glmap.addImage(imgId, im); } catch (er) {} res(); }; im.onerror = () => res(); im.src = url; }); } catch (er) {}
       }
-      if (glmap.hasImage(imgId)) feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lng, e.lat] }, properties: { img: imgId } });
+      if (glmap.hasImage(imgId)) feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lng, e.lat] }, properties: { img: imgId, hdg: ((e.rotZ || 0) + 180) % 360 } });
     }
     try { const s = glmap.getSource(M3D_ICO_SRC); if (s) s.setData({ type: 'FeatureCollection', features: feats }); } catch (e) {}
   }
@@ -505,6 +514,8 @@
     refresh: syncAll,
     invalidate,            // call after a GLB is (re)uploaded for an id
     thumb: (file, style) => billboard({ id: 'thumb:' + file, src: 'assets3d/' + file, style: style || 'solid' }, 0),   // catalog preview PNG (offscreen render, cached)
+    topThumb: (file, rotZ) => billboard({ id: 'topthumb:' + file + ':' + (rotZ || 0), src: 'assets3d/' + file, style: 'solid' }, rotZ || 0, 'top'),   // top-down render at a heading (heading-calibration tool)
+    topThumbModel: (m, rotZ) => billboard(m, rotZ || 0, 'top'),   // top-down render of ANY model object (catalog or upload) — drives the orientation calibrator preview
     has2D: id => markers.has(id),
     marker: id => markers.get(id) || null,   // for the control HUD's selection highlight
     nearestId(point, px) { if (!glmap) return null; let best = null, bd = px || 60; models().forEach(m => { if (m.on === false || m.mode === '2d') return; try { const p = glmap.project([m.lng, m.lat]); const d = Math.hypot(p.x - point.x, p.y - point.y); if (d < bd) { bd = d; best = m.id; } } catch (e) {} }); return best; },

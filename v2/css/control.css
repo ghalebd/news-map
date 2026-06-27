@@ -296,8 +296,26 @@ body.rdrawing #map, body.rdrawing #map3d, body.rdrawing .maplibregl-canvas { cur
 .mctl__act .mctl__b svg { width: 15px; height: 15px; }
 .mctl__b--danger:hover { color: #ff6b6b; border-color: #ff6b6b; }
 .mctl__hint { font-size: 10px; color: var(--text-2); opacity: .8; text-align: center; line-height: 1.4; }
+/* orientation calibrator: a top-down preview where the model is shown facing its travel direction
+   (the green arrow = "forward"). Click the model's NOSE to point it forward; remembered per-model. */
+.mctl__cal { display: flex; gap: 8px; align-items: stretch; }
+.mctl__calpv { position: relative; width: 96px; height: 96px; flex: 0 0 96px; border-radius: 10px; background:
+  radial-gradient(circle at 50% 46%, rgba(120,160,200,.10), rgba(10,16,22,.30)); border: 1px solid var(--stroke);
+  cursor: crosshair; overflow: hidden; }
+.mctl__calpv img { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); object-fit: contain; pointer-events: none; }
+.mctl__calpv::before, .mctl__calpv::after { content: ''; position: absolute; left: 50%; pointer-events: none; }
+/* green "forward / travel" arrow shaft + head at top-center */
+.mctl__calpv::before { top: 7px; height: 26px; width: 0; transform: translateX(-50%); border-left: 2px solid #39d353; box-shadow: 0 0 6px #39d35388; }
+.mctl__calpv::after { top: 5px; width: 0; height: 0; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid #39d353; }
+.mctl__calhair { position: absolute; inset: 0; pointer-events: none; opacity: .28;
+  background: linear-gradient(rgba(150,180,210,1),rgba(150,180,210,1)) 50% 0/1px 100% no-repeat,
+              linear-gradient(rgba(150,180,210,1),rgba(150,180,210,1)) 0 50%/100% 1px no-repeat; }
+.mctl__calside { flex: 1; display: flex; flex-direction: column; gap: 5px; justify-content: center; }
+.mctl__caltxt { font-size: 10px; color: var(--text-2); line-height: 1.35; }
+.mctl__caltxt b { color: #39d353; }
 body.touch .mctl { width: 290px; }
 body.touch .mctl__b { height: 46px; }
+body.touch .mctl__calpv { width: 120px; height: 120px; flex-basis: 120px; }
 .cfg-in--name { flex: 1; height: 28px; font-weight: 700; background: transparent; border: 1px solid transparent; padding: 0 6px; }
 .cfg-in--name:hover, .cfg-in--name:focus { border-color: var(--stroke); background: var(--glass-2); }
 .cfg-ovtools { display: flex; gap: 5px; flex-wrap: wrap; }

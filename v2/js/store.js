@@ -11,6 +11,17 @@ const Store = (() => {
 
   const DEFAULT_CONFIG = {
     style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14, sat: 1.7, sheen: 16, shadow: 1, brightness: 105 },
+    // Per-MODEL heading correction (degrees), keyed by Store.modelKey (catalog → filename, uploads →
+    // 'id:<id>'). Applied centrally in models3d eff() for ALL three view modes. The auto-orient gets
+    // most models nose-forward already; these are the few the heuristic faces wrong (front/back is
+    // geometrically ambiguous) — VERIFIED empirically from large top-down renders (nose must point
+    // "up"/along travel). The operator's calibrator/Turn button writes here too, so any fix (incl.
+    // future uploads) is remembered for every instance, view and device. THE permanent cure.
+    modelFix: {
+      'abrams-m1a2.glb': 180, 'abrams-mbt.glb': 180, 'al-khalid-type-90-iim-mbt-2000-main-battle-tank.glb': 180,
+      'amx-30-tank.glb': 180, 'm60-t1-sabra.glb': 180, 'bm-21-grad.glb': 180,
+      'embraer-legacy-650-fbx.glb': 270, 'fa-18f-raaf.glb': 270, 'geranium.glb': 270, 'shahed-238.glb': 180,
+    },
     visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true, sceneSettings: true, attribution: true },
     permissions: {
       tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, frontline: true, country: true, erase: true, asset: true },
@@ -206,6 +217,12 @@ const Store = (() => {
   /* ---- config ---- */
   const cfg = () => state.config;
   function setStyle(patch) { Object.assign(state.config.style, patch); emit('config'); }
+  function modelFix() { if (!state.config.modelFix) state.config.modelFix = {}; return state.config.modelFix; }
+  // STABLE per-model key for the heading-correction table: catalog models share their filename (so
+  // calibrating one fixes EVERY copy + all future placements of that model); uploaded blobs have no
+  // filename, so they key by their own id. Used by eff() (render), the Turn button + the calibrator.
+  function modelKey(m) { return m ? (m.src ? String(m.src).split('/').pop() : ('id:' + m.id)) : ''; }
+  function setModelFix(key, deg) { if (!key) return; modelFix()[key] = ((Math.round(deg) % 360) + 360) % 360; emit('models3d'); }   // per-model heading correction (synced) — re-renders every instance keyed the same
   function setVisibility(key, on) { state.config.visibility[key] = on; emit('config'); }
   function setPerm(key, val) { state.config.permissions[key] = val; emit('config'); }
   function setToolPerm(tool, on) { state.config.permissions.tools[tool] = on; emit('config'); }
@@ -271,7 +288,7 @@ const Store = (() => {
   load();
 
   return {
-    state, on, emit, uid, load, exportState, importState, isDefaultStyle, DEFAULT_CONFIG,
+    state, on, emit, uid, load, exportState, importState, isDefaultStyle, modelFix, setModelFix, modelKey, DEFAULT_CONFIG,
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene, setSceneView,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,

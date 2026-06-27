@@ -33,7 +33,33 @@
   function resetAttitude() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { rotZ: 0, pitch: 0, roll: 0, headOff: 0 }); }
   // persistent nose correction that CYCLES 0→90→180→270 — survives route playback (which overwrites
   // rotZ each frame), so it fixes any model the auto-orientation faces wrong (90° sideways OR 180° back).
-  function flip() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { headOff: ((m.headOff || 0) + 90) % 360 }); }
+  // PER-MODEL via Store.setModelFix(modelKey) (synced) so calibrating one tank fixes EVERY copy of that
+  // model — including future placements/uploads of it — in all three view modes, forever.
+  function curFix(m) { return ((S.cfg().modelFix || {})[S.modelKey(m)] || 0); }
+  function flip() { const m = sel(); if (!m) return; S.setModelFix(S.modelKey(m), (curFix(m) + 90) % 360); }
+  function setFix(m, deg) { if (m) S.setModelFix(S.modelKey(m), deg); }
+  // calibrator click: the preview shows the model at heading-north (total = 180 + fix). The user clicks
+  // where the NOSE is; that point sits at `clickAngle` clockwise from straight-up. Increasing the total
+  // rotation turns the on-screen nose clockwise, so to bring the nose to "up" (travel) we subtract that
+  // angle from the fix. Click position → exact angle → arbitrary-precision aim (also fixes off-axis models).
+  function onCalibClick(e) {
+    const m = sel(); if (!m || !calibPv) return;
+    e.preventDefault();
+    const r = calibPv.getBoundingClientRect();
+    const dx = (e.clientX - r.left) - r.width / 2, dy = (e.clientY - r.top) - r.height / 2;
+    if (Math.hypot(dx, dy) < 6) return;   // ignore dead-centre clicks (no direction)
+    const clickAngle = Math.atan2(dx, -dy) * 180 / Math.PI;   // 0 = up, +90 = right (clockwise)
+    setFix(m, curFix(m) - clickAngle);
+  }
+  // refresh the top-down preview at the model's current calibrated heading (north). Async + token-guarded
+  // so a stale render can't overwrite a newer one (rapid selection / repeated clicks).
+  function renderCalib() {
+    const m = sel(); if (!m || !calibImg || !window.Models3D || !Models3D.topThumbModel) return;
+    const tok = ++calibToken;
+    Promise.resolve(Models3D.topThumbModel(m, 180 + curFix(m))).then(url => {
+      if (tok === calibToken && url && calibImg) calibImg.src = url;
+    }).catch(() => {});
+  }
   function flyTo() { const m = sel(); if (!m) return; const g = gl(); if (g) g.flyTo({ center: [m.lng, m.lat], zoom: Math.max(g.getZoom(), 8), duration: 900 }); else window.GameMap.flyToView({ lat: m.lat, lng: m.lng, zoom: 9 }, { type: 'flyTo', duration: 1 }); }
   async function duplicate() { const m = sel(); if (!m) return; try { const id = S.uid('m3d'); if (!m.src) { const blob = await window.Assets3D.get(m.id); if (blob) await window.Assets3D.put(id, blob); } const [hh] = span(); const c = Object.assign({}, m, { id, name: (m.name || 'Model') + ' copy', lat: m.lat + hh * 0.06 }); S.addModel3d(c); select(id); } catch (e) {} }
   function del() { const m = sel(); if (!m) return; try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} const rest = models().filter(x => x.id !== m.id); S.removeModel3d(m.id); const nxt = rest[0]; nxt ? select(nxt.id) : hide(); }
@@ -137,6 +163,7 @@
 
   /* ---- HUD ---- */
   let hud, nameEl, picker, vHead, vPitch, vRoll, vSize, vAlt, wireBtn, routeB, playB, followB;
+  let calibPv, calibImg, calibToken = 0;
   function toggleFollow() { const m = sel(); if (!m || !window.Follow) return; Follow.isFollowing('model', m.id) ? Follow.stop() : Follow.set('model', m.id); renderVals(); }
   function toggleWire() { const m = sel(); if (!m) return; S.updateModel3d(m.id, { style: (m.style === 'wireframe') ? 'solid' : 'wireframe' }); }
   function build() {
@@ -185,6 +212,19 @@
     );
     vHead = rHead.el; vPitch = rPitch.el; vRoll = rRoll.el; vSize = rSize.el; vAlt = rAlt.el;
 
+    // ---- orientation calibrator: top-down preview, model shown facing its travel direction (green
+    // arrow = forward). Click the model's NOSE to point it that way. Remembered per-model (synced,
+    // applied in all 3 view modes) — works for catalog models AND anything uploaded later.
+    const cal = h('div', 'mctl__cal');
+    calibPv = h('div', 'mctl__calpv'); calibPv.title = 'Click the front/nose of the model to point it along its path';
+    calibImg = h('img'); calibImg.alt = ''; calibImg.draggable = false;
+    calibPv.append(h('div', 'mctl__calhair'), calibImg);
+    calibPv.addEventListener('pointerdown', onCalibClick);
+    const calSide = h('div', 'mctl__calside');
+    calSide.appendChild(h('div', 'mctl__caltxt', 'Facing check — the model should point along the <b>green arrow</b> (its travel direction). Click its nose to aim it, or use Turn 90°. Saved for this model everywhere.'));
+    cal.append(calibPv, calSide);
+    hud.appendChild(cal);
+
     const act = h('div', 'mctl__act mctl__act--6');
     routeB = B(I.sketch + '<span>Path</span>', 'Draw a movement path', drawRoute);
     playB = B(I.play + '<span>Play</span>', 'Play / stop movement', togglePlay);
@@ -216,6 +256,7 @@
     vSize.textContent = (Math.round((m.scale || 1) * 10) / 10) + ' km';
     vAlt.textContent = Math.round(m.alt || 0) + ' m';
     if (wireBtn) wireBtn.classList.toggle('on', m.style === 'wireframe');
+    renderCalib();
     const playing = window.ModelsAnim && ModelsAnim.playing(m.id);
     if (playB) { playB.innerHTML = (playing ? I.close : I.play) + '<span>' + (playing ? 'Stop' : 'Play') + '</span>'; playB.classList.toggle('on', !!playing); }
     if (routeB) routeB.classList.toggle('on', !!(routeMode && routeMode.id === m.id));
