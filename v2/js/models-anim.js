@@ -41,17 +41,17 @@
       // sum UNIT step-vectors (robust to segment length + noise) → one stable direction of travel.
       // Deterministic (function of t only) → control and presenter stay in lockstep. +180: catalog GLB
       // noses sit on -Y, so a raw bearing would fly the model tail-first.
-      // The window is biased AHEAD of t (look where you're going, only a little behind for stability):
-      // it anticipates turns so the model banks smoothly into them instead of snapping at the corner,
-      // and a forward window of all-forward steps doesn't cancel the way a centred one does across a
-      // reversal (which used to make the heading flip 180° in a single frame mid-route).
-      // The heading window must NEVER cross the loop seam. An OPEN route played with loop:true teleports
-      // end->start each cycle; averaging across that jump made the model violently spin/point backward at
-      // the end of every lap ("كارثي عند الحركة"). So sample the window with NON-wrapping (clamped)
-      // posAt unless the route is a genuine CLOSED loop (its ends actually meet) — then wrapping is smooth.
+      // The window is CENTRED on t so the model points along the path direction WHERE IT ACTUALLY IS
+      // (its current tangent), not ahead of itself. A forward-biased window made it "lead" into the next
+      // segment at bends — the nose pointed off the road before reaching the corner, which read as wrong.
+      // Summing UNIT step-vectors over the window still smooths dense/jittery freehand points (no wobble).
+      // The window must NEVER cross the loop seam. An OPEN route played with loop:true teleports end->start
+      // each cycle; averaging across that jump made the model violently spin/point backward at the end of
+      // every lap ("كارثي عند الحركة"). So sample with NON-wrapping (clamped) posAt + clamp t0 to [0,1-SPAN]
+      // unless the route is a genuine CLOSED loop (its ends actually meet) — then wrapping stays smooth.
       const closed = loop && segLen(pts[0], pts[pts.length - 1]) < total * 0.05;
-      const SPAN = 0.18, N = 9;
-      const t0 = closed ? (t - SPAN * 0.25) : Math.max(0, Math.min(1 - SPAN, t - SPAN * 0.25));
+      const SPAN = 0.14, N = 9;
+      const t0 = closed ? (t - SPAN * 0.5) : Math.max(0, Math.min(1 - SPAN, t - SPAN * 0.5));
       let sx = 0, sy = 0, prev = posAt(pts, segs, total, t0, closed);
       for (let k = 1; k <= N; k++) {
         const cur = posAt(pts, segs, total, t0 + SPAN * k / N, closed);
