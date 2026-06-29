@@ -12,16 +12,12 @@ const Store = (() => {
   const DEFAULT_CONFIG = {
     style: { accent: '#5b9dff', glass: 55, blur: 24, distort: 46, radius: 14, sat: 1.7, sheen: 16, shadow: 1, brightness: 105 },
     // Per-MODEL heading correction (degrees), keyed by Store.modelKey (catalog → filename, uploads →
-    // 'id:<id>'). Applied centrally in models3d eff() for ALL three view modes. The auto-orient gets
-    // most models nose-forward already; these are the few the heuristic faces wrong (front/back is
-    // geometrically ambiguous) — VERIFIED empirically from large top-down renders (nose must point
-    // "up"/along travel). The operator's calibrator/Turn button writes here too, so any fix (incl.
-    // future uploads) is remembered for every instance, view and device. THE permanent cure.
-    modelFix: {
-      'abrams-m1a2.glb': 180, 'abrams-mbt.glb': 180, 'al-khalid-type-90-iim-mbt-2000-main-battle-tank.glb': 180,
-      'amx-30-tank.glb': 180, 'm60-t1-sabra.glb': 180, 'bm-21-grad.glb': 180,
-      'embraer-legacy-650-fbx.glb': 270, 'fa-18f-raaf.glb': 270, 'geranium.glb': 270, 'shahed-238.glb': 180,
-    },
+    // 'id:<id>'). Applied centrally in models3d eff() for ALL three view modes. With the anim +180 removed,
+    // forward travel is the DEFAULT (correctly-oriented models need no fix). Entries here are ONLY for GLBs
+    // whose geometry canonicalOrient gets wrong (sideways = wrong axis, or front/back flipped) — derived by
+    // the MOVEMENT-forward test (nose must point along travel), not a static guess. The calibrator / Turn
+    // button writes here too, so any fix (incl. future uploads) is remembered for every instance + device.
+    modelFix: { 'fa-18f-raaf.glb': 270, 'embraer-legacy-650-fbx.glb': 270, 'geranium.glb': 270, 'shahed-238.glb': 180 },
     visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true, sceneSettings: true, attribution: true },
     permissions: {
       tools: { select: true, marker: true, arrow: true, curve: true, ring: true, circle: true, polygon: true, sketch: true, text: true, measure: true, frontline: true, country: true, erase: true, asset: true },
