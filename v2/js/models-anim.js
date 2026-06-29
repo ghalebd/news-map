@@ -64,7 +64,12 @@
         const a = posAt(pts, segs, total, Math.max(0, t - 0.02), closed), c = posAt(pts, segs, total, Math.min(1, t + 0.02), closed);
         head = bearing(a, c);
       } else head = (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
-      pose.rotZ = (head + 180) % 360;
+      // NO +180 here. The render path (eff→billboard/mesh, barrel_compass(x)=x) points a correctly
+      // oriented model's nose along e.rotZ, so e.rotZ must equal the travel bearing for forward motion.
+      // The old +180 made every correctly-oriented (fix 0) model fly TAIL-FIRST; the per-file table was
+      // (wrongly) compensating only a handful. Now forward is the default; only genuinely mis-oriented
+      // GLBs (canonicalOrient picked the wrong/again axis) carry a modelFix.
+      pose.rotZ = head % 360;
     }
     return pose;
   }
