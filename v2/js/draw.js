@@ -6,9 +6,12 @@
 const Draw = (() => {
   const map = GameMap.map, drawn = GameMap.drawn, S = Store, I = ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+  // safe CSS colour: only allow hex / rgb(a) / hsl(a) / a bare colour word — blocks CSS injection when
+  // an element's colour comes from imported/synced scene JSON (interpolated raw into inline style).
+  const col = c => (typeof c === 'string' && /^(#[0-9a-fA-F]{3,8}|rgb[a]?\([\d.,%\s]+\)|hsl[a]?\([\d.,%\s]+\)|[a-zA-Z]{1,20})$/.test(c.trim())) ? c.trim() : '#ff453a';
   const fmtDist = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
-  const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${color}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
+  const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${col(color)}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
   /* permission gate — the control console (full console) always permits;
      the presenter is limited by config.permissions. */
   const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
@@ -97,8 +100,8 @@ const Draw = (() => {
     const o = { color: el.color, weight: el.weight || dw(), opacity: 1 };
     switch (el.type) {
       case 'marker':  {
-        if (el.icon && MICONS[el.icon]) { const px = Math.round(40 * (S.cfg().markerScale || 1)); const html = `<span class="map-mk" style="color:${el.color};width:${px}px;height:${px}px">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [px, px], iconAnchor: [px / 2, px / 2] }) }); }
-        if (el.label) return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html: `<span class="map-mk__dot" style="background:${el.color}"></span><span class="map-mk__lbl" style="border-color:${el.color}">${esc(el.label)}</span>`, iconSize: [14, 14], iconAnchor: [7, 7] }) });
+        if (el.icon && MICONS[el.icon]) { const px = Math.round(40 * (S.cfg().markerScale || 1)); const c = col(el.color); const html = `<span class="map-mk" style="color:${c};width:${px}px;height:${px}px">${MICONS[el.icon]}</span>${el.label ? `<span class="map-mk__lbl" style="border-color:${c}">${esc(el.label)}</span>` : ''}`; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html, iconSize: [px, px], iconAnchor: [px / 2, px / 2] }) }); }
+        if (el.label) { const c = col(el.color); return L.marker(el.ll, { icon: L.divIcon({ className: 'map-mkw', html: `<span class="map-mk__dot" style="background:${c}"></span><span class="map-mk__lbl" style="border-color:${c}">${esc(el.label)}</span>`, iconSize: [14, 14], iconAnchor: [7, 7] }) }); }
         return L.circleMarker(el.ll, { radius: 7, color: '#fff', weight: 2, fillColor: el.color, fillOpacity: 1 });
       }
       case 'circle':  return L.circle(el.ll, { radius: el.radius, ...o, fillColor: el.color, fillOpacity: 0.12, className: 'el-pulse' });
@@ -110,9 +113,9 @@ const Draw = (() => {
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
-      case 'asset':   { const w = el.w || 54, rot = el.rot || 0; const tint = el.tint ? `<span class="asset-tint" style="background:${el.tint};opacity:${(el.tintStr == null ? 65 : el.tintStr) / 100};-webkit-mask:url('${esc(el.src)}') center/contain no-repeat;mask:url('${esc(el.src)}') center/contain no-repeat;transform:rotate(${rot}deg)"></span>` : ''; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<span class="asset-im" style="width:${w}px;height:auto"><img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${tint}</span>${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      case 'asset':   { const w = +el.w || 54, rot = +el.rot || 0; const tint = el.tint ? `<span class="asset-tint" style="background:${col(el.tint)};opacity:${(el.tintStr == null ? 65 : el.tintStr) / 100};-webkit-mask:url('${esc(el.src)}') center/contain no-repeat;mask:url('${esc(el.src)}') center/contain no-repeat;transform:rotate(${rot}deg)"></span>` : ''; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<span class="asset-im" style="width:${w}px;height:auto"><img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${tint}</span>${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
       case 'frontline': return frontLine(L.latLng(el.a), L.latLng(el.b), { color: el.color });
-      case 'country': { const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: el.color, weight: 2, fillColor: el.color, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(el.name, { sticky: true, className: 'trk-tip' }); return lyr; }
+      case 'country': { const c = col(el.color); const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: c, weight: 2, fillColor: c, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(esc(el.name), { sticky: true, className: 'trk-tip' }); return lyr; }
     }
     return null;
   }
@@ -149,7 +152,7 @@ const Draw = (() => {
       skipClick = true;   // swallow the map 'click' that follows so we don't deselect
       if (tool === 'erase') { S.removeElement(el.id); return; }
       selectEl(el, layer);
-      dragEl = el; dragPrev = ev.latlng; map.dragging.disable();   // begin move
+      dragEl = el; dragPrev = ev.latlng; map.dragging.disable(); try { S.pushHistory(); } catch (e) {}   // begin move — snapshot BEFORE the in-place drag so undo reverts the move
     });
     if (layer.eachLayer) layer.eachLayer(wire); else wire(layer);
   }
@@ -173,7 +176,7 @@ const Draw = (() => {
     deselect(); return null;
   }
   function moveSelected(dLat, dLng) { if (selected) { moveEl(selected, dLat, dLng); render(); positionCtx(selected); } }
-  function commitSelected() { if (!selected) return; const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (selected[k] != null) patch[k] = selected[k]; }); if (Object.keys(patch).length) S.updateElement(selected.id, patch); }
+  function commitSelected() { if (!selected) return; const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (selected[k] != null) patch[k] = selected[k]; }); if (Object.keys(patch).length) S.updateElement(selected.id, patch, true); }   // noHist: the 3D drag snapshots on grab
   function highlight(layer, on) { if (!layer) return; const f = lyr => { if (lyr._path) lyr._path.classList.toggle('el-sel', on); if (lyr._icon) lyr._icon.classList.toggle('mk-sel', on); }; if (layer.eachLayer) layer.eachLayer(f); else f(layer); }
 
   /* ---------------- tools ---------------- */
@@ -206,7 +209,7 @@ const Draw = (() => {
     if (!dragStart) return; if (FREE.includes(tool) && sketchPts) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
   });
   map.on('mouseup', e => {
-    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }
+    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch, true); dragEl = null; dragPrev = null; map.dragging.enable(); return; }   // noHist: snapshot already taken on grab
     if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
   });
   map.on('click', e => {
@@ -256,7 +259,9 @@ const Draw = (() => {
   function commit(t, a, b) {
     if (!permits(t)) { setTool('select'); return; }   // permission chokepoint: nothing gets created without it
     const c = S.state.color, A = [a.lat, a.lng], B = [b.lat, b.lng];
-    if (map.distance(a, b) < 1 && t !== 'sketch') return;
+    // sketch AND tarrow (freehand) carry a full multi-point stroke in sketchPts — a start≈end gesture
+    // (tight loop, tap-drag) is still valid, so don't drop them on the a↔b distance check.
+    if (map.distance(a, b) < 1 && t !== 'sketch' && t !== 'tarrow') return;
     if (t === 'circle') S.addElement({ type: 'circle', ll: A, radius: map.distance(a, b), color: c });
     else if (t === 'ring') S.addElement({ type: 'ring', ll: A, radius: map.distance(a, b), color: c });
     else if (t === 'arrow') S.addElement({ type: 'arrow', a: A, b: B, color: c });

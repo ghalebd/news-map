@@ -41,6 +41,11 @@
     document.querySelectorAll('.nownext__nav').forEach(b => { b.hidden = !p.canNavigate; });
     const add = document.querySelector('.deck__add'); if (add) add.hidden = !p.canEditScenes;
     document.querySelectorAll('.card-sc__ops').forEach(o => { o.hidden = !p.canEditScenes; });
+    // enforce the map-style + tracking permissions on the PRESENTER (these qbar buttons render on both
+    // windows; previously the flags were shown in the UI but never gated → a presenter could change them).
+    const hideQ = qid => document.querySelectorAll('.qtool[data-qid="' + qid + '"]').forEach(b => { b.hidden = true; });
+    if (p.canChangeMapStyle === false) hideQ('mapstyle');
+    if (p.canTrack === false) ['ships', 'flights', 'trails'].forEach(hideQ);
   }
 
   function applyTouch() { document.body.classList.toggle('touch', !!S.cfg().touch); }
