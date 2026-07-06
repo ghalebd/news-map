@@ -154,6 +154,20 @@
   /* ---- mirror the active scene geometry into GeoJSON ---- */
   const SRC = 'scene';
   function ringFor(lat, lng, radiusM, n = 64) { const pts = []; const dLat = radiusM / 111320; for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; pts.push([lng + (dLat / Math.cos(lat * Math.PI / 180)) * Math.cos(a), lat + dLat * Math.sin(a)]); } return pts; }
+  const RAD = Math.PI / 180;
+  function haversine(a, b) { const dLat = (b[0] - a[0]) * RAD, dLng = (b[1] - a[1]) * RAD, la1 = a[0] * RAD, la2 = b[0] * RAD; const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2; return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)); }
+  const fmtD = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
+  // arrowhead triangle (lng/lat ring) at tip T pointing away from A. Sized as a fraction of the shaft so
+  // it scales with the arrow — projection-agnostic (a plain polygon renders correctly in flat-3D + globe,
+  // unlike a screen-space icon whose rotation-alignment differs per projection). aLL/tLL are [lng,lat].
+  function headTri(aLL, tLL) {
+    const lat0 = (aLL[1] + tLL[1]) / 2, cl = Math.cos(lat0 * RAD) || 1;
+    const ax = aLL[0] * cl, ay = aLL[1], tx = tLL[0] * cl, ty = tLL[1];
+    const dx = tx - ax, dy = ty - ay, len = Math.hypot(dx, dy); if (len < 1e-7) return null;
+    const ux = dx / len, uy = dy / len, L = Math.min(len * 0.24, 2.2), W = L * 0.5;   // head length capped at ~2.2° so a very long shaft doesn't get an absurd head
+    const bx = tx - ux * L, by = ty - uy * L, px = -uy, py = ux;
+    return [[tLL[0], tLL[1]], [(bx + px * W) / cl, by + py * W], [(bx - px * W) / cl, by - py * W], [tLL[0], tLL[1]]];
+  }
   function toFeatures() {
     const sc = S.activeScene(); if (!sc) return [];
     const live = S.state.mode === 'live';
@@ -174,6 +188,14 @@
         case 'polygon': add({ type: 'Polygon', coordinates: [(el.pts || []).map(p => [p[1], p[0]])] }, { kind: 'area', color: col }); break;
         case 'country': if (el.geom) add(el.geom, { kind: 'area', color: col }); break;
       }
+      // ---- 3D fidelity: arrowheads + distance labels the 2D map draws but the 3D scene was missing ----
+      if ((el.type === 'arrow' || el.type === 'curve' || el.type === 'frontline') && el.a && el.b) {
+        const tri = headTri([el.a[1], el.a[0]], [el.b[1], el.b[0]]); if (tri) add({ type: 'Polygon', coordinates: [tri] }, { kind: 'head', color: col });
+      } else if (el.type === 'tarrow' && (el.pts || []).length >= 2) {
+        const p = el.pts, tri = headTri([p[p.length - 2][1], p[p.length - 2][0]], [p[p.length - 1][1], p[p.length - 1][0]]); if (tri) add({ type: 'Polygon', coordinates: [tri] }, { kind: 'head', color: col });
+      }
+      if (el.type === 'ring' && el.ll) add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'txt', color: col, label: (el.radius / 1000).toFixed(0) + ' KM' });
+      if (el.type === 'measure' && el.a && el.b) add({ type: 'Point', coordinates: [(el.a[1] + el.b[1]) / 2, (el.a[0] + el.b[0]) / 2] }, { kind: 'txt', color: col, label: fmtD(haversine(el.a, el.b)) });
      } catch (e) {}
     });
     return F;
@@ -184,6 +206,7 @@
     map.addLayer({ id: 'sc-area', type: 'fill', source: SRC, filter: ['==', ['get', 'kind'], 'area'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.18 } });
     map.addLayer({ id: 'sc-area-l', type: 'line', source: SRC, filter: ['==', ['get', 'kind'], 'area'], paint: { 'line-color': ['get', 'color'], 'line-width': 2 } });
     map.addLayer({ id: 'sc-line', type: 'line', source: SRC, filter: ['==', ['get', 'kind'], 'line'], paint: { 'line-color': ['get', 'color'], 'line-width': 3 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    map.addLayer({ id: 'sc-head', type: 'fill', source: SRC, filter: ['==', ['get', 'kind'], 'head'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.95 } });   // solid arrowhead triangles for arrow/curve/frontline/tarrow
     map.addLayer({ id: 'sc-pt', type: 'circle', source: SRC, filter: ['==', ['get', 'kind'], 'pt'], paint: { 'circle-radius': 6, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
     map.addLayer({ id: 'sc-lbl', type: 'symbol', source: SRC, filter: ['in', ['get', 'kind'], ['literal', ['pt', 'txt']]], layout: { 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.1], 'text-anchor': 'top' }, paint: { 'text-color': '#fff', 'text-halo-color': '#0a0e16', 'text-halo-width': 1.4 } });
     if (!map.getSource('routes')) {
@@ -232,11 +255,14 @@
       if (!on) return; const t = tool();
       if (t === 'select') {   // select / move drawn elements in 3D (yield to a model under the cursor)
         if (window.Models3D && Models3D.nearestId && Models3D.nearestId(e.point, 60)) return;
-        const el = window.Draw && Draw.pickAt(toLL(e.lngLat)); if (el) { e.preventDefault(); selDrag = { prev: e.lngLat }; }
+        const el = window.Draw && Draw.pickAt(toLL(e.lngLat)); if (el) { e.preventDefault(); selDrag = { prev: e.lngLat }; try { S.pushHistory(); } catch (er) {} }   // snapshot on grab → 3D element drag is undoable
         return;
       }
       if (DRAG3.includes(t)) { e.preventDefault(); drawing = true; L2.fire('mousedown', { latlng: toLL(e.lngLat) }); }
     });
+    // safety: if the pointer is released OFF the GL canvas, MapLibre's 'mouseup' never fires and the
+    // element/draw gesture would stay glued to the cursor. Finalize on the document instead.
+    window.addEventListener('mouseup', () => { if (!on) return; if (selDrag) { try { window.Draw.commitSelected(); } catch (e) {} selDrag = null; setTimeout(mirror, 30); } if (drawing) { drawing = false; setTimeout(mirror, 30); } });
     map.on('mousemove', e => { if (!on) return; if (selDrag) { const d = e.lngLat; window.Draw.moveSelected(d.lat - selDrag.prev.lat, d.lng - selDrag.prev.lng); selDrag.prev = d; mirror(); return; } if (drawing || tool() === 'tarrow') L2.fire('mousemove', { latlng: toLL(e.lngLat) }); });
     map.on('mouseup', e => { if (!on) return; if (selDrag) { window.Draw.commitSelected(); selDrag = null; setTimeout(mirror, 30); return; } if (drawing) { drawing = false; L2.fire('mouseup', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 30); } });
     map.on('click', e => { if (!on) return; const t = tool(); if (CLICK3.includes(t) || t === 'tarrow') { L2.fire('click', { latlng: toLL(e.lngLat) }); setTimeout(mirror, 60); } });

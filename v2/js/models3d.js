@@ -221,6 +221,7 @@
   // fully forget a model (re-upload of same id, or it was deleted): dispose its 2D
   // marker, 3D group, cached scene + billboards, and free the object URL.
   function purge(id) {
+    poses.delete(id);   // drop any transient route/drag pose so a deleted-mid-animation model can't linger in eff()
     const mk = markers.get(id); if (mk) { L2.removeLayer(mk); markers.delete(id); }
     const g = groups.get(id); if (g) { if (layer && layer.scene) { layer.scene.remove(g.group); if (g.shadow) layer.scene.remove(g.shadow); } groups.delete(id); }   // clone — not disposed
     if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }   // master owns the GPU resources

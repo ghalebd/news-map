@@ -109,10 +109,15 @@
       // static data: voyage destination + ETA
       const sd = msg.Message && msg.Message.ShipStaticData;
       if (sd) {
-        const s = this.ships.get(mmsi); if (!s) return;
         const dest = (sd.Destination || '').replace(/[@_]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const nm = sd.Name ? sd.Name.replace(/[@_]+/g, ' ').trim() : '';
+        const s = this.ships.get(mmsi);
+        if (!s) {   // static data (name/destination/ETA) often arrives BEFORE the first position report → buffer it and apply on upsert (was dropped, so ships had no route/destination)
+          if (dest || nm || sd.Eta != null) { (this.staticBuf = this.staticBuf || new Map()).set(mmsi, { dest, name: nm, eta: sd.Eta }); if (this.staticBuf.size > 4000) this.staticBuf.clear(); }
+          return;
+        }
         if (dest) s.dest = dest; s.eta = sd.Eta;
-        if (sd.Name) s.name = sd.Name.replace(/[@_]+/g, ' ').trim() || s.name;
+        if (nm) s.name = nm || s.name;
         this.resolveDest(s);
         if (s.marker) s.marker.setTooltipContent(this.tipHtml(s));
         this.ensureRoute(s);
@@ -132,6 +137,8 @@
       if (!s && this.ships.size >= TS().maxShips) return;   // soft cap (control panel)
       if (!s) {
         s = { mmsi, trail: [[info.lat, info.lng]], ...info };
+        const buf = this.staticBuf && this.staticBuf.get(mmsi);   // apply any static data that arrived before this first position report
+        if (buf) { if (buf.dest) s.dest = buf.dest; if (buf.name) s.name = buf.name; if (buf.eta != null) s.eta = buf.eta; this.staticBuf.delete(mmsi); if (buf.dest) this.resolveDest(s); }
         s.marker = L.marker([s.lat, s.lng], { icon: icon('ship', s.course, this.focus === mmsi), zIndexOffset: 100, keyboard: false });
         s.marker.bindTooltip(this.tipHtml(s), { direction: 'top', offset: [0, -12], className: 'trk-tip', sticky: true });
         s.marker.on('click', () => S.setTrackFocus(this.focus === mmsi ? null : mmsi));

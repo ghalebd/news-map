@@ -174,7 +174,7 @@ const Store = (() => {
     const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: okView ? view : { lat: 29.5, lng: 45, zoom: 5 }, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], reveal: false, lowerThird: null };
     scenes().push(s); state.rundown.activeId = s.id; revealReset(s.id); emit('scenes'); return s;
   }
-  function removeScene(id) { const i = sceneIndex(id); if (i < 0) return; scenes().splice(i, 1); if (state.rundown.activeId === id) state.rundown.activeId = (scenes()[i] || scenes()[i - 1] || {}).id || null; emit('scenes'); }
+  function removeScene(id) { const i = sceneIndex(id); if (i < 0) return; scenes().splice(i, 1); histMap.delete(id); delete state.reveal[id]; if (state.rundown.activeId === id) state.rundown.activeId = (scenes()[i] || scenes()[i - 1] || {}).id || null; emit('scenes'); }   // drop the removed scene's undo history + reveal counter (were orphaned/leaked into every sync)
   function moveScene(id, dir) { const i = sceneIndex(id), j = i + dir; if (i < 0 || j < 0 || j >= scenes().length) return; const a = scenes();[a[i], a[j]] = [a[j], a[i]]; emit('scenes'); }
   function setActive(id) {
     state.rundown.activeId = id; revealReset(id);
@@ -213,13 +213,22 @@ const Store = (() => {
   function setSpotlight(patch) { Object.assign(state.broadcast.spotlight, patch); emit('broadcast'); }
   function setAnim(patch) { Object.assign(state.broadcast.anim, patch); emit('broadcast'); }
 
-  /* ---- elements (active scene) ---- */
-  function addElement(rec) { const s = activeScene(); if (!s) return null; rec.id = uid('el'); s.__redo = []; s.elements.push(rec); emit('elements'); return rec; }
-  function removeElement(id) { const s = activeScene(); if (!s) return; s.elements = s.elements.filter(e => e.id !== id); s.revealOrder = s.revealOrder.filter(x => x !== id); emit('elements'); }
-  function updateElement(id, patch) { const s = activeScene(); if (!s) return; const e = s.elements.find(x => x.id === id); if (e) { Object.assign(e, patch); emit('elements'); } }
-  function clearElements() { const s = activeScene(); if (!s) return; s.elements = []; s.revealOrder = []; s.__redo = []; emit('elements'); }
-  function undo() { const s = activeScene(); if (!s || !s.elements.length) return; (s.__redo = s.__redo || []).push(s.elements.pop()); emit('elements'); }
-  function redo() { const s = activeScene(); if (!s || !s.__redo || !s.__redo.length) return; s.elements.push(s.__redo.pop()); emit('elements'); }
+  /* ---- elements (active scene) ---- undo/redo is a real per-scene SNAPSHOT history (of the elements +
+     revealOrder), kept in a module Map OUTSIDE the persisted/synced state so it never bloats the KV
+     payload. Every structural/attribute change snapshots first; undo/redo swap between the stacks and
+     also re-clamp the reveal counter. Replaces the old "pop the last element" which corrupted after
+     delete/edit and could resurrect ids. */
+  const HIST_MAX = 60, histMap = new Map();   // sceneId -> { undo:[str], redo:[str] }
+  function hist(s) { let h = histMap.get(s.id); if (!h) { h = { undo: [], redo: [] }; histMap.set(s.id, h); } return h; }
+  function snapEl(s) { return JSON.stringify({ e: s.elements, r: s.revealOrder }); }
+  function pushHistory(sc) { const s = sc || activeScene(); if (!s) return; const h = hist(s); h.undo.push(snapEl(s)); if (h.undo.length > HIST_MAX) h.undo.shift(); h.redo = []; }
+  function restoreSnap(s, str) { try { const o = JSON.parse(str); s.elements = o.e || []; s.revealOrder = o.r || []; if (state.reveal[s.id] != null) state.reveal[s.id] = Math.min(state.reveal[s.id], s.elements.length); } catch (e) {} }
+  function addElement(rec) { const s = activeScene(); if (!s) return null; pushHistory(s); rec.id = uid('el'); s.elements.push(rec); emit('elements'); return rec; }
+  function removeElement(id) { const s = activeScene(); if (!s) return; pushHistory(s); s.elements = s.elements.filter(e => e.id !== id); s.revealOrder = s.revealOrder.filter(x => x !== id); emit('elements'); }
+  function updateElement(id, patch, noHist) { const s = activeScene(); if (!s) return; const e = s.elements.find(x => x.id === id); if (e) { if (!noHist) pushHistory(s); Object.assign(e, patch); emit('elements'); } }   // noHist: caller already snapshotted (e.g. a drag that snapshots on grab)
+  function clearElements() { const s = activeScene(); if (!s) return; pushHistory(s); s.elements = []; s.revealOrder = []; emit('elements'); }
+  function undo() { const s = activeScene(); if (!s) return; const h = hist(s); if (!h.undo.length) return; h.redo.push(snapEl(s)); restoreSnap(s, h.undo.pop()); emit('elements'); }
+  function redo() { const s = activeScene(); if (!s) return; const h = hist(s); if (!h.redo.length) return; h.undo.push(snapEl(s)); restoreSnap(s, h.redo.pop()); emit('elements'); }
 
   /* ---- config ---- */
   const cfg = () => state.config;
@@ -300,7 +309,7 @@ const Store = (() => {
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene, setSceneView,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,
     setMode, toggleMode, setColor, setMapStyle, setTracking, setTrackFocus, setBanner, setTicker, setTour, setSpotlight, setAnim,
-    addElement, removeElement, updateElement, clearElements, undo, redo,
+    addElement, removeElement, updateElement, clearElements, undo, redo, pushHistory,
     cfg, setStyle, setVisibility, setPerm, setToolPerm, toolAllowed,
     setMapStyleOn, addMapStyle, removeMapStyle, addAssetCat, removeAssetCat, addCustomAsset, removeCustomAsset, setTrackStyle, setLogo, setLogoSize, setBrand, setTouch, setLocator, setTilt, setEasing, setFollow, setDrawDefaults, setMarkerScale, layout, setLayout, clearLayout, setPanelScale, setQbar, addPlace, removePlace, resetConfig,
     overlays, addOverlay, updateOverlay, removeOverlay, moveOverlay, setOverlayWipe, setOverlayWipeDir, setThreeD, setLight3d, setGrid, setSea, setClouds, setLtStyle, setThirds, setDayNight, campath, setCampath, addCampathFrame, removeCampathFrame,

@@ -84,8 +84,11 @@
       if (m.route && m.route.play && window.ModelsAnim) ModelsAnim.stop(m.id);   // taking manual control stops route playback
       select(m.id); dragId = m.id; e.preventDefault();   // grab the model (cancels map pan)
     });
-    g.on('mousemove', e => { if (dragId) window.Models3D.setPose(dragId, { lat: e.lngLat.lat, lng: e.lngLat.lng }); });
+    g.on('mousemove', e => { if (dragId) { dragLast = { lat: e.lngLat.lat, lng: e.lngLat.lng }; window.Models3D.setPose(dragId, dragLast); } });
     g.on('mouseup', e => { if (!dragId) return; const id = dragId; dragId = null; S.updateModel3d(id, { lat: e.lngLat.lat, lng: e.lngLat.lng }); window.Models3D.setPose(id, null); });
+    // safety: release OFF the GL canvas → MapLibre 'mouseup' never fires and the model would stay stuck at
+    // its drag preview. Commit it at the last drag position and clear the transient pose.
+    window.addEventListener('mouseup', () => { if (!dragId) return; const id = dragId; dragId = null; try { if (dragLast) S.updateModel3d(id, dragLast); } catch (e) {} try { window.Models3D.setPose(id, null); } catch (e) {} });
     // (route drawing is freehand now — see onFhDown; selection handled on mousedown)
   }
 
