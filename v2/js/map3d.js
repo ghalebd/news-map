@@ -160,6 +160,7 @@
     const n = live ? S.revealedCount(sc) : sc.elements.length;
     const F = []; const add = (geom, props) => F.push({ type: 'Feature', geometry: geom, properties: props });
     sc.elements.slice(0, n).forEach(el => {
+     try {   // one malformed element (missing ll/a/b/pts from a partial sync or legacy record) must not crash the whole 3D scene
       const col = el.color || '#ff453a';
       switch (el.type) {
         case 'marker': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'pt', color: col, label: el.label || '' }); break;
@@ -173,6 +174,7 @@
         case 'polygon': add({ type: 'Polygon', coordinates: [(el.pts || []).map(p => [p[1], p[0]])] }, { kind: 'area', color: col }); break;
         case 'country': if (el.geom) add(el.geom, { kind: 'area', color: col }); break;
       }
+     } catch (e) {}
     });
     return F;
   }
@@ -252,8 +254,9 @@
     if (map.isStyleLoaded()) { addSceneLayers(); mirror(); }
     btn.classList.add('is-on'); ctrls.hidden = false;
     if (window.Movable) Movable.reflow();   // place/orient the unified drag grip now it's visible
+    try { window.dispatchEvent(new Event('mode3d')); } catch (e) {}   // let mode-aware overlays (day/night) re-evaluate
   }
-  function exit() { if (!on) return; on = false; syncFrom3D(); document.body.classList.remove('mode-3d'); cont.classList.remove('on'); btn.classList.remove('is-on'); ctrls.hidden = true; }
+  function exit() { if (!on) return; on = false; syncFrom3D(); document.body.classList.remove('mode-3d'); cont.classList.remove('on'); btn.classList.remove('is-on'); ctrls.hidden = true; try { window.dispatchEvent(new Event('mode3d')); } catch (e) {} }
   function toggle() { on ? exit() : enter(); }
 
   /* ---- on-screen controls (visible only in 3D) ---- */
@@ -278,6 +281,12 @@
   document.body.appendChild(ctrls);
 
   /* ---- react to store: keep 3D base in step with the 2D app ---- */
+  // The PRESENTER never receives the granular 'active' event — a remote scene cut arrives only as 'sync'.
+  // Track the active scene's signature so we can ease the 3D camera to the new scene on 'sync' too
+  // (previously the presenter's 3D view stayed frozen on the old scene while the control cut scenes).
+  let lastSceneSig = null;
+  function sceneSig() { const sc = S.activeScene(); const v = sc && sc.view; return (S.sceneIndex ? S.sceneIndex() : 0) + '|' + (v ? [v.lat, v.lng, v.zoom].join(',') : ''); }
+  function easeToActiveScene() { const sc = S.activeScene(); if (on && map && sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); }
   S.on((st, evt) => {
     if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); applyPerf(); } return; }
     if (evt === 'light3d') { if (on && map) applyLight(); return; }
@@ -287,7 +296,9 @@
       ['models3d-gl', 'trk3d'].forEach(id => { try { if (map.getLayer(id)) map.removeLayer(id); } catch (e) {} });
       try { map.setStyle(styleUrl(cur)); builtStyle = cur; } catch (e) {} } } if (evt === 'mapstyle') return; }
     if (!on || !map) return;
-    if (evt === 'active') { const sc = S.activeScene(); if (sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); setTimeout(mirror, 50); }
+    if (evt === 'active') { lastSceneSig = sceneSig(); easeToActiveScene(); setTimeout(mirror, 50); }
+    // presenter path: a synced scene cut (or a scene view edit) changes the signature → follow it in 3D
+    else if (evt === 'sync') { const sig = sceneSig(); if (sig !== lastSceneSig) { lastSceneSig = sig; easeToActiveScene(); } }
     if (evt === 'models3d') { mirrorRoutes(); return; }
     if (evt === 'overlays') { mirrorOverlays(); return; }
     if (['elements', 'reveal', 'scenes', 'active', 'sync', 'mode'].includes(evt)) mirror();

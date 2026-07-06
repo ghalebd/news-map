@@ -51,6 +51,7 @@
 
   map.on('moveend zoomend resize', () => { if (on()) draw(); });   // redraw at rest only — the terminator is a heavy per-cell trig loop, not needed every frame
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync') refresh(); });
+  window.addEventListener('mode3d', refresh);   // entering/leaving 3D emits no store event — hide/show the twilight canvas accordingly
   clearInterval(timer); timer = setInterval(() => { if (on()) draw(); }, 60000);
   refresh();
 })();
