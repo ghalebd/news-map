@@ -225,6 +225,9 @@
     const g = groups.get(id); if (g) { if (layer && layer.scene) { layer.scene.remove(g.group); if (g.shadow) layer.scene.remove(g.shadow); } groups.delete(id); }   // clone — not disposed
     if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }   // master owns the GPU resources
     dropBillboards(id);
+    // free the globe symbol-layer images for this model (both style variants) — MapLibre's sprite atlas
+    // keeps them forever otherwise, leaking a GPU texture per model/style over a long broadcast session.
+    if (glmap) ['solid', 'wireframe'].forEach(sty => { const iid = 'm3dico:' + id + ':N:' + sty; try { if (glmap.hasImage(iid)) glmap.removeImage(iid); } catch (e) {} });
     if (window.Assets3D && Assets3D.revoke) Assets3D.revoke(id);
   }
   function invalidate(id) { purge(id); }   // re-upload: forget everything so it reloads fresh
@@ -455,8 +458,13 @@
       });
     } catch (e) {}
   }
+  let globeIcoToken = 0;
   async function updateGlobeIcons() {
     if (!glmap || !glmap.getSource(M3D_ICO_SRC)) return;
+    // re-entrancy guard: this is async (awaits image decode) and is called every animation frame on the
+    // globe. Without a token, a call that started earlier could resolve LATER and setData a stale frame
+    // (icon jumps backward / a just-deleted model reappears for a frame). Only the newest call may write.
+    const tok = ++globeIcoToken;
     const ms = models().filter(m => m.on !== false && m.mode !== '2d');
     const feats = [];
     for (const m of ms) {
@@ -469,6 +477,7 @@
       }
       if (glmap.hasImage(imgId)) feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lng, e.lat] }, properties: { img: imgId, hdg: ((e.rotZ || 0) + 180) % 360 } });
     }
+    if (tok !== globeIcoToken) return;   // a newer updateGlobeIcons superseded us while we awaited
     try { const s = glmap.getSource(M3D_ICO_SRC); if (s) s.setData({ type: 'FeatureCollection', features: feats }); } catch (e) {}
   }
   function attach3D(map) {

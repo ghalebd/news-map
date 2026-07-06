@@ -110,11 +110,22 @@ const Store = (() => {
   const subs = [];
   const on = fn => { subs.push(fn); return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); }; };
   let _t = null;
-  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus, broadcast: state.broadcast })); } catch (e) {} }, 120); }
+  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus, broadcast: state.broadcast })); } catch (e) { console.warn('Store.persist failed (localStorage quota?) — edits may not survive reload or sync', e && e.name); } }, 120); }
   const emit = (evt, opts) => { subs.forEach(fn => fn(state, evt || 'change')); if (!(opts && opts.silent)) persist(); };
 
-  function deepMerge(def, ov) { const o = JSON.parse(JSON.stringify(def)); for (const k in ov) { if (ov[k] && typeof ov[k] === 'object' && !Array.isArray(ov[k])) o[k] = deepMerge(def[k] || {}, ov[k]); else o[k] = ov[k]; } return o; }
-  function mergeNewMapStyles() { const have = new Set(state.config.mapStyles.map(m => m.id)); DEFAULT_CONFIG.mapStyles.forEach(m => { if (!have.has(m.id)) state.config.mapStyles.push({ ...m }); }); }
+  function deepMerge(def, ov) {
+    const o = JSON.parse(JSON.stringify(def));
+    for (const k in ov) {
+      // a corrupt/old snapshot may carry an explicit null (or wrong type) for a key whose DEFAULT is a
+      // non-null object/array. Copying that null over would defeat "missing keys fall back to default"
+      // and then crash consumers (e.g. mapStyles.map). Keep the default for such keys.
+      if (ov[k] == null && def && def[k] && typeof def[k] === 'object') continue;
+      if (ov[k] && typeof ov[k] === 'object' && !Array.isArray(ov[k])) o[k] = deepMerge(def[k] || {}, ov[k]);
+      else o[k] = ov[k];
+    }
+    return o;
+  }
+  function mergeNewMapStyles() { if (!Array.isArray(state.config.mapStyles)) state.config.mapStyles = JSON.parse(JSON.stringify(DEFAULT_CONFIG.mapStyles)); const have = new Set(state.config.mapStyles.map(m => m.id)); DEFAULT_CONFIG.mapStyles.forEach(m => { if (!have.has(m.id)) state.config.mapStyles.push({ ...m }); }); }
   function applyData(d) { if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; if ('trackFocus' in d) state.trackFocus = d.trackFocus; if (d.broadcast) state.broadcast = deepMerge(state.broadcast, d.broadcast); mergeNewMapStyles(); migrate(); return true; }
   // one-time fixes for older persisted configs
   function migrate() {

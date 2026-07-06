@@ -241,6 +241,11 @@
       if (!f.head) f.head = L.polyline(recent, hs).addTo(this.ftrails); else { f.head.setLatLngs(recent); f.head.setStyle(hs); }
     },
     async fetch() {
+      if (!this.on || this._fetching) return;   // guard: moveend + the 10s interval can otherwise overlap →
+      this._fetching = true;                     // two responses resolve out of order → the older prune deletes fresh aircraft (ghosts/flicker)
+      try { await this._fetch(); } finally { this._fetching = false; }
+    },
+    async _fetch() {
       if (!this.on) return;
       const b = map.getBounds(), c = map.getCenter();
       const distNM = Math.min(Math.max(50, c.distanceTo(L.latLng(b.getNorth(), b.getEast())) / 1852), 1000);

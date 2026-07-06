@@ -179,7 +179,17 @@ const Draw = (() => {
   /* ---------------- tools ---------------- */
   const DRAG = ['arrow', 'curve', 'circle', 'ring', 'polygon', 'sketch', 'tarrow', 'measure', 'frontline'];
   const FREE = ['sketch', 'tarrow'];   // freehand: collect points while dragging
+  // abandon any in-progress gesture (draw drag OR element move) and ALWAYS re-enable map panning.
+  // Without this, switching tools / pressing Esc / releasing the mouse off the map left dragStart or
+  // dragEl set and `map.dragging` DISABLED → the 2D map could no longer be panned (broadcast-breaking),
+  // and a stale ghost lingered. Also nulls sketchPts so a mid-stroke tool switch can't crash on push.
+  function resetGesture() {
+    if (ghost) { try { drawn.removeLayer(ghost); } catch (e) {} ghost = null; }
+    dragStart = null; sketchPts = null; polyPts = null; dragEl = null; dragPrev = null;
+    try { map.dragging.enable(); } catch (e) {}
+  }
   function setTool(t) {
+    resetGesture();
     tool = t;
     if (t !== 'asset') assetPending = null; deselect(); closePalette(); closeFlags(); closeMenu(); map.getContainer().style.cursor = t === 'select' ? '' : 'crosshair'; armChip(); Object.keys(qbtns).forEach(id => qbtns[id].classList.toggle('is-on', id === t));   // closeMenu: the two tool surfaces never stay open at once
   }
@@ -193,7 +203,7 @@ const Draw = (() => {
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; if (!permits(tool)) { setTool('select'); return; } dragStart = e.latlng; map.dragging.disable(); sketchPts = FREE.includes(tool) ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => {
     if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
-    if (!dragStart) return; if (FREE.includes(tool)) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
+    if (!dragStart) return; if (FREE.includes(tool) && sketchPts) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
   });
   map.on('mouseup', e => {
     if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch); dragEl = null; dragPrev = null; map.dragging.enable(); return; }

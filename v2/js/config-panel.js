@@ -562,6 +562,7 @@
   }
 
   let m3dCat = 'All', m3dSearch = '';   // persisted catalog filter/search across re-renders
+  let thumbIO = null;                    // reused across renders — disconnect the old one so renderTab() doesn't leak an observer + its detached nodes each call
   // sensible default on-map size (km) by type so a carrier ≠ a missile
   const m3dScale = (cat, file) => { const f = file || ''; if (/carrier|lincoln|eisenhower|cvn/.test(f)) return 12; if (cat === 'Naval') return 6; if (cat === 'Aircraft') return /c-130|hercules|a-3|707|boein|awacs|e-3|sentry|b-2|spirit|b21|tu160|legacy|embraer/.test(f) ? 4.5 : 2.2; if (cat === 'Drones / UAV') return 1.4; if (cat === 'Air defense / Radar') return 2; if (cat === 'Missiles / Rockets') return 1; if (cat === 'Armor / Vehicles') return 1.4; return 2.5; };
   // sensible DEFAULT altitude by category so assets land in the right layer: aircraft in the air,
@@ -602,7 +603,8 @@
       // render the 3D preview thumbnails lazily as items scroll into view (69 models — don't render
       // every GLB offscreen at once). Each thumb is cached by file, so re-opens are instant.
       try {
-        const io = new IntersectionObserver((ents) => ents.forEach(e => { if (e.isIntersecting && e.target._drawThumb) { e.target._drawThumb(); e.target._drawThumb = null; io.unobserve(e.target); } }), { rootMargin: '120px' });
+        if (thumbIO) { try { thumbIO.disconnect(); } catch (e) {} }   // drop the previous render's observer (was leaking one IO + its detached nodes per renderTab)
+        const io = thumbIO = new IntersectionObserver((ents) => ents.forEach(e => { if (e.isIntersecting && e.target._drawThumb) { e.target._drawThumb(); e.target._drawThumb = null; io.unobserve(e.target); } }), { rootMargin: '120px' });
         grid.querySelectorAll('.cfg-cat3d__i').forEach(it => io.observe(it));
       } catch (e) { grid.querySelectorAll('.cfg-cat3d__i').forEach(it => it._drawThumb && it._drawThumb()); }
       lb.bd.appendChild(h('div', 'hint', CAT.length + ' built-in military models (aircraft, naval, armour, missiles, air-defence, drones). Search or filter, then click one to drop it at the map centre and steer it with the control HUD.'));

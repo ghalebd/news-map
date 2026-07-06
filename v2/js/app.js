@@ -5,7 +5,7 @@
 (() => {
   const I = window.ICONS, S = window.Store, M = window.GameMap;
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------- brand + status ---------- */
   const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);
@@ -52,7 +52,7 @@
       const card = h('div', 'card-sc' + (active ? ' is-active' : ''));
       card.append(
         h('div', 'card-sc__no', String(i + 1)),
-        h('div', 'card-sc__title', sc.title),
+        h('div', 'card-sc__title', esc(sc.title)),   // esc: title is operator-typed AND arrives via sync → stored-XSS sink otherwise
         h('div', 'card-sc__meta', `Z${(sc.view && Number.isFinite(sc.view.zoom) ? sc.view.zoom : 0).toFixed(1)} · ${(sc.elements || []).length} elem`),
       );
       const ops = h('div', 'card-sc__ops');
