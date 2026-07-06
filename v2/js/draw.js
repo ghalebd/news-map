@@ -455,6 +455,6 @@ const Draw = (() => {
     if (noDraw && tool !== 'select') setTool('select');
   }
 
-  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, openFlags, toggleFlags, deselect, applyPerms, pickAt, moveSelected, commitSelected, reposition() { if (selected) positionCtx(selected); }, get tool() { return tool; }, get hasSelection() { return !!selected; } };
+  return { render, setTool, openMenu, closeMenu, toggleMenu, openPalette, closePalette, togglePalette, openFlags, toggleFlags, deselect, applyPerms, pickAt, moveSelected, commitSelected, reposition() { if (selected) positionCtx(selected); }, iconSVG: k => MICONS[k] || null, get tool() { return tool; }, get hasSelection() { return !!selected; } };   // iconSVG: used by map3d to render NATO marker symbols in 3D
 })();
 window.Draw = Draw;

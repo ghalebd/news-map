@@ -152,7 +152,7 @@
   }
 
   /* ---- mirror the active scene geometry into GeoJSON ---- */
-  const SRC = 'scene';
+  const SRC = 'scene', SRC_IC = 'scene-ic';
   function ringFor(lat, lng, radiusM, n = 64) { const pts = []; const dLat = radiusM / 111320; for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; pts.push([lng + (dLat / Math.cos(lat * Math.PI / 180)) * Math.cos(a), lat + dLat * Math.sin(a)]); } return pts; }
   const RAD = Math.PI / 180;
   function haversine(a, b) { const dLat = (b[0] - a[0]) * RAD, dLng = (b[1] - a[1]) * RAD, la1 = a[0] * RAD, la2 = b[0] * RAD; const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2; return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)); }
@@ -177,9 +177,9 @@
      try {   // one malformed element (missing ll/a/b/pts from a partial sync or legacy record) must not crash the whole 3D scene
       const col = el.color || '#ff453a';
       switch (el.type) {
-        case 'marker': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'pt', color: col, label: el.label || '' }); break;
+        case 'marker': if (el.icon && el.icon !== 'pin' && window.Draw && Draw.iconSVG && Draw.iconSVG(el.icon)) break; add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'pt', color: col, label: el.label || '' }); break;   // NATO symbol markers are drawn as real icons by mirrorIcons()
         case 'text': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'txt', color: col, label: el.text || '' }); break;
-        case 'asset': add({ type: 'Point', coordinates: [el.ll[1], el.ll[0]] }, { kind: 'pt', color: col, label: el.name || '' }); break;
+        case 'asset': break;   // flags/images are drawn as real icons by mirrorIcons()
         case 'arrow': case 'curve': add({ type: 'LineString', coordinates: [[el.a[1], el.a[0]], [el.b[1], el.b[0]]] }, { kind: 'line', color: col }); break;
         case 'tarrow': case 'sketch': add({ type: 'LineString', coordinates: (el.pts || []).map(p => [p[1], p[0]]) }, { kind: 'line', color: col }); break;
         case 'frontline': add({ type: 'LineString', coordinates: [[el.a[1], el.a[0]], [el.b[1], el.b[0]]] }, { kind: 'line', color: col }); break;
@@ -202,6 +202,7 @@
   }
   function addSceneLayers() {
     if (map.getSource(SRC)) return;
+    addedIcons.clear();   // a style swap wipes the sprite atlas → forget cached icon ids so they re-rasterise
     map.addSource(SRC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     map.addLayer({ id: 'sc-area', type: 'fill', source: SRC, filter: ['==', ['get', 'kind'], 'area'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.18 } });
     map.addLayer({ id: 'sc-area-l', type: 'line', source: SRC, filter: ['==', ['get', 'kind'], 'area'], paint: { 'line-color': ['get', 'color'], 'line-width': 2 } });
@@ -209,6 +210,9 @@
     map.addLayer({ id: 'sc-head', type: 'fill', source: SRC, filter: ['==', ['get', 'kind'], 'head'], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.95 } });   // solid arrowhead triangles for arrow/curve/frontline/tarrow
     map.addLayer({ id: 'sc-pt', type: 'circle', source: SRC, filter: ['==', ['get', 'kind'], 'pt'], paint: { 'circle-radius': 6, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
     map.addLayer({ id: 'sc-lbl', type: 'symbol', source: SRC, filter: ['in', ['get', 'kind'], ['literal', ['pt', 'txt']]], layout: { 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.1], 'text-anchor': 'top' }, paint: { 'text-color': '#fff', 'text-halo-color': '#0a0e16', 'text-halo-width': 1.4 } });
+    // real NATO-symbol markers + flag/image assets in 3D (rasterised to map images by mirrorIcons)
+    map.addSource(SRC_IC, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addLayer({ id: 'sc-icon', type: 'symbol', source: SRC_IC, layout: { 'icon-image': ['get', 'icon'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 2, 0.5, 6, 0.85, 10, 1.1], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'text-field': ['get', 'label'], 'text-size': 12, 'text-offset': [0, 1.5], 'text-anchor': 'top' }, paint: { 'text-color': '#fff', 'text-halo-color': '#0a0e16', 'text-halo-width': 1.4 } });
     if (!map.getSource('routes')) {
       map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       map.addLayer({ id: 'routes-l', type: 'line', source: 'routes', paint: { 'line-color': '#ffb020', 'line-width': 2, 'line-opacity': 0.8, 'line-dasharray': [2, 2] }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
@@ -220,7 +224,48 @@
     ((S.models3d && S.models3d()) || []).forEach(m => { const r = m.route; if (m.on !== false && m.mode !== '2d' && r && (r.pts || []).length >= 2) F.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: r.pts.map(p => [p[1], p[0]]) }, properties: {} }); });
     s.setData({ type: 'FeatureCollection', features: F });
   }
-  function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); mirrorRoutes(); }
+  function mirror() { if (!map || !on) return; const s = map.getSource(SRC); if (s) s.setData({ type: 'FeatureCollection', features: toFeatures() }); mirrorRoutes(); mirrorIcons(); }
+
+  /* ---- real marker icons (NATO symbols) + flag/image assets in 3D ----
+     rasterise each distinct icon to a MapLibre sprite image ONCE (SVG coloured to the element's colour,
+     or the asset image), then a symbol layer draws it. Async image loads are handled like the model globe
+     icons: a re-entrancy token guards setData, and we re-run when a new image finishes so the feature picks
+     it up. Skipped set of already-added image ids is reused; assets/icons are static so this is cheap. */
+  const addedIcons = new Set();
+  let icoTok = 0;
+  function iconIdFor(el) {
+    if (el.type === 'asset') { let h = 0; const s = String(el.src || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return 'ic-as:' + (h >>> 0); }
+    return 'ic-mi:' + el.icon + ':' + (el.color || '#fff');
+  }
+  function rasterToMap(id, src, isSvg, color) {   // returns Promise<bool added>
+    return new Promise(res => {
+      if (!map || map.hasImage(id) || addedIcons.has(id)) { addedIcons.add(id); return res(false); }
+      const SZ = 64;
+      let url = src;
+      if (isSvg) { const coloured = src.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg" color="' + (color || '#fff') + '" width="' + SZ + '" height="' + SZ + '"'); url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(coloured); }   // xmlns is REQUIRED to load an inline SVG as an <img> (the MICONS omit it since they're used in innerHTML)
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { try { const cv = document.createElement('canvas'); cv.width = cv.height = SZ; const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, SZ, SZ); if (map && !map.hasImage(id)) map.addImage(id, cx.getImageData(0, 0, SZ, SZ)); addedIcons.add(id); res(true); } catch (e) { res(false); } };
+      im.onerror = () => res(false);
+      im.src = url;
+    });
+  }
+  async function mirrorIcons() {
+    if (!map || !on) return; const s = map.getSource(SRC_IC); if (!s) return;
+    const tok = ++icoTok;
+    const sc = S.activeScene(); if (!sc) { s.setData({ type: 'FeatureCollection', features: [] }); return; }
+    const live = S.state.mode === 'live', n = live ? S.revealedCount(sc) : sc.elements.length;
+    const items = [], jobs = [];
+    sc.elements.slice(0, n).forEach(el => {
+      try {
+        if (el.type === 'asset' && el.src && el.ll) { const id = iconIdFor(el); jobs.push(rasterToMap(id, el.src, false)); items.push({ id, ll: el.ll, label: el.name || '' }); }
+        else if (el.type === 'marker' && el.icon && el.icon !== 'pin' && el.ll && window.Draw && Draw.iconSVG) { const svg = Draw.iconSVG(el.icon); if (svg) { const id = iconIdFor(el); jobs.push(rasterToMap(id, svg, true, el.color || '#fff')); items.push({ id, ll: el.ll, label: el.label || '' }); } }
+      } catch (e) {}
+    });
+    if (jobs.length) await Promise.all(jobs);
+    if (tok !== icoTok || !map) return;   // superseded while rasterising
+    const feats = items.filter(it => map.hasImage(it.id)).map(it => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [it.ll[1], it.ll[0]] }, properties: { icon: it.id, label: it.label } }));
+    try { s.setData({ type: 'FeatureCollection', features: feats }); } catch (e) {}
+  }
   // drape the satellite/image overlays onto the 3D terrain (image sources + raster layers)
   function mirrorOverlays() {
     if (!map) return;
