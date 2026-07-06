@@ -50,8 +50,8 @@ svg { display: block; }
 .glass,
 .modesw, .deck, .nownext, .qa, .qtools, .ctxbar, .panel {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--glass-sat, 1.7)) brightness(var(--glass-bright, 1.05));
-  backdrop-filter: url(#glassDistort) blur(var(--blur)) saturate(var(--glass-sat, 1.7)) brightness(var(--glass-bright, 1.05));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-bright, 1.05));
+  backdrop-filter: url(#glassDistort) blur(var(--blur)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-bright, 1.05));
   border: 1px solid var(--stroke);
   box-shadow: var(--shadow), var(--sheen);
   border-radius: var(--r);
@@ -469,6 +469,7 @@ body.ui-hidden .brand, body.ui-hidden .status, body.ui-hidden .modesw, body.ui-h
 body.ui-hidden .nownext, body.ui-hidden .qtools, body.ui-hidden .fab, body.ui-hidden .qa,
 body.ui-hidden .mapstyle, body.ui-hidden .mapstyle-pop, body.ui-hidden .livetrack,
 body.ui-hidden .sceneins, body.ui-hidden .cfg-toggle, body.ui-hidden .cfg-drawer,
+body.ui-hidden .mctl, body.ui-hidden .zoomctl,
 body.ui-hidden .armchip, body.ui-hidden .ctxbar { display: none !important; }
 
 /* ---------- movable panels: dot-grip on the panel's SHORTER edge ---------- */
