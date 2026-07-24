@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Rock Garden — نموذج ثلاثي الأبعاد</title>
+<title>Floating Island — WebGL prototype</title>
 <style>
   :root{
     --glass: rgba(18,22,26,.55);
@@ -94,70 +94,77 @@
 <canvas id="scene"></canvas>
 
 <div id="title">
-  <h1>حديقة الصخرة</h1>
-  <p>نموذج WebGL تجريبي — صخرة إجرائية تنمو عليها الأعشاب والزهور</p>
+  <h1>Floating Island</h1>
+  <p>Procedural rock adrift in the sky — turf and flowers above, vines below</p>
 </div>
 
 <div id="panel">
   <div class="panel-head">
-    <h2>لوحة التحكم</h2>
-    <button class="x" id="closePanel" title="طيّ اللوحة">✕</button>
+    <h2>Controls</h2>
+    <button class="x" id="closePanel" title="Hide panel">✕</button>
   </div>
 
   <div class="row">
-    <label>كثافة الأعشاب <b id="grassVal">16,000</b></label>
-    <input type="range" id="grassRange" min="2000" max="70000" step="1000" value="16000">
+    <label>Grass density <b id="grassVal">30,000</b></label>
+    <input type="range" id="grassRange" min="2000" max="70000" step="1000" value="30000">
   </div>
 
   <div class="row">
-    <label>عدد الزهور <b id="flowerVal">700</b></label>
-    <input type="range" id="flowerRange" min="0" max="4000" step="50" value="700">
+    <label>Flowers <b id="flowerVal">900</b></label>
+    <input type="range" id="flowerRange" min="0" max="4000" step="50" value="900">
   </div>
 
   <div class="row">
-    <label>قوة الرياح <b id="windVal">100%</b></label>
+    <label>Wind <b id="windVal">100%</b></label>
     <input type="range" id="windRange" min="0" max="250" step="5" value="100">
   </div>
 
   <div class="row">
-    <label>وقت اليوم <b id="todVal">فجر</b></label>
-    <input type="range" id="todRange" min="0" max="100" step="1" value="35">
+    <label>Time of day <b id="todVal">Sunrise</b></label>
+    <input type="range" id="todRange" min="0" max="100" step="1" value="28">
   </div>
 
   <div class="divider"></div>
 
   <div class="row">
-    <label>لوحة ألوان الزهور</label>
+    <label>Flower palette</label>
     <div class="btns">
       <button class="btn active" data-palette="warm">
-        <span class="swatch"><i style="background:#f2b93c"></i><i style="background:#ef6d3a"></i><i style="background:#e8467a"></i></span>دافئة
+        <span class="swatch"><i style="background:#f2b93c"></i><i style="background:#ef6d3a"></i><i style="background:#e8467a"></i></span>Warm
       </button>
       <button class="btn" data-palette="cool">
-        <span class="swatch"><i style="background:#74b7ec"></i><i style="background:#5a86e0"></i><i style="background:#9c6fe0"></i></span>باردة
+        <span class="swatch"><i style="background:#74b7ec"></i><i style="background:#5a86e0"></i><i style="background:#9c6fe0"></i></span>Cool
       </button>
       <button class="btn" data-palette="aj">
-        <span class="swatch"><i style="background:#e8b53f"></i><i style="background:#db8a3a"></i><i style="background:#c0392b"></i></span>ذهبية
+        <span class="swatch"><i style="background:#e8b53f"></i><i style="background:#db8a3a"></i><i style="background:#c0392b"></i></span>Gold
       </button>
     </div>
   </div>
 
   <div class="btns">
-    <button class="btn active" id="rotBtn">إيقاف الدوران</button>
-    <button class="btn" id="shotBtn">حفظ صورة PNG</button>
+    <button class="btn active" id="fxBtn">Cinematic FX: on</button>
+  </div>
+  <div class="btns">
+    <button class="btn active" id="qualityBtn">Quality: high</button>
+    <button class="btn active" id="rotBtn">Stop rotation</button>
+  </div>
+  <div class="btns">
+    <button class="btn" id="shotBtn">Save PNG</button>
   </div>
 </div>
-<button id="panelToggle" title="إظهار اللوحة">☰</button>
+<button id="panelToggle" title="Show panel">☰</button>
 
 <div id="hud">
   <span id="fps">— fps</span>
   <span id="stats"></span>
   <span id="status"></span>
 </div>
-<div id="hint">اسحب للدوران · عجلة الفأرة للتقريب</div>
+<div id="hint">Drag to orbit · scroll to zoom</div>
 
 <script src="../v2/lib/three.min.js"></script>
 <script src="../v2/lib/GLTFLoader.js"></script>
 <script src="./js/noise.js"></script>
+<script src="./js/postfx.js"></script>
 <script src="./js/rock-garden.js"></script>
 <script>
   document.getElementById('closePanel').addEventListener('click', function () {
