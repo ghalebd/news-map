@@ -391,9 +391,9 @@
     const nor = geo.attributes.normal;
     const colors = new Float32Array(pos.count * 3);
 
-    const stone = new THREE.Color(0x6f6558);
-    const pale = new THREE.Color(0x8b8375);     // sun-bleached upper faces
-    const dark = new THREE.Color(0x241f19);
+    const stone = new THREE.Color(0x8a7f6e);
+    const pale = new THREE.Color(0xa89e8d);    // sun-bleached upper faces
+    const dark = new THREE.Color(0x342c23);
     const moss = new THREE.Color(0x4a6329);
     const soil = new THREE.Color(0x3b2b1c);     // earth band under the turf
     const ochre = new THREE.Color(0x9a7345);    // exposed, weathered underside
@@ -411,7 +411,7 @@
 
       // torn underside: oxidised, ochre-stained rock with no moss on it
       const under = THREE.MathUtils.smoothstep(y, 0.15, -0.9);
-      c.lerp(ochre, under * (0.30 + grain * 0.35));
+      c.lerp(ochre, under * (0.22 + grain * 0.26));
 
       // soil band where the turf ends and the cliff begins
       const rim = THREE.MathUtils.smoothstep(y, 0.34, 0.06) *
@@ -436,14 +436,94 @@
   const rockMat = new THREE.MeshStandardMaterial({
     vertexColors: true, roughness: 0.95, metalness: 0.0, envMapIntensity: 1.15
   });
-  // damp crevices read glossier than dry, sun-bleached tops
+  // Surface detail lives in the shader, not in the mesh: the geometry only
+  // carries the boulder's shape, while grain, pitting and hairline cracks are
+  // evaluated per pixel from world position. That keeps detail sharp no matter
+  // how close the camera gets, and needs no UVs on an icosphere (which has
+  // terrible ones).
+  const ROCK_NOISE_GLSL = `
+    float rk_hash(vec3 p) {
+      return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
+    }
+    float rk_noise(vec3 p) {
+      vec3 i = floor(p), f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(mix(rk_hash(i), rk_hash(i + vec3(1,0,0)), f.x),
+                     mix(rk_hash(i + vec3(0,1,0)), rk_hash(i + vec3(1,1,0)), f.x), f.y),
+                 mix(mix(rk_hash(i + vec3(0,0,1)), rk_hash(i + vec3(1,0,1)), f.x),
+                     mix(rk_hash(i + vec3(0,1,1)), rk_hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+    }
+    float rk_fbm(vec3 p) {
+      float a = 0.5, s = 0.0, n = 0.0;
+      for (int i = 0; i < 4; i++) { s += a * rk_noise(p); n += a; p *= 2.11; a *= 0.5; }
+      return s / n;
+    }
+    // grain + coarse pitting + sharp hairline cracks
+    float rk_height(vec3 p) {
+      float grain = rk_fbm(p * 34.0);
+      float pits = rk_fbm(p * 9.0);
+      float crack = 1.0 - abs(rk_fbm(p * 5.5) * 2.0 - 1.0);
+      crack = pow(clamp(crack, 0.0, 1.0), 7.0);
+      return grain * 0.45 + pits * 0.55 - crack * 0.9;
+    }
+  `;
+
   rockMat.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
+    shader.vertexShader = `
+      varying vec3 vRockPos;
+      ${shader.vertexShader}
+    `.replace(
+      '#include <begin_vertex>',
+      `
+      #include <begin_vertex>
+      vRockPos = transformed;
+      `
+    );
+
+    shader.fragmentShader = `
+      varying vec3 vRockPos;
+      ${ROCK_NOISE_GLSL}
+      ${shader.fragmentShader}
+    `.replace(
+      '#include <normal_fragment_begin>',
+      `
+      #include <normal_fragment_begin>
+      {
+        // finite-difference the height field to get a real bump normal
+        float e = 0.0045;
+        float h0 = rk_height(vRockPos);
+        vec3 grad = vec3(
+          rk_height(vRockPos + vec3(e, 0.0, 0.0)) - h0,
+          rk_height(vRockPos + vec3(0.0, e, 0.0)) - h0,
+          rk_height(vRockPos + vec3(0.0, 0.0, e)) - h0
+        ) / e;
+        // normalMatrix is vertex-stage only; the island barely rotates, so the
+        // view matrix is an accurate enough object → view transform here
+        vec3 vg = (viewMatrix * vec4(grad, 0.0)).xyz;
+        vg -= normal * dot(normal, vg);
+        normal = normalize(normal - vg * 0.055);
+      }
+      `
+    ).replace(
       '#include <roughnessmap_fragment>',
       `
       #include <roughnessmap_fragment>
+      float rkGrain = rk_fbm(vRockPos * 34.0);
+      float rkCrack = pow(clamp(1.0 - abs(rk_fbm(vRockPos * 5.5) * 2.0 - 1.0), 0.0, 1.0), 7.0);
       float lum = dot(vColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-      roughnessFactor = mix(0.72, 1.0, smoothstep(0.02, 0.35, lum));
+      // damp crevices read glossier than dry, sun-bleached tops
+      roughnessFactor = mix(0.70, 1.0, smoothstep(0.02, 0.35, lum));
+      roughnessFactor = clamp(roughnessFactor - rkGrain * 0.12 + rkCrack * 0.1, 0.25, 1.0);
+      `
+    ).replace(
+      '#include <color_fragment>',
+      `
+      #include <color_fragment>
+      // speckled mineral grain, and cracks that swallow light
+      float rkSpeck = rk_fbm(vRockPos * 60.0);
+      rkSpeck = mix(rkSpeck, 0.5, smoothstep(-0.3, -1.4, vRockPos.y));
+      diffuseColor.rgb *= 0.86 + rkSpeck * 0.28;
+      diffuseColor.rgb *= 1.0 - pow(clamp(1.0 - abs(rk_fbm(vRockPos * 5.5) * 2.0 - 1.0), 0.0, 1.0), 7.0) * 0.45;
       `
     );
   };
@@ -552,9 +632,9 @@
     // that curvature is what makes light travel along a blade instead of
     // flat-shading it. The blade also arcs forward and tapers to a point.
     opts = opts || {};
-    const w = opts.width != null ? opts.width : 0.011;
+    const w = opts.width != null ? opts.width : 0.0032;
     const h = 1.0;
-    const arc = opts.arc != null ? opts.arc : 0.28;
+    const arc = opts.arc != null ? opts.arc : 0.42;
     const verts = [], uvs = [], idx = [];
 
     for (let i = 0; i <= segments; i++) {
@@ -655,15 +735,16 @@
 
   // --------------------------------------------------------------- scatter
   let grassMesh = null, flowerMesh = null, stemMesh = null, hangingVines = null;
+  let broadLeaves = null, pebbles = null;
 
   function clearScatter() {
-    [grassMesh, flowerMesh, stemMesh, hangingVines].forEach((m) => {
+    [grassMesh, flowerMesh, stemMesh, hangingVines, broadLeaves, pebbles].forEach((m) => {
       if (!m) return;
       island.remove(m);
       m.geometry.dispose();
       m.material.dispose();
     });
-    grassMesh = flowerMesh = stemMesh = hangingVines = null;
+    grassMesh = flowerMesh = stemMesh = hangingVines = broadLeaves = pebbles = null;
   }
 
   const dummy = new THREE.Object3D();
@@ -690,46 +771,144 @@
 
     const gColors = new Float32Array(grassCount * 3);
     const cBlade = new THREE.Color();
-    const dry = new THREE.Color(0xa8964f);
-    const fresh = new THREE.Color(0x51812c);
+    const dry = new THREE.Color(0x8d8340);
+    const fresh = new THREE.Color(0x43762a);
     const deep = new THREE.Color(0x223d17);
 
+    // Grass does not grow one blade at a time — it grows in tufts. Each tuft
+    // gets a shared colour and a splayed fan of blades, tallest at the centre.
+    // That structure, more than blade count, is what reads as real turf.
+    const t1 = new THREE.Vector3(), t2 = new THREE.Vector3(), off = new THREE.Vector3();
+
+    // broad, drooping leaves — a second species mixed through the turf
+    const leafBudget = Math.round(grassCount * 0.03);
+    const lGeo = bladeGeometry(6, { width: 0.0055, arc: 0.8 });
+    const lMat = makePlantMaterial({
+      color: 0xffffff, roughness: 0.55, metalness: 0.0,
+      side: THREE.DoubleSide, vertexColors: true, envMapIntensity: 0.55
+    }, { rootAO: 0.22, sss: 1.25 });
+    broadLeaves = new THREE.InstancedMesh(lGeo, lMat, leafBudget);
+    broadLeaves.castShadow = true;
+    broadLeaves.receiveShadow = true;
+    const lColors = new Float32Array(leafBudget * 3);
+    let lPlaced = 0;
+
     let placed = 0;
-    for (let i = 0; i < grassCount; i++) {
+    const tuftTarget = Math.ceil(grassCount / 7);
+
+    for (let tuft = 0; tuft < tuftTarget && placed < grassCount; tuft++) {
       if (!sampler.sample(rand, p, n)) continue;
 
       const clump = fbm3(p.x * 5.5, p.y * 5.5, p.z * 5.5, 3) * 0.5 + 0.5;
-      if (rand() > Math.pow(clump, 1.5) * 1.15) continue;
+      if (rand() > Math.pow(clump, 1.1) * 1.35) continue;
 
-      dummy.position.copy(p).add(targetMesh.position);
-      q.setFromUnitVectors(upVec, n);
-      dummy.quaternion.copy(q);
-      dummy.rotateY(rand() * Math.PI * 2);
-      dummy.rotateX((rand() - 0.5) * 0.5);
-      dummy.rotateZ((rand() - 0.5) * 0.5);
+      // tangent frame on the surface, so a tuft spreads across the rock face
+      t1.set(0, 1, 0).cross(n);
+      if (t1.lengthSq() < 1e-4) t1.set(1, 0, 0);
+      t1.normalize();
+      t2.crossVectors(n, t1).normalize();
 
-      const h = 0.055 + rand() * 0.07 + clump * 0.05;
-      const wsc = 0.7 + rand() * 0.7;
-      dummy.scale.set(wsc, h, wsc);
-      dummy.updateMatrix();
-      grassMesh.setMatrixAt(placed, dummy.matrix);
+      const blades = 4 + Math.floor(rand() * 7);
+      const spread = 0.018 + rand() * 0.045;
+      const tuftHeight = 0.085 + rand() * 0.085 + clump * 0.07;
 
+      // one hue per tuft, with only slight per-blade drift
       cBlade.copy(deep).lerp(fresh, clump * (0.6 + rand() * 0.5));
-      cBlade.lerp(dry, Math.pow(rand(), 2.4) * 0.6);
-      gColors[placed * 3] = cBlade.r;
-      gColors[placed * 3 + 1] = cBlade.g;
-      gColors[placed * 3 + 2] = cBlade.b;
-      placed++;
+      cBlade.lerp(dry, Math.pow(rand(), 3.0) * 0.5);
+      const tuftR = cBlade.r, tuftG = cBlade.g, tuftB = cBlade.b;
+
+      for (let b = 0; b < blades && placed < grassCount; b++) {
+        const a = rand() * Math.PI * 2;
+        const rr = Math.pow(rand(), 0.65);          // denser toward the centre
+        off.copy(t1).multiplyScalar(Math.cos(a) * rr * spread)
+          .addScaledVector(t2, Math.sin(a) * rr * spread);
+
+        dummy.position.copy(p).add(off).add(targetMesh.position);
+        q.setFromUnitVectors(upVec, n);
+        dummy.quaternion.copy(q);
+        dummy.rotateY(a + (rand() - 0.5) * 0.9);
+        // blades splay outward the further they sit from the tuft centre
+        dummy.rotateX(rr * 0.55 + (rand() - 0.5) * 0.25);
+        dummy.rotateZ((rand() - 0.5) * 0.3);
+
+        const h = tuftHeight * (1.05 - rr * 0.45) * (0.8 + rand() * 0.4);
+        const wsc = 0.7 + rand() * 0.7;
+        dummy.scale.set(wsc, h, h * (0.75 + rand() * 0.6));
+        dummy.updateMatrix();
+
+        const isLeaf = lPlaced < leafBudget && rand() < 0.03;
+        if (isLeaf) {
+          broadLeaves.setMatrixAt(lPlaced, dummy.matrix);
+          lColors[lPlaced * 3] = tuftR * 0.82;
+          lColors[lPlaced * 3 + 1] = tuftG * 0.90;
+          lColors[lPlaced * 3 + 2] = tuftB * 0.78;
+          lPlaced++;
+        } else {
+          grassMesh.setMatrixAt(placed, dummy.matrix);
+          const j = 0.88 + rand() * 0.26;
+          gColors[placed * 3] = tuftR * j;
+          gColors[placed * 3 + 1] = tuftG * j;
+          gColors[placed * 3 + 2] = tuftB * j;
+          placed++;
+        }
+      }
     }
     grassMesh.count = placed;
     gGeo.setAttribute('color', new THREE.InstancedBufferAttribute(gColors, 3));
     island.add(grassMesh);
 
+    broadLeaves.count = lPlaced;
+    lGeo.setAttribute('color', new THREE.InstancedBufferAttribute(lColors, 3));
+    island.add(broadLeaves);
+
+    // ---- loose pebbles and grit caught in the turf ----
+    const pebbleBudget = Math.round(grassCount * 0.02);
+    const pebGeo = new THREE.IcosahedronGeometry(1, 1);
+    {
+      // squash each pebble so they don't read as identical balls
+      const pp = pebGeo.attributes.position;
+      for (let i = 0; i < pp.count; i++) {
+        pp.setXYZ(i, pp.getX(i) * 1.15, pp.getY(i) * 0.62, pp.getZ(i) * 0.92);
+      }
+      pebGeo.computeVertexNormals();
+    }
+    pebbles = new THREE.InstancedMesh(pebGeo, new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.9, metalness: 0.0, envMapIntensity: 1.0
+    }), pebbleBudget);
+    pebbles.castShadow = true;
+    pebbles.receiveShadow = true;
+    const pebColors = new Float32Array(pebbleBudget * 3);
+    const cPeb = new THREE.Color();
+    let pebPlaced = 0;
+
+    for (let i = 0; i < pebbleBudget; i++) {
+      if (!sampler.sample(rand, p, n)) continue;
+      if (rand() < 0.45) continue;
+      dummy.position.copy(p).add(targetMesh.position);
+      q.setFromUnitVectors(upVec, n);
+      dummy.quaternion.copy(q);
+      dummy.rotateY(rand() * Math.PI * 2);
+      dummy.rotateX((rand() - 0.5) * 0.8);
+      const sc = 0.006 + Math.pow(rand(), 2.2) * 0.030;
+      dummy.scale.set(sc * (0.8 + rand() * 0.5), sc, sc * (0.8 + rand() * 0.5));
+      dummy.updateMatrix();
+      pebbles.setMatrixAt(pebPlaced, dummy.matrix);
+
+      cPeb.setHex(0x6b6156).offsetHSL(0, (rand() - 0.5) * 0.05, (rand() - 0.5) * 0.22);
+      pebColors[pebPlaced * 3] = cPeb.r;
+      pebColors[pebPlaced * 3 + 1] = cPeb.g;
+      pebColors[pebPlaced * 3 + 2] = cPeb.b;
+      pebPlaced++;
+    }
+    pebbles.count = pebPlaced;
+    pebGeo.setAttribute('color', new THREE.InstancedBufferAttribute(pebColors, 3));
+    island.add(pebbles);
+
     // ---- vines hanging off the torn underside ----
     // Same blade geometry, flipped to grow downward: the wind shader already
     // drives sway from uv.y, so the tips trail while the anchor stays put.
-    const vineCount = Math.round(grassCount * 0.10);
-    const vGeo = bladeGeometry(10, { width: 0.0075, arc: 0.62 });
+    const vineCount = Math.round(grassCount * 0.16);
+    const vGeo = bladeGeometry(10, { width: 0.0042, arc: 0.62 });
     const vMat = makePlantMaterial({
       color: 0xffffff, roughness: 0.72, metalness: 0.0,
       side: THREE.DoubleSide, vertexColors: true, envMapIntensity: 0.45
@@ -739,8 +918,8 @@
     hangingVines.castShadow = true;
     const vColors = new Float32Array(vineCount * 3);
     const vine = new THREE.Color();
-    const vineGreen = new THREE.Color(0x40632a);
-    const vineDry = new THREE.Color(0x6d5a2f);
+    const vineGreen = new THREE.Color(0x3a5c26);
+    const vineDry = new THREE.Color(0x5d5330);
     const down = new THREE.Vector3(0, -1, 0);
 
     let vPlaced = 0;
@@ -749,7 +928,7 @@
 
       // vines cluster near the rim and thin out toward the tip of the keel
       const depth = THREE.MathUtils.clamp((0.1 - p.y) / 1.9, 0, 1);
-      if (rand() < depth * 0.92) continue;      // almost nothing survives near the tip
+      if (rand() < depth * 0.85) continue;      // almost nothing survives near the tip
 
       const clump = fbm3(p.x * 4.0 + 7, p.y * 4.0, p.z * 4.0, 3) * 0.5 + 0.5;
       if (rand() > Math.pow(clump, 1.3) * 1.2) continue;
@@ -762,11 +941,11 @@
 
       const len = 0.30 + Math.pow(rand(), 1.4) * 1.5 * (1.0 - depth * 0.4);
       const wsc = 0.30 + rand() * 0.45;
-      dummy.scale.set(wsc, len, wsc);
+      dummy.scale.set(wsc, len, len * (0.5 + rand() * 0.5));
       dummy.updateMatrix();
       hangingVines.setMatrixAt(vPlaced, dummy.matrix);
 
-      vine.copy(vineGreen).lerp(vineDry, Math.pow(rand(), 1.5) * 0.7 + depth * 0.25);
+      vine.copy(vineGreen).lerp(vineDry, Math.pow(rand(), 2.0) * 0.55 + depth * 0.2);
       vine.multiplyScalar(0.8 + rand() * 0.3);
       vColors[vPlaced * 3] = vine.r;
       vColors[vPlaced * 3 + 1] = vine.g;
@@ -808,7 +987,7 @@
       dummy.quaternion.copy(q);
       dummy.rotateY(rand() * Math.PI * 2);
       dummy.rotateX((rand() - 0.5) * 0.3);
-      dummy.scale.set(0.8, height, 0.8);
+      dummy.scale.set(0.8, height, height);
       dummy.updateMatrix();
       stemMesh.setMatrixAt(fPlaced, dummy.matrix);
 
@@ -833,7 +1012,7 @@
     headGeo.setAttribute('color', new THREE.InstancedBufferAttribute(fColors, 3));
     island.add(stemMesh, flowerMesh);
 
-    updateStats(placed, fPlaced, vPlaced);
+    updateStats(placed + lPlaced, fPlaced, vPlaced);
   }
 
   function flowerHeadGeometry() {
@@ -1096,6 +1275,16 @@
     applyCamera();
 
     // keep the rock in focus, everything nearer/further falls off
+    // where is the sun on screen, and is it actually in shot?
+    const sunWorld = sunDir.clone().multiplyScalar(60).project(camera);
+    const camFwd = new THREE.Vector3();
+    camera.getWorldDirection(camFwd);
+    const facing = camFwd.dot(sunDir);
+    const inFrame = Math.max(Math.abs(sunWorld.x), Math.abs(sunWorld.y));
+    post.composite.mat.uniforms.uSunScreen.value.set(sunWorld.x * 0.5 + 0.5, sunWorld.y * 0.5 + 0.5);
+    post.composite.mat.uniforms.uShaft.value =
+      facing > 0 ? THREE.MathUtils.clamp(1.0 - (inFrame - 0.6) / 0.9, 0, 1) * 0.75 : 0;
+
     post.composite.mat.uniforms.uFocus.value = camera.position.distanceTo(orbit.target);
     post.composite.mat.uniforms.uRange.value = Math.max(1.6, orbit.radius * 0.35);
     post.render(windUniforms.uTime.value);
@@ -1120,5 +1309,5 @@
   tryLoadBlenderRock();
   tick();
 
-  window.NM3D = { scene, camera, renderer, post, P, scatter, activeRock };
+  window.NM3D = { scene, camera, renderer, post, P, orbit, applyCamera, scatter, activeRock };
 })();

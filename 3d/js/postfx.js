@@ -97,6 +97,8 @@
     uniform float uGrain;
     uniform float uCA;
     uniform float uTime;
+    uniform vec2 uSunScreen;     // sun position in screen UV
+    uniform float uShaft;        // 0 when the sun is out of frame / behind
     varying vec2 vUv;
 
     float viewZ(vec2 uv) {
@@ -131,6 +133,21 @@
 
       // bloom
       col += texture2D(tBloom, uv).rgb * uBloom;
+
+      // crepuscular rays: march the bright pass back toward the sun, so
+      // anything occluding it throws a visible shaft
+      if (uShaft > 0.001) {
+        vec2 delta = (uv - uSunScreen) * (1.0 / 14.0) * 0.85;
+        vec2 sp = uv;
+        float w = 1.0;
+        vec3 shaft = vec3(0.0);
+        for (int i = 0; i < 14; i++) {
+          sp -= delta;
+          shaft += texture2D(tBloom, sp).rgb * w;
+          w *= 0.90;
+        }
+        col += shaft * (uShaft / 14.0);
+      }
 
       // film grade: cool shadows, warm highlights, a little extra saturation
       float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
@@ -188,7 +205,9 @@
         uVignette: { value: this.params.vignette },
         uGrain: { value: this.params.grain },
         uCA: { value: this.params.ca },
-        uTime: { value: 0 }
+        uTime: { value: 0 },
+        uSunScreen: { value: new THREE.Vector2(0.5, 0.5) },
+        uShaft: { value: 0.0 }
       });
 
       this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
