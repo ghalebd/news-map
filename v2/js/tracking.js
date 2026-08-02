@@ -169,7 +169,7 @@
       const moved = !s._rp || Math.abs(s._rp[0] - s.lat) > 0.25 || Math.abs(s._rp[1] - s.lng) > 0.25;
       if (s.routeLine && !s._destChanged && !moved) return;
       if (s._rt && now - s._rt < 5000 && !s._destChanged) return;
-      if (!s.routeLine && this.route.getLayers().length >= RT_CAP) { if (!this._cap) { console.log('[tracking] route cap ' + RT_CAP + ' reached — extra routes hidden'); this._cap = true; } return; }
+      if (!s.routeLine && this.route.getLayers().length >= RT_CAP) { if (!this._cap) { console.debug('[tracking] route cap ' + RT_CAP + ' reached — extra routes hidden'); this._cap = true; } return; }   // debug level: a normal perf guard, not an operator action — keep the console floor clear for real errors
       s._rt = now; s._rp = [s.lat, s.lng]; s._destChanged = false;
       const ck = Math.round(s.lat * 4) + ',' + Math.round(s.lng * 4) + '>' + (s.destPort.unloc || s.destPort.name);
       let line = _routeCache.get(ck);
@@ -227,12 +227,12 @@
 
   /* -------------------- flights (airplanes.live) -------------------- */
   const Flights = {
-    on: false, flights: new Map(), layer: null, ftrails: null, timer: null,
+    on: false, flights: new Map(), layer: null, ftrails: null, timer: null, STALE: 60000,
     set(v) { if (v === this.on) return; this.on = v; v ? this.start() : this.stop(); setCounts(); },
     start() {
       this.ftrails = this.ftrails || L.layerGroup(); if (showTrails()) this.ftrails.addTo(map);
       this.layer = this.layer || L.layerGroup(); this.layer.addTo(map);
-      setStatus('flights', 'live'); this.fetch(); this.timer = setInterval(() => this.fetch(), 10000);
+      setStatus('flights', 'wait'); this.fetch(); this.timer = setInterval(() => this.fetch(), 10000);   // 'live' is claimed by _fetch on a real response — hard-coded here it reported a healthy feed even when airplanes.live was down
     },
     stop() { clearInterval(this.timer); if (this.layer) map.removeLayer(this.layer); if (this.ftrails) { map.removeLayer(this.ftrails); this.ftrails.clearLayers(); } this.flights.clear(); },
     showTrails(on) { if (!this.ftrails) return; if (on) this.ftrails.addTo(map); else map.removeLayer(this.ftrails); },
@@ -270,12 +270,20 @@
         try { const r = await fetch(url, { signal: AbortSignal.timeout(9000) }); if (r.ok) ac = parse(await r.json()); } catch (e) {}
         if (ac == null && attempt === 0) await new Promise(r => setTimeout(r, 1200));
       }
-      if (!ac || !this.on) return;   // bail if tracking was switched off while awaiting
+      if (!this.on) return;   // bail if tracking was switched off while awaiting
+      // both attempts failed. Say so, and age the last-seen aircraft out: they used to sit frozen at
+      // stale positions on air for the rest of the broadcast while the button still looked healthy.
+      if (!ac) { setStatus('flights', 'err'); this.prune(); return; }
+      setStatus('flights', 'live');
       const seen = new Set(), bounds = map.getBounds();
       ac.forEach(a => { if (!bounds.contains([a.lat, a.lng])) return; seen.add(a.icao); this.upsert(a.icao, a); });
-      this.flights.forEach((f, k) => { if (!seen.has(k)) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); if (this.ftrails) { if (f.line) this.ftrails.removeLayer(f.line); if (f.head) this.ftrails.removeLayer(f.head); if (f.vector) this.ftrails.removeLayer(f.vector); } this.flights.delete(k); } });
+      this.flights.forEach((f, k) => { if (!seen.has(k)) this.drop(k, f); });
       setCounts();
     },
+    drop(k, f) { if (f.marker && this.layer) this.layer.removeLayer(f.marker); if (this.ftrails) { if (f.line) this.ftrails.removeLayer(f.line); if (f.head) this.ftrails.removeLayer(f.head); if (f.vector) this.ftrails.removeLayer(f.vector); } this.flights.delete(k); },
+    /* only bites when the feed is down (a healthy poll drops out-of-view aircraft via the seen set):
+       STALE = 6 missed 10s polls, after which a plane on air is showing a minute-old position */
+    prune() { const now = Date.now(); let n = 0; this.flights.forEach((f, k) => { if (now - (f.t || 0) > this.STALE) { this.drop(k, f); n++; } }); if (n) setCounts(); },
     upsert(icao, info) {
       let f = this.flights.get(icao);
       const tip = `<b>${esc(info.callsign || 'Unknown')}</b><br>${esc(info.type || '?')} · ${Math.round(info.alt)}ft · ${Math.round(info.velocity * 1.94)}kt`;
@@ -286,6 +294,7 @@
         if (this.layer) f.marker.addTo(this.layer);
         this.flights.set(icao, f);
       } else { Object.assign(f, info); f.marker.setLatLng([info.lat, info.lng]); setRot(f.marker, 'plane', info.heading, false, false); f.marker.setTooltipContent(tip); }
+      f.t = Date.now();   // last-seen stamp — prune() needs it to age aircraft out when the feed dies
       this.trail(f);
     },
   };
@@ -324,20 +333,49 @@
     qbar.append(qShips, qFlights, qTrails);
   })();
 
-  function setStatus(kind, st) { const b = kind === 'ships' ? bShips : bFlights; const d = b.querySelector('.lt-dot'); if (d) d.dataset.st = st; }
+  /* Feed health. The floating bar above is off-DOM, so the .qtools buttons are the ONLY health signal
+     the operator can see — without this a dead AIS / flight feed looked exactly like a healthy one,
+     because the button class only ever said what the operator ASKED for. */
+  const feed = { ships: null, flights: null };
+  const FEED_TXT = { live: 'feed live', wait: 'connecting…', err: 'feed down' };
+  function setStatus(kind, st) {
+    feed[kind] = st;
+    const b = kind === 'ships' ? bShips : bFlights, d = b.querySelector('.lt-dot');
+    if (d) { if (st) d.dataset.st = st; else delete d.dataset.st; }
+    paintFeed();
+  }
+  function paintFeed() {
+    const put = (btn, kind, base, on, n) => {
+      if (!btn) return;
+      const st = on ? (feed[kind] || 'wait') : null;   // no state while the layer is off, so an idle button never wears a stale red
+      if (st) { if (btn.dataset.feed !== st) btn.dataset.feed = st; } else if (btn.dataset.feed) delete btn.dataset.feed;
+      const t = on ? `${base} — ${n} tracked · ${FEED_TXT[st]}` : base;
+      if (btn.title !== t) btn.title = t;   // setCounts() fires per new ship — don't churn the attribute
+    };
+    put(qShips, 'ships', 'Live ships', Ships.on, Ships.ships.size);
+    put(qFlights, 'flights', 'Live flights', Flights.on, Flights.flights.size);
+  }
   function setCounts() {
     bShips.classList.toggle('is-on', Ships.on); bFlights.classList.toggle('is-on', Flights.on);
     bShips.querySelector('span').textContent = Ships.on ? `Ships ${Ships.ships.size}` : 'Ships';
     bFlights.querySelector('span').textContent = Flights.on ? `Flights ${Flights.flights.size}` : 'Flights';
+    paintFeed();
   }
   function applyGate() {
     // control window drives tracking from the side panel's "Live layers" card, so the floating
     // bar normally only shows on the presenter — but in PRESENTER (live) mode the control mirrors
     // the on-air chrome (WYSIWYG preview), so honour visibility.tracking there too.
     const ctlPreview = isControl && S.state.mode === 'live';
-    bar.hidden = (isControl && !ctlPreview) || S.cfg().visibility.tracking === false;
+    const off = S.cfg().visibility.tracking === false;
+    bar.hidden = (isControl && !ctlPreview) || off;
     const can = isControl || S.cfg().permissions.canTrack !== false;
     bar.classList.toggle('is-locked', !can);
+    // the .qtools buttons ARE the live tracking UI, so visibility.tracking has to gate them or the
+    // presenter-visibility switch controls nothing (its only other consumer is the off-DOM bar).
+    // canTrack is folded in so this never fights config-apply.js, which hides the same three buttons
+    // for a presenter that lacks the permission (and never un-hides them).
+    const hide = (isControl ? (ctlPreview && off) : off) || !can;
+    [qShips, qFlights, qTrails].forEach(b => { if (b) b.hidden = hide; });   // attribute, not style.display — qbar.js owns display for its show/hide list
   }
   function sync() {
     bShips.classList.toggle('is-on', S.state.tracking.ships); bFlights.classList.toggle('is-on', S.state.tracking.flights);

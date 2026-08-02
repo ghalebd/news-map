@@ -95,35 +95,6 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .modesw__btn:hover { color: var(--text); }
 .modesw__btn.is-active { color: var(--accent-ink); background: var(--accent); box-shadow: var(--accent-glow); }
 
-/* ---------- icon button (canonical) ---------- */
-.btn {
-  width: var(--btn); height: var(--btn); flex: 0 0 auto;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--r-sm); color: var(--text-2);
-  background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen);
-  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
-}
-.btn svg { width: 20px; height: 20px; }
-.btn:hover { color: var(--text); border-color: var(--stroke-2); background: var(--glass-hi); }
-.btn:active { transform: scale(.93); }
-.btn.is-on, .btn.is-active { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
-
-/* text+icon button */
-.tbtn {
-  height: 38px; padding: 0 14px; gap: 9px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--r-sm); font-size: 12px; font-weight: 600; color: var(--text);
-  background: var(--glass-2); border: 1px solid var(--stroke); box-shadow: var(--sheen);
-  transition: all var(--t-fast) var(--ease);
-}
-.tbtn svg { width: 15px; height: 15px; flex: 0 0 auto; color: var(--accent); }
-.tbtn:hover { border-color: var(--accent); }
-.tbtn:active { transform: translateY(1px); }
-.tbtn.is-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: var(--accent-glow); }
-.tbtn.is-primary svg { color: var(--accent-ink); }
-.tbtn.is-danger:hover { border-color: var(--danger); color: var(--danger); }
-.tbtn.grow { flex: 1 1 auto; min-width: 0; }
-.tbtn.grow > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 /* ---------- scene deck (PREP) ---------- */
 .deck { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: var(--z-bar);
   display: flex; align-items: stretch; gap: 8px; max-width: calc(100vw - 120px); padding: 9px; }
@@ -160,30 +131,10 @@ body.touch .status__find svg { width: 18px; height: 18px; }
 .nownext__nav--main { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: var(--accent-glow); }
 .nownext__nav--main:hover { color: var(--accent-ink); }
 
-/* ---------- floating panel (studio / asset) ---------- */
-.panel { position: fixed; display: flex; flex-direction: column; z-index: var(--z-flyout); overflow: hidden;
-  border-radius: var(--r); transition: opacity var(--t) var(--ease), transform var(--t) var(--ease); }
-.panel.flyout { animation: pop var(--t) var(--ease-out); transform-origin: left center; }
+/* shared pop-in — the .panel component it was written for is gone, but .qa, .mapstyle-pop
+   and .geo-pop still animate with it, so this keyframe must outlive it. */
 @keyframes pop { from { opacity: 0; transform: translateX(-8px) scale(.98); } to { opacity: 1; transform: none; } }
-.panel__head { display: flex; align-items: center; gap: 9px; padding: 10px 12px; cursor: grab; background: var(--accent-soft); border-bottom: 1px solid var(--stroke); }
-.panel__head:active { cursor: grabbing; }
-.panel__grip { display: flex; color: var(--text-3); }
-.panel__grip svg { width: 12px; height: 14px; }
-.panel__title { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); }
-.panel__close { width: 24px; height: 24px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border: 1px solid transparent; transition: all var(--t-fast) var(--ease); }
-.panel__close svg { width: 14px; height: 14px; }
-.panel__close:hover { color: var(--danger); border-color: var(--danger); }
-.panel__body { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-.panel__body::-webkit-scrollbar { width: 0; }
-.section__label { font-size: 9px; font-weight: 700; letter-spacing: 1.4px; color: var(--text-3); text-transform: uppercase; }
-.row { display: flex; gap: 6px; }
 .hint { font-size: 10.5px; color: var(--text-3); line-height: 1.45; }
-
-/* collapsed dock square */
-.panel.is-square, .toolbar.is-square, .rail.is-square { padding: 0; overflow: hidden; cursor: grab; align-items: center; justify-content: center; }
-.is-square > :not(.dock-square__icon) { display: none; }
-.dock-square__icon { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--accent); }
-.dock-square__icon svg { width: 21px; height: 21px; }
 
 /* ---------- quick-add launcher ---------- */
 .fab { position: fixed; right: 18px; bottom: 28px; z-index: var(--z-flyout); width: 48px; height: 48px; border-radius: 50%;
@@ -251,6 +202,22 @@ body.attrib-off .maplibregl-ctrl-bottom-right { display: none !important; }
 .qtool.is-on { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow), var(--sheen); }
 .qtool--color { position: relative; }
 .qtool__dot { width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--stroke-2); }
+/* ---------- live-feed health pip (data-feed=live|wait|err, set by tracking.js paintFeed) ----------
+   .is-on only says what the operator ASKED for, so a dead AIS / flight feed looked exactly like a
+   healthy one. A corner pip is all this needs: the tool bar can be on air, so nothing loud and
+   nothing that moves — except a genuine "feed down", which breathes rather than blinks. */
+.qtool[data-feed] { position: relative; }
+.qtool[data-feed]::after { content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-3); box-shadow: 0 0 0 1.5px rgba(8, 11, 18, .8); pointer-events: none; }
+.qtool[data-feed=live]::after { background: var(--ok); box-shadow: 0 0 0 1.5px rgba(8, 11, 18, .8), 0 0 6px rgba(50, 213, 131, .7); }
+.qtool[data-feed=wait]::after { background: var(--warn); box-shadow: 0 0 0 1.5px rgba(8, 11, 18, .8), 0 0 5px rgba(255, 176, 32, .5); }
+.qtool[data-feed=err]::after { background: var(--danger); box-shadow: 0 0 0 1.5px rgba(8, 11, 18, .8), 0 0 7px rgba(255, 90, 95, .75);
+  animation: feedDown 2.4s ease-in-out infinite; }
+/* the button stays accent-lit (the layer IS on) — only the edge warms to red, so "on but broken"
+   reads at a glance without a second alarm colour competing with .is-on */
+.qtool[data-feed=err] { border-color: color-mix(in srgb, var(--danger) 45%, var(--stroke)); }
+@keyframes feedDown { 0%, 100% { opacity: 1; } 50% { opacity: .42; } }
+body.touch .qtool[data-feed]::after { top: 7px; right: 7px; width: 8px; height: 8px; }
 /* ---------- unified left-bar popup (shared by every menu off the tool bar) ---------- */
 .lbar-pop { position: fixed; z-index: var(--z-flyout); width: max-content; min-width: 132px; max-width: 320px;
   padding: 7px; border-radius: 13px; background: var(--glass); border: 1px solid var(--stroke);
@@ -262,7 +229,6 @@ body.attrib-off .maplibregl-ctrl-bottom-right { display: none !important; }
 .lbar-pop__i svg { width: 17px; height: 17px; flex: 0 0 auto; }
 .lbar-pop__i:hover { color: var(--text); background: var(--glass-2); }
 .lbar-pop__i.is-on { color: var(--accent); background: var(--accent-soft); }
-.lbar-pop__row { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; max-width: 184px; }
 
 .qtools-pop { z-index: var(--z-flyout); }
 .qtools-pop.lbar-pop { flex-direction: row; flex-wrap: wrap; max-width: 168px; padding: 9px; gap: 7px; }

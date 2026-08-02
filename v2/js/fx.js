@@ -50,12 +50,19 @@
     thirds.hidden = !S.cfg().thirds;
     const c = S.cfg().clouds || {};
     if (c.on) { clouds.hidden = false; clouds.style.backgroundImage = cloudTile(); clouds.style.opacity = (c.amount == null ? 32 : c.amount) / 100; anchorClouds(); } else clouds.hidden = true;
+    driftRun(!!c.on);
   }
 
   // anchor continuously so grid/clouds track the map (cheap style updates)
   map.on('move zoom moveend zoomend resize', () => { anchorGrid(); anchorClouds(); });
-  // slow drift, only while clouds are on
-  setInterval(() => { const c = S.cfg().clouds || {}; if (!c.on || document.body.classList.contains('mode-3d')) return; drift += 30 / Math.max(8, c.speed || 70); anchorClouds(); }, 90);
+  // slow drift, started/stopped by render() — it used to tick ~11x/s for the whole broadcast even with
+  // clouds off, just to read the config and return
+  let driftT = null;
+  function driftRun(on) {
+    if (on === !!driftT) return;
+    if (on) driftT = setInterval(() => { const c = S.cfg().clouds || {}; if (document.body.classList.contains('mode-3d')) return; drift += 30 / Math.max(8, c.speed || 70); anchorClouds(); }, 90);
+    else { clearInterval(driftT); driftT = null; }
+  }
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync') render(); });
   render();
 })();

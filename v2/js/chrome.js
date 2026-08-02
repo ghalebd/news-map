@@ -6,7 +6,7 @@
 (() => {
   const S = window.Store, M = window.GameMap, L2 = M && M.map;
   if (!S || !L2 || typeof L === 'undefined') return;
-  let lscale = null, glscale = null, glscaleMap = null;
+  let lscale = null, glscale = null, glscaleMap = null, rotMap = null;
 
   const comp = document.createElement('button'); comp.className = 'compass glass'; comp.hidden = true; comp.title = 'North — click to face north (3D)';
   comp.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2.5 15.4,12 12,10 8.6,12"></polygon><polygon points="12,21.5 8.6,12 12,14 15.4,12" class="s"></polygon></svg><b>N</b>';
@@ -22,12 +22,14 @@
     else if (lscale && lscale._map) { try { L2.removeControl(lscale); } catch (e) {} }
     // 3D MapLibre scale (only once the GL map exists)
     const gm = (window.Map3D && Map3D.map) || null;
+    // the compass follows the bearing on MapLibre's own rotate event. The 200ms poll it replaces ran
+    // for the whole broadcast — including in 2D, where the bearing is always 0 and nothing can move.
+    if (gm && rotMap !== gm) { rotMap = gm; const s = () => { if (!comp.hidden) spin(); }; gm.on('rotate', s); gm.on('moveend', s); }   // moveend = safety net so the needle can never end up stale after a camera move
     if (ui.scaleBar && gm) { if (!glscale) { try { glscale = new maplibregl.ScaleControl({ maxWidth: 130, unit: 'metric' }); } catch (e) {} } if (glscale && glscaleMap !== gm) { try { gm.addControl(glscale, 'bottom-left'); glscaleMap = gm; } catch (e) {} } }
     else if (glscale && glscaleMap) { try { glscaleMap.removeControl(glscale); } catch (e) {} glscaleMap = null; }
     comp.hidden = !ui.compass; if (ui.compass) spin();
   }
-  setInterval(() => { if (!comp.hidden) spin(); }, 200);
-  setInterval(apply, 1500);   // pick up the GL map / 3D toggle
+  window.addEventListener('mode3d', apply);   // entering/leaving 3D emits no store event; this replaces a 1.5s poll that ran forever just to notice the GL map being created (only enter() creates it)
   S.on((st, evt) => { if (evt === 'config' || evt === 'sync' || evt === 'threed') apply(); });
   apply();
 })();

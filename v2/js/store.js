@@ -17,6 +17,11 @@ const Store = (() => {
     // whose geometry canonicalOrient gets wrong (sideways = wrong axis, or front/back flipped) — derived by
     // the MOVEMENT-forward test (nose must point along travel), not a static guess. The calibrator / Turn
     // button writes here too, so any fix (incl. future uploads) is remembered for every instance + device.
+    // These stay in the OLD frame on purpose. deepMerge folds them in for any key the operator never
+    // customised and migrate() then negates the whole map, so an old-frame value here is what lands on the
+    // correct new-frame one (270 -> 90). A fresh install has nothing to merge, so the boot path runs
+    // migrate() too (see `if (!load()) migrate()`) — that is what keeps a new machine and a migrated one
+    // pointing the same way. Changing these to new-frame values would double-negate every existing install.
     modelFix: { 'fa-18f-raaf.glb': 270, 'embraer-legacy-650-fbx.glb': 270, 'geranium.glb': 270, 'shahed-238.glb': 180 },
     visibility: { brand: true, status: true, deck: true, modeSwitch: true, fab: true, qtools: true, nownext: true, tracking: true, sceneSettings: true, attribution: true },
     permissions: {
@@ -110,7 +115,14 @@ const Store = (() => {
   const subs = [];
   const on = fn => { subs.push(fn); return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); }; };
   let _t = null;
-  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus, broadcast: state.broadcast })); } catch (e) { console.warn('Store.persist failed (localStorage quota?) — edits may not survive reload or sync', e && e.name); } }, 120); }
+  // A failed write means the operator's work has stopped being saved. This used to be a console.warn
+  // ONLY — invisible to someone who cannot open devtools mid-show — so they kept building a rundown
+  // that would vanish on the next reload. UI.storageAlarm raises a persistent on-screen banner on the
+  // CONTROL console only (never the presenter, which is on air) and is cleared by the next good write.
+  function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus, broadcast: state.broadcast })); alarm(false); } catch (e) { console.warn('Store.persist failed (localStorage quota?) — edits may not survive reload or sync', e && e.name); alarm(true, (e && e.name) || 'write failed'); } }, 120); }
+  // ui.js loads AFTER store.js, so resolve it at call time, not at module scope. Fully qualified
+  // (window.UI, not a bare UI) so this cannot throw where `window` is not the global object.
+  function alarm(on, why) { try { if (window.UI && window.UI.storageAlarm) window.UI.storageAlarm(on, why); } catch (e) {} }
   // PER-SUBSCRIBER ISOLATION — ~18 modules subscribe in <script> order. Without the inner guard a
   // SINGLE throwing subscriber (e.g. one malformed element reaching Leaflet) silently skips every
   // later subscriber for this and all future events: the map goes bare, scene cuts stop working,
@@ -165,14 +177,38 @@ const Store = (() => {
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
   function sanitizeState(d) {
     if (!isObj(d)) return d;
-    const scenes = d.rundown && Array.isArray(d.rundown.scenes) ? d.rundown.scenes : [];
+    // load() applies the LOCAL snapshot straight through applyData with no validateState in front of it,
+    // so these repairs are the only gate a hand-edited / half-written localStorage payload ever passes.
+    // A wrong-typed top-level slice is assigned directly into state and then throws on the first read
+    // (state.rundown.scenes.find, state.tracking[kind]) — inside a subscriber, i.e. mid-render.
+    ['rundown', 'config', 'reveal', 'tracking', 'broadcast'].forEach(k => { if (k in d && d[k] != null && !isObj(d[k])) delete d[k]; });
+    if ('mapStyle' in d && typeof d.mapStyle !== 'string') delete d.mapStyle;
+    if ('color' in d && typeof d.color !== 'string') delete d.color;
+    if (isObj(d.rundown)) {
+      if (d.rundown.title != null && typeof d.rundown.title !== 'string') d.rundown.title = String(d.rundown.title);   // ui.js saveProject/exportPNG call .replace() on it
+      d.rundown.scenes = Array.isArray(d.rundown.scenes) ? d.rundown.scenes.filter(isObj) : [];   // a null/string "scene" throws on the first .elements read
+    }
+    const scenes = isObj(d.rundown) ? d.rundown.scenes : [];
     scenes.forEach(s => {
       if (!isObj(s)) return;
+      // Every renderer iterates elements + revealOrder. A non-array, or a single non-object element,
+      // reaches Leaflet as `undefined.type` and takes the whole render pass — and, before the emit
+      // guard, every later subscriber — with it.
+      if (!Array.isArray(s.elements)) s.elements = [];
+      else if (!s.elements.every(isObj)) s.elements = s.elements.filter(isObj);
+      if (!Array.isArray(s.revealOrder)) s.revealOrder = [];
       const v = isObj(s.view) ? s.view : (s.view = {});
       v.lat = clamp(fin(+v.lat, 29.5), -85, 85);
       v.lng = clamp(fin(+v.lng, 45), -180, 180);
       v.zoom = clamp(fin(+v.zoom, 5), 1, 20);
     });
+    // reveal is sceneId -> count. A non-number makes Math.min(v, len) NaN in revealedCount, and the
+    // storyboard then reveals NOTHING on air (elements.slice(0, NaN) is empty) with no error anywhere.
+    if (isObj(d.reveal)) for (const k in d.reveal) d.reveal[k] = Math.max(0, Math.round(fin(+d.reveal[k], 0)));
+    // broadcast sub-objects are Object.assign'd by setBanner/setTicker/setTour/... and read directly by
+    // the on-air graphics. deepMerge only rescues an explicit null, so a string/array/number survived
+    // into state and threw on the operator's first click instead of at import time.
+    if (isObj(d.broadcast)) ['banner', 'ticker', 'tour', 'spotlight', 'anim'].forEach(k => { if (k in d.broadcast && !isObj(d.broadcast[k])) delete d.broadcast[k]; });
     // a synced/imported timeline duration of 0 makes `t % dur` NaN, and the rAF loop then throws ~60x/s
     if (isObj(d.config) && isObj(d.config.timeline)) d.config.timeline.dur = Math.max(1, fin(+d.config.timeline.dur, 15));
     // Fields the UI iterates with .forEach/.map/.filter. deepMerge only restores the default when the
@@ -182,6 +218,34 @@ const Store = (() => {
       ['mapStyles', 'assetCats', 'customAssets', 'places', 'models3d', 'overlays'].forEach(k => {
         if (k in d.config && !Array.isArray(d.config[k])) delete d.config[k];   // drop it → deepMerge supplies the default
       });
+      // ...and a single bad ENTRY inside one of those arrays is just as fatal: mergeNewMapStyles does
+      // .map(m => m.id) on every load, so one null map-style aborts applyData half-applied — before any
+      // renderer even runs. assetCats is a list of plain strings, so it is filtered on type instead.
+      ['mapStyles', 'customAssets', 'places', 'models3d', 'overlays'].forEach(k => {
+        const a = d.config[k]; if (Array.isArray(a) && !a.every(isObj)) d.config[k] = a.filter(isObj);
+      });
+      if (Array.isArray(d.config.assetCats)) d.config.assetCats = d.config.assetCats.filter(c => typeof c === 'string');
+      // Coordinates that go DIRECTLY into Leaflet/MapLibre constructors. A NaN here throws "Invalid
+      // LatLng" out of the render pass; bounds we cannot read at all are dropped, which render() already
+      // treats as "skip this overlay" rather than crashing.
+      if (Array.isArray(d.config.places)) d.config.places.forEach(p => { p.lat = clamp(fin(+p.lat, 0), -85, 85); p.lng = clamp(fin(+p.lng, 0), -180, 180); p.zoom = clamp(fin(+p.zoom, 5), 1, 20); });
+      if (Array.isArray(d.config.models3d)) d.config.models3d.forEach(m => { m.lat = clamp(fin(+m.lat, 0), -85, 85); m.lng = clamp(fin(+m.lng, 0), -180, 180); });
+      if (Array.isArray(d.config.overlays)) d.config.overlays.forEach(o => {
+        const b = o.bounds;
+        if (!Array.isArray(b) || !Array.isArray(b[0]) || !Array.isArray(b[1])) { delete o.bounds; return; }
+        o.bounds = [[clamp(fin(+b[0][0], 0), -85, 85), clamp(fin(+b[0][1], 0), -180, 180)], [clamp(fin(+b[1][0], 0), -85, 85), clamp(fin(+b[1][1], 0), -180, 180)]];
+      });
+      // Exactly the same failure one level down: every one of these is patched with
+      // Object.assign(cfg().X, patch) by a setter, so a wrong-typed one survived deepMerge and then
+      // threw on the operator's first click on that control rather than at import time.
+      ['style', 'visibility', 'permissions', 'trackStyle', 'brand', 'threeD', 'light3d', 'timeline', 'track3d', 'ui', 'grid', 'sea', 'clouds', 'dayNight', 'campath', 'follow', 'drawDefaults', 'panelScale', 'qbar', 'modelFix'].forEach(k => {
+        if (k in d.config && d.config[k] != null && !isObj(d.config[k])) delete d.config[k];
+      });
+      // arrays/maps walked by the playback rAF loops and the tool-bar builder — a non-array here throws
+      // ~60x/s inside requestAnimationFrame, where nothing is catching it
+      if (isObj(d.config.timeline)) { const t = d.config.timeline; if (!Array.isArray(t.cam)) t.cam = []; if (!isObj(t.models)) t.models = {}; }
+      if (isObj(d.config.campath) && !Array.isArray(d.config.campath.frames)) d.config.campath.frames = [];
+      if (isObj(d.config.qbar)) { const q = d.config.qbar; ['order', 'hidden', 'pinned'].forEach(k => { if (!Array.isArray(q[k])) q[k] = []; }); }
     }
     return d;
   }
@@ -211,6 +275,26 @@ const Store = (() => {
       for (const k in layoutMap) { const e = layoutMap[k]; if (e && e.s && e.s !== 1) { if (c.panelScale[k] == null) c.panelScale[k] = e.s; delete e.s; moved = true; } }
       if (moved) persistLayout();
       c._mig.panelScale = true;
+    }
+    // MODEL HEADING FRAME. rotZ is a compass bearing, but two of the three renderers applied it inside a
+    // MIRRORED frame: the flat 2D billboard drew bearing −rotZ and the flat-3D mesh drew 180−rotZ (only
+    // the globe icons were right). A mirror can't be undone by a rotation, so NO stored modelFix was ever
+    // consistent across the three views — calibrating one broke another. All three now render +rotZ,
+    // which INVERTS the meaning of every stored heading correction and every hand-set heading.
+    // There is no migration that preserves all three views (they never agreed), so this one preserves the
+    // FLAT 2D MAP — the primary working view — exactly: negating modelFix, rotZ and headOff together
+    // leaves every static model pointing at precisely the same pixels as before, whatever each GLB's own
+    // geometry offset happens to be. Timeline keyframes carry rotZ through the same path, so they flip too.
+    // Known, unavoidable consequences: the globe/3D views change (they were mirrored against 2D before),
+    // and a fix that was calibrated while the model flew an EAST/WEST route may need one re-click of the
+    // calibrator — which now actually works. Pitch/roll are left alone: the 2D map ignores them.
+    if (!c._mig.headFrame) {
+      const neg = v => ((-Math.round(v || 0) % 360) + 360) % 360;
+      if (isObj(c.modelFix)) for (const k in c.modelFix) c.modelFix[k] = neg(c.modelFix[k]);
+      if (Array.isArray(c.models3d)) c.models3d.forEach(m => { if (!m) return; if (m.rotZ) m.rotZ = neg(m.rotZ); if (m.headOff) m.headOff = neg(m.headOff); });
+      const tlm = c.timeline && c.timeline.models;
+      if (isObj(tlm)) for (const id in tlm) { if (Array.isArray(tlm[id])) tlm[id].forEach(k => { if (k && k.rotZ) k.rotZ = neg(k.rotZ); }); }
+      c._mig.headFrame = true;
     }
   }
   function load() { try { return applyData(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { return false; } }
@@ -365,7 +449,11 @@ const Store = (() => {
   function resetConfig() { state.config = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); emit('config'); }
 
   /* ---- init ---- */
-  load();
+  // A brand-new install has no stored snapshot, so load() returns false and migrate() would never run —
+  // leaving DEFAULT_CONFIG's old-frame model headings unconverted while every existing install got migrated,
+  // i.e. a fresh machine 180 degrees out from the rest. Run the migrations against the defaults too; they are
+  // all guarded by their own _mig flags, so this is idempotent.
+  if (!load()) migrate();
 
   return {
     state, on, emit, uid, load, exportState, importState, validateState, sanitizeState, isDefaultStyle, modelFix, setModelFix, modelKey, DEFAULT_CONFIG,

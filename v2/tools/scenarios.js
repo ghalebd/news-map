@@ -143,7 +143,8 @@ async function cameraTrack(p, ms = 2400, step = 100) {
     await seed(p);
     await p.evaluate(() => {
       if (Store.clearModels3d) Store.clearModels3d();
-      const m = Store.addModel3d({ src: 'x.glb', name: 'T2', lat: 29.5, lng: 45, scale: 4, mode: '2d', on: true });
+      const it = (window.MODELS3D_CATALOG || [])[0];   // a REAL catalogue model: a fake src now (correctly) reports a load failure
+      const m = Store.addModel3d({ src: it ? 'assets3d/' + it.file : 'x.glb', name: 'T2', lat: 29.5, lng: 45, scale: 4, mode: '2d', on: true });
       Store.updateModel3d(m.id, { route: [[29.5, 45], [31, 48]], routeDur: 60 });
       if (window.ModelsAnim && ModelsAnim.play) ModelsAnim.play(m.id);
       window.__mid = m.id;

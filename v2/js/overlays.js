@@ -61,6 +61,23 @@
     placeHandle();
   }
 
+  /* ---- broken-image reporting ----
+     A 404, a typo'd paste, or a host that dies between rehearsal and transmission used to fail in TOTAL
+     silence: nothing drew, while the overlay's row in the console still read "on" and the operator had
+     no way to tell WHICH of the stacked layers was missing. Name it in a toast and keep the id flagged.
+     The state itself is never touched — an image that comes back must keep working without an edit. */
+  const failed = new Set(), toasted = new Set();   // toasted is keyed by id+url so a corrected URL reports again
+  const urlOf = id => { const o = list().find(x => x.id === id); return (o && o.url) || ''; };
+  function onImgError(id) {
+    failed.add(id);
+    const o = list().find(x => x.id === id) || {}, key = id + '|' + (o.url || '');
+    if (toasted.has(key)) return;   // 'error' can re-fire on every re-add — one report per bad URL, not per render
+    toasted.add(key);
+    console.warn('[overlays] image failed to load —', o.name, o.url);
+    window.UI && window.UI.toast('Overlay image failed to load — “' + (o.name || 'untitled') + '”', 6000);
+  }
+  function onImgLoad(id) { failed.delete(id); toasted.delete(id + '|' + urlOf(id)); applyWipe(); }   // clear the report so a host that dies LATER on the same URL is reported again
+
   function render() {
     const seen = new Set();
     list().forEach((o, i) => {
@@ -70,15 +87,19 @@
       if (!lyr) {
         lyr = L.imageOverlay(o.url, o.bounds, { opacity: o.opacity != null ? o.opacity : 1, interactive: false, className: 'ov-img', crossOrigin: 'anonymous' });
         lyr.addTo(map); layers.set(o.id, lyr);
-        lyr.on('load', applyWipe);
+        // look the overlay up by id at fire time, never close over `o`: a sync/import replaces the whole
+        // config.overlays array, so a captured object would report a stale name (or none at all).
+        const id = o.id;
+        lyr.on('load', () => onImgLoad(id));
+        lyr.on('error', () => onImgError(id));
       } else {
         lyr.setBounds(L.latLngBounds(o.bounds));
         lyr.setOpacity(o.opacity != null ? o.opacity : 1);
-        if (lyr._url !== o.url) lyr.setUrl(o.url);
+        if (lyr._url !== o.url) { failed.delete(o.id); lyr.setUrl(o.url); }   // new URL = a fresh attempt, not still-broken
       }
       if (lyr.setZIndex) lyr.setZIndex(350 + i);
     });
-    for (const [id, lyr] of layers) if (!seen.has(id)) { map.removeLayer(lyr); layers.delete(id); }
+    for (const [id, lyr] of layers) if (!seen.has(id)) { map.removeLayer(lyr); layers.delete(id); failed.delete(id); }
     applyWipe();
     renderEdit();
   }
@@ -136,5 +157,8 @@
     // toggle on-map move/resize handles for an overlay
     edit(id) { editId = (editId === id) ? null : id; renderEdit(); return editId === id; },
     get editing() { return editId; },
+    // overlays whose image did not load — lets the console mark the offending row instead of showing "on"
+    isFailed(id) { return failed.has(id); },
+    get failed() { return [...failed]; },
   };
 })();
