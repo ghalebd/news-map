@@ -6,8 +6,7 @@
    ============================================================ */
 (() => {
   const KEY = 'SIyj4p6cKZm7sBsge2Zn', map = window.GameMap.map, I = window.ICONS;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { h, esc } = window.U;   // js/util.js — place names come back from the MapTiler geocoder, so esc() must be the shared copy
   // fly the ACTIVE map: in 3D the flat map is hidden, so flying it does nothing visible — target the globe
   // instead (MapLibre center is [lng,lat] and its zoom runs ~1 below Leaflet's). On 3D exit the camera syncs back.
   const flyTo = (lat, lng, zoom) => {

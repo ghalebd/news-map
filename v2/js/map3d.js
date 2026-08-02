@@ -8,13 +8,16 @@
    ============================================================ */
 (() => {
   const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
-  const D2R = Math.PI / 180;
+  // js/util.js. This file used to declare Math.PI/180 TWICE under two names (D2R here, RAD ~190 lines
+  // down next to haversine); both names are kept as aliases of the one constant so no body changed.
+  // fmtD is likewise an alias of draw.js's fmtDist — the 2D map and the globe label the same measure
+  // element, and a drift between the two formatters would put two different numbers on air.
+  const { h, D2R, RAD, fmtD } = window.U;
   const KEY = 'SIyj4p6cKZm7sBsge2Zn';
   // "wireframe" in 3D = a near-black vector base with glowing contour lines draped on the
   // terrain (the lines follow the elevation, so mountains read as a topographic wireframe).
   const realStyle = id => (id === 'wireframe' ? 'dataviz-dark' : id);
   const styleUrl = id => `https://api.maptiler.com/maps/${realStyle(id)}/style.json?key=${KEY}`;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
   if (typeof maplibregl === 'undefined') { console.warn('MapLibre not loaded'); return; }
 
   // MapLibre throws a benign internal error ('shaderPreludeCode') for ONE frame while a base style
@@ -196,9 +199,7 @@
   /* ---- mirror the active scene geometry into GeoJSON ---- */
   const SRC = 'scene', SRC_IC = 'scene-ic';
   function ringFor(lat, lng, radiusM, n = 64) { const pts = []; const dLat = radiusM / 111320; for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; pts.push([lng + (dLat / Math.cos(lat * Math.PI / 180)) * Math.cos(a), lat + dLat * Math.sin(a)]); } return pts; }
-  const RAD = Math.PI / 180;
   function haversine(a, b) { const dLat = (b[0] - a[0]) * RAD, dLng = (b[1] - a[1]) * RAD, la1 = a[0] * RAD, la2 = b[0] * RAD; const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2; return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)); }
-  const fmtD = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
   // arrowhead triangle (lng/lat ring) at tip T pointing away from A. Sized as a fraction of the shaft so
   // it scales with the arrow — projection-agnostic (a plain polygon renders correctly in flat-3D + globe,
   // unlike a screen-space icon whose rotation-alignment differs per projection). aLL/tLL are [lng,lat].

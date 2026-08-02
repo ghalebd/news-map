@@ -5,12 +5,13 @@
    ============================================================ */
 const Draw = (() => {
   const map = GameMap.map, drawn = GameMap.drawn, S = Store, I = ICONS;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+  // js/util.js. fmtDist comes from there too: map3d.js labels the SAME measure element on the globe with
+  // an identical formatter, so the two must not be free to drift into showing different numbers on air.
+  // col() below deliberately stays LOCAL — it is a CSS-value allowlist, a different problem from esc().
+  const { h, esc, fmtDist } = window.U;
   // safe CSS colour: only allow hex / rgb(a) / hsl(a) / a bare colour word — blocks CSS injection when
   // an element's colour comes from imported/synced scene JSON (interpolated raw into inline style).
   const col = c => (typeof c === 'string' && /^(#[0-9a-fA-F]{3,8}|rgb[a]?\([\d.,%\s]+\)|hsl[a]?\([\d.,%\s]+\)|[a-zA-Z]{1,20})$/.test(c.trim())) ? c.trim() : '#ff453a';
-  const fmtDist = m => m > 1000 ? (m / 1000).toFixed(1) + ' KM' : Math.round(m) + ' M';
   const labelIcon = (txt, color) => L.divIcon({ className: 'map-label', html: `<span style="border-color:${col(color)}">${esc(txt)}</span>`, iconAnchor: [0, 8] });
   /* permission gate — the control console (full console) always permits;
      the presenter is limited by config.permissions. */

@@ -6,8 +6,7 @@
    ============================================================ */
 (() => {
   const S = window.Store, I = window.ICONS;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // style names arrive via sync → escape
+  const { h, esc } = window.U;   // js/util.js — style names arrive via sync → escape
   const isControl = window.APP_ROLE === 'control';
 
   const qbar = document.querySelector('.qtools');
