@@ -14,6 +14,7 @@
   const S = window.Store, I = window.ICONS, L2 = window.GameMap && window.GameMap.map;
   if (!S || !L2) return;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // model names arrive via sync/import → escape
   const models = () => (S.models3d ? S.models3d() : []);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -60,7 +61,8 @@
       if (tok === calibToken && url && calibImg) calibImg.src = url;
     }).catch(() => {});
   }
-  function flyTo() { const m = sel(); if (!m) return; const g = gl(); if (g) g.flyTo({ center: [m.lng, m.lat], zoom: Math.max(g.getZoom(), 8), duration: 900 }); else window.GameMap.flyToView({ lat: m.lat, lng: m.lng, zoom: 9 }, { type: 'flyTo', duration: 1 }); }
+  function flyTo() { const m = sel(); if (!m) return; try { if (window.Follow && Follow.release) Follow.release(); } catch (e) {}   // deliberate move outranks a follow lock (the 3D branch below bypasses GameMap.flyToView, which has its own release)
+    const g = gl(); if (g) g.flyTo({ center: [m.lng, m.lat], zoom: Math.max(g.getZoom(), 8), duration: 900 }); else window.GameMap.flyToView({ lat: m.lat, lng: m.lng, zoom: 9 }, { type: 'flyTo', duration: 1 }); }
   async function duplicate() { const m = sel(); if (!m) return; try { const id = S.uid('m3d'); if (!m.src) { const blob = await window.Assets3D.get(m.id); if (blob) await window.Assets3D.put(id, blob); } const [hh] = span(); const c = Object.assign({}, m, { id, name: (m.name || 'Model') + ' copy', lat: m.lat + hh * 0.06 }); S.addModel3d(c); select(id); } catch (e) {} }
   function del() { const m = sel(); if (!m) return; try { window.Assets3D && Assets3D.del(m.id); } catch (e) {} const rest = models().filter(x => x.id !== m.id); S.removeModel3d(m.id); const nxt = rest[0]; nxt ? select(nxt.id) : hide(); }
   function step(dir) { const a = models(); if (!a.length) return; let i = a.findIndex(m => m.id === selId); i = (i + dir + a.length) % a.length; select(a[i].id); }
@@ -265,7 +267,7 @@
     if (routeB) routeB.classList.toggle('on', !!(routeMode && routeMode.id === m.id));
     if (followB) followB.classList.toggle('on', !!(window.Follow && Follow.isFollowing('model', m.id)));
     // rebuild the picker
-    if (picker) { picker.innerHTML = ''; models().forEach(x => { const o = h('option', null, x.name || 'Model'); o.value = x.id; if (x.id === selId) o.selected = true; picker.appendChild(o); }); }
+    if (picker) { picker.innerHTML = ''; models().forEach(x => { const o = h('option', null, esc(x.name || 'Model')); o.value = x.id; if (x.id === selId) o.selected = true; picker.appendChild(o); }); }
   }
 
   /* ---- keyboard ---- */

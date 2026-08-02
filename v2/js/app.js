@@ -190,6 +190,10 @@
   }
 
   /* ---------- react to store ---------- */
+  // "which scene is on air, framed how". A cut made on the CONTROL reaches this window as 'sync', never
+  // as 'active', so the 2D camera has to detect the change itself (map3d.js already does this for 3D).
+  const sceneSig = () => { const s = S.activeScene(); const v = (s && s.view) || {}; return s ? [s.id, v.lat, v.lng, v.zoom].join('|') : ''; };
+  let lastSceneSig = sceneSig();
   S.on((st, evt) => {
     if (evt === 'mode') applyMode();
     if (evt === 'config' || evt === 'sync') { window.Theme && window.Theme.apply(S.cfg().style); applyBrand(); applyTilt(); }
@@ -197,7 +201,12 @@
     if (evt === 'elements' || evt === 'active' || evt === 'scenes' || evt === 'reveal' || evt === 'sync' || evt === 'config') window.Draw && window.Draw.render();   // 'config' → marker-size changes redraw markers
     if (evt === 'scenes' || evt === 'active' || evt === 'mode' || evt === 'sync') renderLowerThird();
     if (evt === 'broadcast' || evt === 'sync') { renderBroadcast(); applyTour(); applyAnim(); renderSpotlight(); }
-    if (evt === 'active') { const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); }
+    // 'active' = a LOCAL cut. 'sync' = the operator cut on the other window — previously ignored here, so
+    // the presenter updated its deck, lower third and drawings while the map stayed parked on the old
+    // scene: graphics changing under a frozen camera, on air. Signature-gated so the 3s sync poll cannot
+    // re-fly the camera on every tick.
+    if (evt === 'active') { const s = S.activeScene(); if (s) { lastSceneSig = sceneSig(); M.flyToView(s.view, s.transition); } }
+    else if (evt === 'sync') { const sig = sceneSig(); if (sig !== lastSceneSig) { lastSceneSig = sig; const s = S.activeScene(); if (s) M.flyToView(s.view, s.transition); } }
     if (evt === 'mapstyle' || evt === 'sync') M.setStyle(S.state.mapStyle);
   });
 

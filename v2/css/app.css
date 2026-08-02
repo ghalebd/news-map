@@ -56,6 +56,16 @@ svg { display: block; }
   box-shadow: var(--shadow), var(--sheen);
   border-radius: var(--r);
 }
+/* During map pan/zoom the backdrop changes every frame, so the SVG displacement filter
+   (url(#glassDistort)) re-runs per-frame over every glass surface — the single biggest GPU
+   cost. While moving we drop just the displacement (keep blur+saturate+brightness): the glass
+   looks all but identical in motion and the full refraction snaps back the instant it settles. */
+body.map-moving .glass,
+body.map-moving .modesw, body.map-moving .deck, body.map-moving .nownext,
+body.map-moving .qa, body.map-moving .qtools, body.map-moving .ctxbar, body.map-moving .panel {
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-bright, 1.05));
+  backdrop-filter: blur(var(--blur)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-bright, 1.05));
+}
 
 /* ---------- brand + status ---------- */
 /* logo: positioned from config (top-left default), vertically centre-anchored
@@ -607,7 +617,21 @@ body.touch .ov-handle svg { width: 19px; height: 19px; }
 .locator .leaflet-container { background: #0e1622; }
 
 /* ---------- spotlight (focus mask, feathered) ---------- */
-.spotlight { position: fixed; inset: 0; z-index: var(--z-flyout); pointer-events: none; transition: background .25s var(--ease); }
+/* --z-fx, not --z-flyout: the mask dims to 95% black and shared --z-flyout with the drawing tools,
+   so (being later in the DOM) it painted OVER the FAB, quick-add menu, armed-tool chip and selection
+   context bar — leaving them ~90% black while the timeline and 3D controls stayed bright. */
+.spotlight { position: fixed; inset: 0; z-index: var(--z-fx); pointer-events: none; transition: background .25s var(--ease); }
+/* sync failure alarm — operator console only (gated in sync-client.js); a 9px dot is not enough
+   when every edit is silently failing to reach air. Above toasts so nothing can bury it. */
+.sync-alarm { position: fixed; top: 0; left: 0; right: 0; z-index: 5000; padding: 10px 16px; text-align: center;
+  background: #c1121f; color: #fff; font: 800 13px/1.3 var(--font); letter-spacing: .4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .5); animation: syncalarm 1.4s ease-in-out infinite; }
+@keyframes syncalarm { 0%, 100% { opacity: 1 } 50% { opacity: .72 } }
+/* tile-failure chip — operator console only (gated in map.js). Amber + non-blocking: serious, but it
+   is a "your map source is down" notice, not the same class of emergency as edits not reaching air. */
+.tile-alarm { position: fixed; left: 50%; transform: translateX(-50%); bottom: 54px; z-index: 4100;
+  padding: 8px 14px; border-radius: var(--pill, 999px); background: rgba(180, 108, 0, .95); color: #fff;
+  font: 800 11.5px/1 var(--font); letter-spacing: .3px; box-shadow: 0 6px 20px rgba(0, 0, 0, .45); pointer-events: none; }
 
 /* ---------- broadcast graphics: breaking banner + news ticker ---------- */
 .bcast-ticker { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); height: 36px; display: flex; align-items: stretch;

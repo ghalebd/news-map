@@ -16,7 +16,7 @@ const Draw = (() => {
      the presenter is limited by config.permissions. */
   const permits = id => { if (window.APP_ROLE === 'control') return true; const p = S.cfg().permissions; if (id === 'select') return true; if (!p.canDraw) return false; return p.tools[id] !== false; };
 
-  let tool = 'select', selected = null, selLayer = null, dragStart = null, ghost = null, sketchPts = null, polyPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null, skipClick = false;
+  let tool = 'select', selected = null, selLayer = null, dragStart = null, ghost = null, sketchPts = null, polyPts = null, qbtns = {}, markerIcon = null, dragEl = null, dragPrev = null, skipClick = false, pendingHist = false;   // pendingHist: undo snapshot is deferred until the grabbed element actually moves
   /* translate every coordinate of an element by a lat/lng delta (move) */
   function moveEl(el, dLat, dLng) {
     if (el.ll) el.ll = [el.ll[0] + dLat, el.ll[1] + dLng];
@@ -73,12 +73,18 @@ const Draw = (() => {
     let animFrom = -1;
     if (live) { if (sc.id === lastScene && n > lastN) animFrom = lastN; lastScene = sc.id; lastN = n; }
     else { lastScene = sc.id; lastN = n; }
+    // PER-ELEMENT ISOLATION — drawn.clearLayers() has already run, so a single malformed element (a NaN
+    // circle radius, a missing ll/a/b) throwing inside Leaflet used to abort this loop with the map
+    // already emptied: every drawing gone from air, and the throw also killed the rest of the store's
+    // subscriber chain. Skip the bad element and keep the scene. (map3d.js:178 already does this for 3D.)
     sc.elements.slice(0, n).forEach((el, i) => {
-      const l = buildLayer(el); if (!l) return;
-      l.__id = el.id; drawn.addLayer(l);
-      if (el.desc && l.bindTooltip) l.bindTooltip(esc(el.desc), { direction: 'top', offset: [0, -10], className: 'trk-tip' });
-      bindSelect(l, el);
-      if (animFrom >= 0 && i >= animFrom) animateIn(l, el);
+      try {
+        const l = buildLayer(el); if (!l) return;
+        l.__id = el.id; drawn.addLayer(l);
+        if (el.desc && l.bindTooltip) l.bindTooltip(esc(el.desc), { direction: 'top', offset: [0, -10], className: 'trk-tip' });
+        bindSelect(l, el);
+        if (animFrom >= 0 && i >= animFrom) animateIn(l, el);
+      } catch (err) { console.error('[draw] skipped a malformed element (' + (el && el.type) + ' ' + (el && el.id) + ')', err); }
     });
     refreshCtx();
   }
@@ -152,7 +158,11 @@ const Draw = (() => {
       skipClick = true;   // swallow the map 'click' that follows so we don't deselect
       if (tool === 'erase') { S.removeElement(el.id); return; }
       selectEl(el, layer);
-      dragEl = el; dragPrev = ev.latlng; map.dragging.disable(); try { S.pushHistory(); } catch (e) {}   // begin move — snapshot BEFORE the in-place drag so undo reverts the move
+      // Snapshot BEFORE the in-place drag so undo reverts the move — but only once the element actually
+      // MOVES (see the mousemove handler). Taking it here on every press meant a plain selection click
+      // pushed an identical snapshot and wiped the redo stack: one wasted ⌘Z per click, redo impossible
+      // after selecting anything, and real history silently evicted at HIST_MAX.
+      dragEl = el; dragPrev = ev.latlng; pendingHist = true; map.dragging.disable();
     });
     if (layer.eachLayer) layer.eachLayer(wire); else wire(layer);
   }
@@ -188,7 +198,7 @@ const Draw = (() => {
   // and a stale ghost lingered. Also nulls sketchPts so a mid-stroke tool switch can't crash on push.
   function resetGesture() {
     if (ghost) { try { drawn.removeLayer(ghost); } catch (e) {} ghost = null; }
-    dragStart = null; sketchPts = null; polyPts = null; dragEl = null; dragPrev = null;
+    dragStart = null; sketchPts = null; polyPts = null; dragEl = null; dragPrev = null; pendingHist = false;
     try { map.dragging.enable(); } catch (e) {}
   }
   function setTool(t) {
@@ -205,13 +215,31 @@ const Draw = (() => {
 
   map.on('mousedown', e => { if (!DRAG.includes(tool)) return; if (!permits(tool)) { setTool('select'); return; } dragStart = e.latlng; map.dragging.disable(); sketchPts = FREE.includes(tool) ? [[e.latlng.lat, e.latlng.lng]] : null; });
   map.on('mousemove', e => {
-    if (dragEl) { moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
+    if (dragEl) { if (pendingHist) { pendingHist = false; try { S.pushHistory(); } catch (err) {} }   // first real movement → now it is a move worth undoing
+      moveEl(dragEl, e.latlng.lat - dragPrev.lat, e.latlng.lng - dragPrev.lng); dragPrev = e.latlng; render(); return; }
     if (!dragStart) return; if (FREE.includes(tool) && sketchPts) sketchPts.push([e.latlng.lat, e.latlng.lng]); if (ghost) drawn.removeLayer(ghost); ghost = preview(tool, dragStart, e.latlng); if (ghost) drawn.addLayer(ghost);
   });
   map.on('mouseup', e => {
-    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch, true); dragEl = null; dragPrev = null; map.dragging.enable(); return; }   // noHist: snapshot already taken on grab
+    if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch, true); dragEl = null; dragPrev = null; pendingHist = false; map.dragging.enable(); return; }   // noHist: snapshot already taken on the first movement
     if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
   });
+  // RELEASE SAFETY NET — Leaflet's 'mouseup' above only fires when the pointer is released over the
+  // map container. The tool bar, settings drawer and zoom cluster are position:fixed SIBLINGS of #map,
+  // so a drag released over any of them (or outside the window) never reached it: `map.dragging` stayed
+  // DISABLED and the gesture stayed armed, leaving a dead un-pannable map that also kept dragging the
+  // grabbed element with no button held. Mirrors the nets map3d.js:311 / model-control.js:92 already have.
+  window.addEventListener('mouseup', e => {
+    if (!dragEl && !dragStart) return;
+    try { if (e.target && map.getContainer().contains(e.target)) return; } catch (err) {}   // the real map handler already ran
+    // an element moved live: keep the move the operator can already see. A half-drawn NEW shape has no
+    // valid end point, so resetGesture cancels it rather than committing garbage geometry.
+    if (dragEl) {
+      const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; });
+      if (Object.keys(patch).length) { try { S.updateElement(dragEl.id, patch, true); } catch (err) {} }
+    }
+    resetGesture();
+  });
+  window.addEventListener('blur', () => { if (dragEl || dragStart) resetGesture(); });   // dragged clean out of the window
   map.on('click', e => {
     if (skipClick) { skipClick = false; return; }   // came from selecting/erasing an element
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
@@ -320,9 +348,9 @@ const Draw = (() => {
     cats.forEach(cat => {
       const items = assets.filter(a => (a.cat || '(uncategorised)') === cat);
       if (!items.length) return;
-      apal.appendChild(h('div', 'qa-asset__cat', cat));
+      apal.appendChild(h('div', 'qa-asset__cat', esc(cat)));   // asset category arrives via sync/import → escape
       const grid = h('div', 'qa-asset__grid');
-      items.forEach(a => { const b = h('button', 'qa-asset__item' + (assetPending && assetPending.id === a.id ? ' is-on' : ''), `<img src="${a.url}" alt=""><span>${esc(a.name || '')}</span>`); b.title = a.name || ''; b.onclick = () => { assetPending = a; setTool('asset'); }; grid.appendChild(b); });
+      items.forEach(a => { const b = h('button', 'qa-asset__item' + (assetPending && assetPending.id === a.id ? ' is-on' : ''), `<img src="${esc(a.url)}" alt=""><span>${esc(a.name || '')}</span>`); b.title = a.name || ''; b.onclick = () => { assetPending = a; setTool('asset'); }; grid.appendChild(b); });   // esc(a.url): synced customAssets → attribute-breakout XSS otherwise
       apal.appendChild(grid);
     });
   }
@@ -426,7 +454,10 @@ const Draw = (() => {
     if (!nEl && !nM) { window.UI && UI.toast && UI.toast('Nothing to clear'); return; }
     if (!confirm('Clear everything on screen — drawings AND 3D objects?')) return;
     S.clearElements();
-    if (S.clearModels3d) { try { S.models3d().forEach(m => { if (!m.src && window.Assets3D) try { Assets3D.del(m.id); } catch (e) {} }); } catch (e) {} S.clearModels3d(); }
+    // Deliberately does NOT Assets3D.del() the uploaded GLBs: IndexedDB holds the ONLY copy of those
+    // binaries and pushHistory covers drawings only, so deleting here made one mis-click permanently
+    // unrecoverable. The models leave the scene; their orphaned blobs are collected by the usual sweep.
+    if (S.clearModels3d) S.clearModels3d();
     window.UI && UI.toast && UI.toast('Screen cleared');
   };
   qbar.appendChild(qclear);
@@ -452,6 +483,9 @@ const Draw = (() => {
     Object.keys(qbtns).forEach(id => { qbtns[id].hidden = !permits(id); });
     const noDraw = window.APP_ROLE !== 'control' && !S.cfg().permissions.canDraw;
     qcolor.hidden = noDraw; qundo.hidden = noDraw;
+    // qclear/qredo are appended straight to the bar rather than registered in qbtns, so the loop above
+    // never gated them: a presenter with canDraw=false still showed the red DESTRUCTIVE clear button.
+    qclear.hidden = noDraw; qredo.hidden = noDraw;
     if (noDraw && tool !== 'select') setTool('select');
   }
 

@@ -111,11 +111,24 @@ const Store = (() => {
   const on = fn => { subs.push(fn); return () => { const i = subs.indexOf(fn); if (i >= 0) subs.splice(i, 1); }; };
   let _t = null;
   function persist() { clearTimeout(_t); _t = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus, broadcast: state.broadcast })); } catch (e) { console.warn('Store.persist failed (localStorage quota?) — edits may not survive reload or sync', e && e.name); } }, 120); }
-  const emit = (evt, opts) => { subs.forEach(fn => fn(state, evt || 'change')); if (!(opts && opts.silent)) persist(); };
+  // PER-SUBSCRIBER ISOLATION — ~18 modules subscribe in <script> order. Without the inner guard a
+  // SINGLE throwing subscriber (e.g. one malformed element reaching Leaflet) silently skips every
+  // later subscriber for this and all future events: the map goes bare, scene cuts stop working,
+  // permission gating stops running on air — and persist() never runs, so nothing saves or syncs.
+  // persist() is in `finally` so state is never lost because a renderer failed.
+  const emit = (evt, opts) => {
+    try {
+      subs.forEach(fn => {
+        try { fn(state, evt || 'change'); }
+        catch (e) { console.error('[store] subscriber threw on "' + (evt || 'change') + '" — isolated', e); }
+      });
+    } finally { if (!(opts && opts.silent)) persist(); }
+  };
 
   function deepMerge(def, ov) {
     const o = JSON.parse(JSON.stringify(def));
     for (const k in ov) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;   // block prototype pollution from an imported project file or a synced room snapshot
       // a corrupt/old snapshot may carry an explicit null (or wrong type) for a key whose DEFAULT is a
       // non-null object/array. Copying that null over would defeat "missing keys fall back to default"
       // and then crash consumers (e.g. mapStyles.map). Keep the default for such keys.
@@ -126,7 +139,53 @@ const Store = (() => {
     return o;
   }
   function mergeNewMapStyles() { if (!Array.isArray(state.config.mapStyles)) state.config.mapStyles = JSON.parse(JSON.stringify(DEFAULT_CONFIG.mapStyles)); const have = new Set(state.config.mapStyles.map(m => m.id)); DEFAULT_CONFIG.mapStyles.forEach(m => { if (!have.has(m.id)) state.config.mapStyles.push({ ...m }); }); }
-  function applyData(d) { if (!d) return false; if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; if ('trackFocus' in d) state.trackFocus = d.trackFocus; if (d.broadcast) state.broadcast = deepMerge(state.broadcast, d.broadcast); mergeNewMapStyles(); migrate(); return true; }
+  /* BOUNDARY VALIDATION — every untrusted snapshot (synced room payload, imported project file,
+     restored local snapshot) passes through here BEFORE it is trusted. This only rejects shapes that
+     would genuinely wedge the app; odd-but-survivable values are repaired by sanitizeState instead,
+     so one bad field never costs the operator a whole rundown. */
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  function validateState(d) {
+    if (!isObj(d)) return { ok: false, reason: 'payload is not an object' };
+    if ('rundown' in d && d.rundown != null) {
+      if (!isObj(d.rundown)) return { ok: false, reason: 'rundown is not an object' };
+      if (!Array.isArray(d.rundown.scenes)) return { ok: false, reason: 'rundown.scenes is not an array' };
+      for (const s of d.rundown.scenes) {
+        if (!isObj(s)) return { ok: false, reason: 'a scene is not an object' };
+        if (s.elements != null && !Array.isArray(s.elements)) return { ok: false, reason: 'scene.elements is not an array' };
+      }
+    }
+    for (const k of ['config', 'broadcast', 'reveal']) {
+      if (k in d && d[k] != null && !isObj(d[k])) return { ok: false, reason: k + ' is not an object' };
+    }
+    return { ok: true };
+  }
+  /* Repair non-finite / out-of-range numbers that would otherwise reach Leaflet or MapLibre and throw
+     ("Invalid LatLng object", "Circle radius cannot be NaN"), taking the whole render pass with them. */
+  const fin = (n, dflt) => (typeof n === 'number' && isFinite(n) ? n : dflt);
+  const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+  function sanitizeState(d) {
+    if (!isObj(d)) return d;
+    const scenes = d.rundown && Array.isArray(d.rundown.scenes) ? d.rundown.scenes : [];
+    scenes.forEach(s => {
+      if (!isObj(s)) return;
+      const v = isObj(s.view) ? s.view : (s.view = {});
+      v.lat = clamp(fin(+v.lat, 29.5), -85, 85);
+      v.lng = clamp(fin(+v.lng, 45), -180, 180);
+      v.zoom = clamp(fin(+v.zoom, 5), 1, 20);
+    });
+    // a synced/imported timeline duration of 0 makes `t % dur` NaN, and the rAF loop then throws ~60x/s
+    if (isObj(d.config) && isObj(d.config.timeline)) d.config.timeline.dur = Math.max(1, fin(+d.config.timeline.dur, 15));
+    // Fields the UI iterates with .forEach/.map/.filter. deepMerge only restores the default when the
+    // incoming value is null — a WRONG TYPE (a string, a number) passed straight through and then threw
+    // inside a renderer ("C.assetCats.forEach is not a function"), taking that whole render pass with it.
+    if (isObj(d.config)) {
+      ['mapStyles', 'assetCats', 'customAssets', 'places', 'models3d', 'overlays'].forEach(k => {
+        if (k in d.config && !Array.isArray(d.config[k])) delete d.config[k];   // drop it → deepMerge supplies the default
+      });
+    }
+    return d;
+  }
+  function applyData(d) { if (!d) return false; sanitizeState(d); if (d.rundown) state.rundown = d.rundown; if (d.config) state.config = deepMerge(DEFAULT_CONFIG, d.config); if (d.color) state.color = d.color; if (d.mapStyle) state.mapStyle = d.mapStyle; if (d.reveal) state.reveal = d.reveal; if (d.tracking) state.tracking = d.tracking; if ('trackFocus' in d) state.trackFocus = d.trackFocus; if (d.broadcast) state.broadcast = deepMerge(state.broadcast, d.broadcast); mergeNewMapStyles(); migrate(); return true; }
   // one-time fixes for older persisted configs
   function migrate() {
     const c = state.config; if (!c._mig) c._mig = {};
@@ -158,7 +217,9 @@ const Store = (() => {
   // true when the look hasn't been customised — lets the sync layer tell a FRESH window (which should
   // adopt the live room style) from a configured source-of-truth (which must not be reset).
   function isDefaultStyle() { try { return JSON.stringify(state.config.style) === JSON.stringify(DEFAULT_CONFIG.style); } catch (e) { return false; } }
-  function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking }; }
+  // Must mirror what persist() saves, or a saved project / restored snapshot silently comes back WITHOUT
+  // the breaking banner, ticker text+speed, spotlight framing and tour/anim timing that were set up with it.
+  function exportState() { return { rundown: state.rundown, config: state.config, color: state.color, mapStyle: state.mapStyle, reveal: state.reveal, tracking: state.tracking, trackFocus: state.trackFocus, broadcast: state.broadcast }; }
   function importState(d) { applyData(d); emit('sync'); }
   // The control console is authoritative and must NOT be overwritten by another window writing the
   // shared key (e.g. a presenter tab in the same browser mirroring the cloud) — only the presenter
@@ -170,8 +231,11 @@ const Store = (() => {
   const activeScene = () => scenes().find(s => s.id === state.rundown.activeId) || null;
   const sceneIndex = id => scenes().findIndex(s => s.id === id);
   function addScene(view, opts = {}) {
+    // isFinite alone let lat 200 / lng 900 through — "finite" but off the globe, and Leaflet then threw
+    // "Invalid LatLng" from inside a render pass. Clamp to the real ranges instead of only type-checking.
     const okView = view && typeof view === 'object' && Number.isFinite(view.lat) && Number.isFinite(view.lng) && Number.isFinite(view.zoom);
-    const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: okView ? view : { lat: 29.5, lng: 45, zoom: 5 }, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], reveal: false, lowerThird: null };
+    const safeView = okView ? { lat: clamp(view.lat, -85, 85), lng: clamp(view.lng, -180, 180), zoom: clamp(view.zoom, 1, 20) } : { lat: 29.5, lng: 45, zoom: 5 };
+    const s = { id: uid('sc'), title: opts.title || ('Scene ' + (scenes().length + 1)), view: safeView, mapStyle: opts.mapStyle || null, transition: { type: 'flyTo', duration: 1.2 }, elements: [], revealOrder: [], reveal: false, lowerThird: null };
     scenes().push(s); state.rundown.activeId = s.id; revealReset(s.id); emit('scenes'); return s;
   }
   function removeScene(id) { const i = sceneIndex(id); if (i < 0) return; scenes().splice(i, 1); histMap.delete(id); delete state.reveal[id]; if (state.rundown.activeId === id) state.rundown.activeId = (scenes()[i] || scenes()[i - 1] || {}).id || null; emit('scenes'); }   // drop the removed scene's undo history + reveal counter (were orphaned/leaked into every sync)
@@ -188,7 +252,7 @@ const Store = (() => {
   function nextScene() { const i = sceneIndex(state.rundown.activeId); if (i < scenes().length - 1) setActive(scenes()[i + 1].id); }
   function prevScene() { const i = sceneIndex(state.rundown.activeId); if (i > 0) setActive(scenes()[i - 1].id); }
   function renameScene(id, title) { const s = scenes().find(x => x.id === id); if (s) { s.title = title; emit('scenes'); } }
-  function setSceneView(id, view) { const s = scenes().find(x => x.id === id); if (s && view) { s.view = view; emit('scenes'); } }
+  function setSceneView(id, view) { const s = scenes().find(x => x.id === id); if (s && view) { s.view = { lat: clamp(fin(+view.lat, 29.5), -85, 85), lng: clamp(fin(+view.lng, 45), -180, 180), zoom: clamp(fin(+view.zoom, 5), 1, 20) }; emit('scenes'); } }   // same range clamp as addScene — a bad view here reaches Leaflet/MapLibre directly
 
   /* ---- storyboard reveal + scene settings ---- */
   function revealReset(id) { const s = scenes().find(x => x.id === id); if (!s) return; state.reveal[id] = s.reveal ? 0 : s.elements.length; }
@@ -304,7 +368,7 @@ const Store = (() => {
   load();
 
   return {
-    state, on, emit, uid, load, exportState, importState, isDefaultStyle, modelFix, setModelFix, modelKey, DEFAULT_CONFIG,
+    state, on, emit, uid, load, exportState, importState, validateState, sanitizeState, isDefaultStyle, modelFix, setModelFix, modelKey, DEFAULT_CONFIG,
     scenes, activeScene, sceneIndex,
     addScene, removeScene, moveScene, setActive, nextScene, prevScene, renameScene, setSceneView,
     revealReset, revealedCount, revealNext, revealPrev, advance, retreat, toggleSceneReveal, setLowerThird, setTransition,

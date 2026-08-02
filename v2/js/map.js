@@ -5,7 +5,7 @@
    in tracking) are benign — keep them out of the console */
 window.addEventListener('unhandledrejection', e => { const r = e.reason; if (r && (r.name === 'AbortError' || /abort/i.test(r.message || ''))) e.preventDefault(); });
 const GameMap = (() => {
-  const KEY = 'tnFJbEP9ELhQqkA6rPY2';
+  const KEY = 'SIyj4p6cKZm7sBsge2Zn';
   const tile = id => `https://api.maptiler.com/maps/${id}/{z}/{x}/{y}.png?key=${KEY}`;
 
   const STYLES = [
@@ -45,6 +45,38 @@ const GameMap = (() => {
 
   L.control.attribution({ position: 'bottomright', prefix: false }).addAttribution('© MapTiler © OpenStreetMap').addTo(map);
 
+  // TILE-FAILURE VISIBILITY. Both layers are served by the same MapTiler key, so an expired key or a
+  // 429 kills the "permanent backdrop" in the same instant it was designed to cover for — the map just
+  // becomes empty background with drawings floating on it, and nothing anywhere says why. Counts errors
+  // in a short window and raises a persistent chip, so the operator can tell "no tiles" from "no data".
+  let tileErrs = 0, tileT = null, tileChip = null;
+  function tileAlarm(on) {
+    if (window.APP_ROLE !== 'control') return;   // NEVER paint a warning on the presenter — that window is on air
+    if (on && !tileChip) { tileChip = document.createElement('div'); tileChip.className = 'tile-alarm'; tileChip.textContent = 'MAP TILES FAILING — check the MapTiler key / connection'; document.body.appendChild(tileChip); }
+    else if (!on && tileChip) { tileChip.remove(); tileChip = null; }
+  }
+  // A CUSTOM (uuid) MapTiler style belongs to one specific account — rotate the key and it 404s, which
+  // is exactly what happens to the default "News" style. Rather than sit on a blank map on air, fall
+  // back once to a style that is guaranteed to exist on any key. If the custom style is later published
+  // under the current key it simply works again; nothing here overwrites the operator's saved choice.
+  const isCustomStyle = id => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(id || ''));
+  let fellBack = false;
+  function onTileError() {
+    tileErrs++;
+    clearTimeout(tileT); tileT = setTimeout(() => { tileErrs = 0; tileAlarm(false); }, 15000);   // quiet for 15s → recovered
+    if (tileErrs >= 6) {
+      if (!fellBack && isCustomStyle(window.Store && Store.state && Store.state.mapStyle)) {
+        fellBack = true; tileErrs = 0;
+        setStyle('satellite');
+        window.UI && UI.toast && UI.toast('Custom map style unavailable on this key — switched to Satellite', 6000);
+        return;
+      }
+      tileAlarm(true);   // a handful of misses is normal at the edge of a pan; a storm is not
+    }
+  }
+  base.on('tileerror', onTileError); underlay.on('tileerror', onTileError);
+  base.on('tileload', () => { if (tileErrs) { tileErrs = 0; tileAlarm(false); } });
+
   const drawn = L.layerGroup().addTo(map);   // rendered elements of the active scene live here
 
   // "wireframe" is a look, not a MapTiler map: render dark vector tiles + a glowing-line CSS
@@ -59,11 +91,28 @@ const GameMap = (() => {
   function currentView() { const c = map.getCenter(); return { lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), zoom: +map.getZoom().toFixed(2) }; }
   function flyToView(view, t) {
     if (!view) return;
+    // Every caller of this is a DELIBERATE operator move (scene cut, reset-to-scene, saved place,
+    // fly-to-model), so it outranks an active follow lock — otherwise the follow rAF loop aborts the
+    // flyTo on its next frame and snaps back to the tracked target. Timeline/campath drive the camera
+    // through their own paths and are NOT affected here (follow already yields to them).
+    try { if (window.Follow && Follow.release) Follow.release(); } catch (e) {}
     const type = t && t.type, dur = (t && t.duration) || 1.4;
     if (type === 'cut') { map.setView([view.lat, view.lng], view.zoom, { animate: false }); return; }
     // 'ease' = gentle linear glide; default 'flyTo' = cinematic zoom-out-and-in arc
     map.flyTo([view.lat, view.lng], view.zoom, { duration: dur, easeLinearity: type === 'ease' ? 0.45 : 0.18 });
   }
+
+  // GPU relief: flag body.map-moving while the map pans/zooms so the glass surfaces drop their
+  // per-frame SVG refraction (see app.css .map-moving) and snap it back ~160ms after it settles.
+  // Shared with the 3D (MapLibre) map, which calls window.markMapMotion on its own move events.
+  let _moT = null;
+  window.markMapMotion = moving => {
+    clearTimeout(_moT);
+    if (moving) document.body.classList.add('map-moving');
+    else _moT = setTimeout(() => document.body.classList.remove('map-moving'), 160);
+  };
+  map.on('movestart zoomstart', () => window.markMapMotion(true));
+  map.on('moveend zoomend', () => window.markMapMotion(false));
 
   return { map, drawn, setStyle, currentView, flyToView, STYLES };
 })();

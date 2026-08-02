@@ -11,7 +11,7 @@ const p=await browser.newPage();await p.setViewport({width:1280,height:840});
 p.on('dialog',d=>d.accept().catch(()=>{}));
 p.on('error',e=>console.log('PAGE CRASHED:',''+e));
 const errs=[];p.on('pageerror',e=>errs.push((''+e).slice(0,140)));
-await p.goto('http://localhost:8000/v2/control.html',{waitUntil:'networkidle2'});
+await p.goto('http://localhost:8000/v2/control.html?nosync',{waitUntil:'networkidle2'});   // ?nosync is MANDATORY: control.html is a sync SENDER — without it this test writes into the live broadcast room
 await p.evaluate(()=>localStorage.clear());await p.reload({waitUntil:'networkidle2'});await sleep(2500);
 await p.evaluate(()=>{
  [...document.querySelectorAll('.modesw__btn')].find(x=>x.dataset.mode==='live').click();

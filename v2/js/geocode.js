@@ -5,9 +5,16 @@
    a smooth flyTo. Available on both windows (per-window nav aid).
    ============================================================ */
 (() => {
-  const KEY = 'tnFJbEP9ELhQqkA6rPY2', map = window.GameMap.map, I = window.ICONS;
+  const KEY = 'SIyj4p6cKZm7sBsge2Zn', map = window.GameMap.map, I = window.ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+  // fly the ACTIVE map: in 3D the flat map is hidden, so flying it does nothing visible — target the globe
+  // instead (MapLibre center is [lng,lat] and its zoom runs ~1 below Leaflet's). On 3D exit the camera syncs back.
+  const flyTo = (lat, lng, zoom) => {
+    try { if (window.Follow && Follow.release) Follow.release(); } catch (e) {}   // a search is a deliberate move — outrank an active follow lock, or it snaps straight back
+    if (window.Map3D && Map3D.on && Map3D.map) Map3D.map.flyTo({ center: [lng, lat], zoom: Math.max(1, zoom - 1), duration: 1600 });
+    else map.flyTo([lat, lng], zoom, { duration: 1.6 });
+  };
 
   const btn = h('button', 'zoomctl__b geo-btn', I.search); btn.title = 'Search a place';
   const pop = h('div', 'geo-pop glass'); pop.hidden = true;
@@ -33,10 +40,13 @@
   async function search(q) {
     if (!q.trim()) { list.innerHTML = ''; return; }
     const co = parseCoords(q);
-    if (co) { list.innerHTML = ''; const it = h('button', 'geo-item', `<b>Go to ${co[0]}, ${co[1]}</b><small>coordinates</small>`); it.onclick = () => { map.flyTo(co, 9, { duration: 1.6 }); pop.hidden = true; }; list.appendChild(it); return; }
+    if (co) { list.innerHTML = ''; const it = h('button', 'geo-item', `<b>Go to ${co[0]}, ${co[1]}</b><small>coordinates</small>`); it.onclick = () => { flyTo(co[0], co[1], 9); pop.hidden = true; }; list.appendChild(it); return; }
     list.innerHTML = '<div class="geo-empty">Searching…</div>';
     try {
       const r = await fetch(`https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json?key=${KEY}&limit=6`);
+      // an expired/rate-limited key returns a parseable error body, so without this the operator saw
+      // "No results" and blamed their spelling — while the same key failure was blanking the base map
+      if (!r.ok) { list.innerHTML = `<div class="geo-empty">Search unavailable (${r.status})</div>`; return; }
       const d = await r.json(); render(d.features || []);
     } catch (e) { list.innerHTML = '<div class="geo-empty">No results</div>'; }
   }
@@ -45,7 +55,7 @@
     if (!feats.length) { list.innerHTML = '<div class="geo-empty">No results</div>'; return; }
     feats.forEach(f => {
       const it = h('button', 'geo-item', `<b>${esc(f.text || f.place_name)}</b><small>${esc(f.place_name || '')}</small>`);
-      it.onclick = () => { const c = f.center; if (c) map.flyTo([c[1], c[0]], zoomForBbox(f.bbox), { duration: 1.6 }); pop.hidden = true; };
+      it.onclick = () => { const c = f.center; if (c) flyTo(c[1], c[0], zoomForBbox(f.bbox)); pop.hidden = true; };
       list.appendChild(it);
     });
   }

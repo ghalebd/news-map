@@ -208,7 +208,7 @@ const surf = await p.evaluate(async () => {
   // ---- remaining draw tools ----
   await T('draw:tarrow (freehand arrow)', async () => { const b = cnt(); Draw.setTool('tarrow'); m.fire('mousedown', { latlng: LL([30, 50]) }); m.fire('mousemove', { latlng: LL([30.5, 50.6]) }); m.fire('mousemove', { latlng: LL([31, 51]) }); m.fire('mouseup', { latlng: LL([31, 51]) }); await sleep(40); return cnt() > b && last().type === 'tarrow'; });
   await T('draw:text (label)', async () => { const _in = window.UI && UI.input; if (window.UI) UI.input = () => Promise.resolve('Test label'); const b = cnt(); Draw.setTool('text'); m.fire('click', { latlng: LL([29, 49]) }); await sleep(120); if (window.UI) UI.input = _in; return cnt() > b && last().type === 'text'; });
-  await T('draw:asset (place image)', async () => { const a = S.addCustomAsset({ name: 'TP', cat: 'air', url: 'data:image/png;base64,iVBORw0KGgo=' }); Draw.openPalette(); await sleep(60); const btn = document.querySelector('.qa--assets:not(.qa--flags) button.qa-asset__item, .qa--assets:not(.qa--flags) .qa-asset__item'); if (!btn) { Draw.closePalette(); return 'no palette item'; } btn.click(); await sleep(30); const b = cnt(); m.fire('click', { latlng: LL([28, 48]) }); await sleep(40); const ok = cnt() > b && last().type === 'asset'; S.removeCustomAsset(a.id); return ok; });
+  await T('draw:asset (place image)', async () => { const a = S.addCustomAsset({ name: 'TP', cat: 'air', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' }); Draw.openPalette(); await sleep(60); const btn = document.querySelector('.qa--assets:not(.qa--flags) button.qa-asset__item, .qa--assets:not(.qa--flags) .qa-asset__item'); if (!btn) { Draw.closePalette(); return 'no palette item'; } btn.click(); await sleep(30); const b = cnt(); m.fire('click', { latlng: LL([28, 48]) }); await sleep(40); const ok = cnt() > b && last().type === 'asset'; S.removeCustomAsset(a.id); return ok; });
   await T('draw:flags (place flag)', async () => { if (!(window.FLAGS && FLAGS.length)) return 'no FLAGS'; Draw.openFlags(); await sleep(60); const btn = document.querySelector('.qa--flags .qa-asset__item'); if (!btn) return 'no flag item'; btn.click(); await sleep(30); const b = cnt(); m.fire('click', { latlng: LL([27, 47]) }); await sleep(40); return cnt() > b && last().type === 'asset'; });
   await T('draw:erase (remove element)', async () => { if (window.Map3D && Map3D.on && Map3D.toggle) { Map3D.toggle(false); await sleep(300); } Draw.setTool('select'); S.clearElements(); S.addElement({ type: 'marker', ll: [25, 45], color: '#fff' }); await sleep(160); const id = last().id; Draw.setTool('erase'); const layers = Object.values(m._layers); const lyr = layers.find(l => l && l.__id === id); let fired = false; if (lyr) { if (lyr.eachLayer) lyr.eachLayer(s => { if (s.fire) { s.fire('mousedown', { latlng: LL([25, 45]), originalEvent: { stopPropagation() {}, preventDefault() {} } }); fired = true; } }); else if (lyr.fire) { lyr.fire('mousedown', { latlng: LL([25, 45]), originalEvent: { stopPropagation() {}, preventDefault() {} } }); fired = true; } } await sleep(60); Draw.setTool('select'); if (cnt() === 0) return true; return 'm3don=' + !!(window.Map3D && Map3D.on) + ' withId=' + layers.filter(l => l && l.__id).length + ' matched=' + !!lyr + ' fired=' + fired + ' remain=' + cnt(); });
   S.clearElements();
@@ -258,11 +258,11 @@ const surf = await p.evaluate(async () => {
 
   // ---- overlays (satellite georef) ----
   let ovid;
-  await T('overlay: add georef image', async () => { const o = S.addOverlay({ name: 'O', url: 'data:image/png;base64,iVBORw0KGgo=', bounds: [[20, 40], [30, 55]] }); ovid = o.id; await sleep(200); return S.overlays().some(x => x.id === o.id); });
+  await T('overlay: add georef image', async () => { const o = S.addOverlay({ name: 'O', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', bounds: [[20, 40], [30, 55]] }); ovid = o.id; await sleep(200); return S.overlays().some(x => x.id === o.id); });
   await T('overlay: update opacity', () => { S.updateOverlay(ovid, { opacity: 0.5 }); return S.overlays().find(x => x.id === ovid).opacity === 0.5; });
   await T('overlay: before/after wipe', () => { S.setOverlayWipe(0.7); return Math.abs(cfg().overlayWipe - 0.7) < 0.01; });
   await T('overlay: wipe direction', () => { S.setOverlayWipeDir('h'); const v = cfg().overlayWipeDir === 'h'; S.setOverlayWipeDir('v'); return v; });
-  await T('overlay: reorder', () => { const o2 = S.addOverlay({ name: 'O2', url: 'data:,', bounds: [[0, 0], [1, 1]] }); S.moveOverlay(o2.id, -1); return true; });
+  await T('overlay: reorder', () => { const o2 = S.addOverlay({ name: 'O2', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', bounds: [[0, 0], [1, 1]] }); S.moveOverlay(o2.id, -1); return true; });
   await T('overlay: remove', () => { S.removeOverlay(ovid); return !S.overlays().some(x => x.id === ovid); });
 
   // ---- 3D parameters ----
@@ -308,7 +308,7 @@ await p.evaluate(() => {
   Store.setTicker({ on: true, text: 'MIRROR_TICKER' });
   Store.setSpotlight({ on: true, lat: 25, lng: 45, radiusKm: 400 });
   Store.addElement({ type: 'marker', ll: [25, 45], color: '#36ff9e' });
-  Store.addOverlay({ name: 'PMOV', url: 'data:image/png;base64,iVBORw0KGgo=', bounds: [[20, 40], [30, 55]] });
+  Store.addOverlay({ name: 'PMOV', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', bounds: [[20, 40], [30, 55]] });
 });
 await sleep(400);
 const pres = await b.newPage(); await pres.setViewport({ width: 1280, height: 840 });

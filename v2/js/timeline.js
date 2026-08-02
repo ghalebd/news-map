@@ -14,6 +14,7 @@
   if (!S || !L2) return;
   const isCtrl = window.APP_ROLE === 'control';
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // model names arrive via sync/import → escape
   const TL = () => S.timeline();
   const models = () => (S.models3d ? S.models3d() : []);
   const gl = () => (window.Map3D && Map3D.on && Map3D.map) ? Map3D.map : null;
@@ -103,7 +104,7 @@
     const tl = TL();
     const row = h('div', 'tl__trk');
     const add = h('button', 'tl__key', I.plus); add.title = 'Add keyframe at playhead'; add.onclick = onAdd;
-    const lab = h('span', 'tl__trklab', label);
+    const lab = h('span', 'tl__trklab', esc(label));
     const lane = h('div', 'tl__lane');
     (keys || []).forEach((k, i) => { const tick = h('span', 'tl__tick'); tick.style.left = (k.t / Math.max(1, tl.dur) * 100) + '%'; tick.title = label + ' @ ' + k.t.toFixed(1) + 's'; tick.onclick = ev => { ev.stopPropagation(); seek(k.t); }; const x = h('span', 'tl__tickx', '×'); x.onclick = ev => { ev.stopPropagation(); onDel(i); }; tick.appendChild(x); lane.appendChild(tick); });
     row.append(add, lab, lane); return row;
