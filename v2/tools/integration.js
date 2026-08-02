@@ -36,7 +36,7 @@ const FILTER = /CORS|ERR_FAILED|ERR_ABORTED|fetch|airplanes|opensky|aisstream|co
   e0 = errSnap();
   await p.evaluate(() => {
     Store.setTrack3d({ on: true }); Store.setTracking('ships', true); Store.setTracking('flights', true);
-    Store.addOverlay({ name: 'OV', url: 'data:image/png;base64,iVBORw0KGgo=', bounds: [[28, 44], [34, 50]] });
+    Store.addOverlay({ name: 'OV', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', bounds: [[28, 44], [34, 50]] });
     const it = (window.MODELS3D_CATALOG || [])[0]; if (it) Store.addModel3d({ src: 'assets3d/' + it.file, name: 'M', lat: 31, lng: 47, scale: 4, mode: 'both', on: true });
   });
   await sleep(1400);

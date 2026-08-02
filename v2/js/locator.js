@@ -5,7 +5,7 @@
    ============================================================ */
 (() => {
   const S = window.Store, M = window.GameMap;
-  const KEY = 'tnFJbEP9ELhQqkA6rPY2';
+  const KEY = 'SIyj4p6cKZm7sBsge2Zn';
   const box = document.createElement('div'); box.className = 'locator'; box.hidden = true; document.body.appendChild(box);
   let mini = null, rect = null;
 

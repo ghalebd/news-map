@@ -5,7 +5,7 @@
 (() => {
   const S = window.Store;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------- toast ---------- */
   const toastWrap = h('div', 'toast-wrap'); document.body.appendChild(toastWrap);
@@ -65,7 +65,18 @@
     inp.onchange = () => {
       const f = inp.files[0]; if (!f) { inp.remove(); return; }
       const fr = new FileReader();
-      fr.onload = () => { try { S.importState(JSON.parse(fr.result)); toast('Project loaded'); } catch (e) { toast('Invalid project file'); } inp.remove(); };
+      // Validate BEFORE importing. Previously any syntactically-valid JSON went straight into applyData,
+      // so a wrong-shaped file overwrote the live rundown and THEN showed "Invalid project file" — the
+      // operator read a rejection message while already running on that file's data.
+      fr.onload = () => {
+        try {
+          const d = JSON.parse(fr.result);
+          const v = (S.validateState ? S.validateState(d) : { ok: true });
+          if (!v.ok) { toast('Invalid project file — ' + v.reason); inp.remove(); return; }
+          S.importState(d); toast('Project loaded');
+        } catch (e) { toast('Invalid project file'); }
+        inp.remove();
+      };
       fr.onerror = () => { toast('Read failed'); inp.remove(); };
       fr.readAsText(f);
     };
@@ -74,9 +85,9 @@
 
   /* ---------- export current frame to PNG ---------- */
   function exportPNG() {
-    if (!window.html2canvas) { toast('Export library not loaded'); return; }
     const t = toast('Rendering image…', 8000);
-    html2canvas(document.body, { useCORS: true, allowTaint: false, backgroundColor: '#0e1622', logging: false, scale: 2 })
+    window.loadScript('lib/html2canvas.min.js')   // heavy lib (194KB) — fetched on first export, not at boot
+      .then(() => html2canvas(document.body, { useCORS: true, allowTaint: false, backgroundColor: '#0e1622', logging: false, scale: 2 }))
       .then(canvas => {
         canvas.toBlob(blob => {
           if (!blob) { toast('Export failed (tainted canvas)'); return; }
@@ -88,9 +99,9 @@
       }).catch(() => { t.remove(); toast('Export failed'); });
   }
   function exportPDF() {
-    if (!window.html2canvas) { toast('Export library not loaded'); return; }
     const t = toast('Rendering PDF…', 8000);
-    html2canvas(document.body, { useCORS: true, allowTaint: false, backgroundColor: '#0e1622', logging: false, scale: 2 })
+    window.loadScript('lib/html2canvas.min.js')   // heavy lib (194KB) — fetched on first export, not at boot
+      .then(() => html2canvas(document.body, { useCORS: true, allowTaint: false, backgroundColor: '#0e1622', logging: false, scale: 2 }))
       .then(canvas => {
         const data = canvas.toDataURL('image/png');
         const w = window.open('', '_blank');
@@ -112,7 +123,16 @@
     list.unshift({ id: 's' + Date.now(), name: name || ('Snapshot ' + (list.length + 1)), at: new Date().toISOString().slice(0, 16).replace('T', ' '), data: S.exportState() });
     try { localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0, 30))); toast('Snapshot saved'); } catch (e) { toast('Snapshot failed (storage full)'); }
   }
-  function restoreSnapshot(id) { const s = snaps().find(x => x.id === id); if (s) { S.importState(s.data); toast('Snapshot restored'); } }
+  // Same gate as loadProject — a snapshot is a restore point, i.e. exactly what gets reached for when the
+  // app is already misbehaving. It had no try/catch at all, so a corrupt one deepened the problem.
+  function restoreSnapshot(id) {
+    const s = snaps().find(x => x.id === id); if (!s) return;
+    try {
+      const v = (S.validateState ? S.validateState(s.data) : { ok: true });
+      if (!v.ok) { toast('Snapshot is corrupt — ' + v.reason); return; }
+      S.importState(s.data); toast('Snapshot restored');
+    } catch (e) { toast('Snapshot restore failed'); }
+  }
   function deleteSnapshot(id) { try { localStorage.setItem(SNAP_KEY, JSON.stringify(snaps().filter(x => x.id !== id))); } catch (e) {} }
 
   window.UI = { toast, input, hideUI, saveProject, loadProject, exportPNG, exportPDF, snaps, saveSnapshot, restoreSnapshot, deleteSnapshot };

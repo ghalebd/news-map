@@ -12,7 +12,7 @@
   const cp = () => S.cfg().campath || { frames: [], legSec: 3, loop: false };
 
   function flyTo(f, dur) {
-    if (window.Map3D && Map3D.on && window.__m3) { window.__m3.easeTo({ center: [f.lng, f.lat], zoom: Math.max(1, f.zoom - 1), duration: dur * 1000 }); }
+    if (window.Map3D && Map3D.on && Map3D.map) { Map3D.map.easeTo({ center: [f.lng, f.lat], zoom: Math.max(1, f.zoom - 1), duration: dur * 1000 }); }   // Map3D.map is the sanctioned accessor; window.__m3 is a debug hook
     else map.flyTo([f.lat, f.lng], f.zoom, { duration: dur, easeLinearity: 0.25 });
   }
   function step() {
@@ -33,6 +33,10 @@
   }
   function stop(finished) {
     running = false; clearTimeout(timer); timer = null;
+    // Clearing the timer only ended the SCHEDULING — the leg already handed to flyTo/easeTo kept coasting,
+    // so pressing Stop (or the presenter adopting playing:false mid-leg) parked the on-air camera on an
+    // arbitrary intermediate framing that was never a keyframe. Cancel the in-flight animation too.
+    try { const g = (window.Map3D && Map3D.on && Map3D.map); (g || map).stop(); } catch (e) {}
     if (finished && window.APP_ROLE === 'control' && (S.cfg().campath || {}).playing) S.setCampath({ playing: false });
   }
   S.on((st, evt) => {

@@ -18,7 +18,7 @@ async function freshPage(b, url) {
 
   // ===== 1) TWO-WINDOW CLOUD SYNC (isolated room) =====
   console.log('\n--- 1) two-window cloud sync (room=' + ROOM + ') ---');
-  const A = await freshPage(b, 'http://localhost:8000/v2/control.html?room=' + ROOM);
+  const A = await freshPage(b, 'http://localhost:8000/v2/control.html?allowsync&room=' + ROOM);   // ?allowsync: this test legitimately exercises publishing, into the isolated ROOM above
   const B = await freshPage(b, 'http://localhost:8000/v2/index.html?room=' + ROOM);
   console.log('isolated storage:', A.isolated && B.isolated);
   await A.p.evaluate(() => { if (!Store.scenes().length) Store.addScene({ lat: 31, lng: 47, zoom: 6 }); Store.clearElements(); if (Store.clearModels3d) Store.clearModels3d(); (Store.overlays() || []).slice().forEach(o => Store.removeOverlay(o.id)); });
@@ -26,19 +26,24 @@ async function freshPage(b, url) {
   // control adds content
   await A.p.evaluate(() => {
     Store.addElement({ type: 'marker', ll: [31, 47], color: '#36ff9e' });
-    Store.addOverlay({ name: 'SYNCOV', url: 'data:image/png;base64,iVBORw0KGgo=', bounds: [[28, 44], [34, 50]] });
+    Store.addOverlay({ name: 'SYNCOV', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', bounds: [[28, 44], [34, 50]] });
     const it = (window.MODELS3D_CATALOG || [])[0]; if (it) Store.addModel3d({ src: 'assets3d/' + it.file, name: 'SYNCM', lat: 31, lng: 47, scale: 3, mode: '2d', on: true });
   });
-  await sleep(3000);
-  const bMirror = await B.p.evaluate(() => ({ el: Store.activeScene() ? Store.activeScene().elements.length : 0, ov: Store.overlays().length, m: Store.models3d().length, hasSyncOv: Store.overlays().some(o => o.name === 'SYNCOV') }));
+  // POLL, don't sleep. Mirroring needs ~4.2s of app latency (1200ms push debounce + 3000ms poll) PLUS
+  // however long Cloudflare KV takes to make the write visible to the reader — KV is eventually
+  // consistent, so a fixed sleep produces random false failures. Wait for the condition, with a ceiling.
+  const readB = () => B.p.evaluate(() => ({ el: Store.activeScene() ? Store.activeScene().elements.length : 0, ov: Store.overlays().length, m: Store.models3d().length, hasSyncOv: Store.overlays().some(o => o.name === 'SYNCOV') }));
+  let bMirror = await readB();
+  for (let i = 0; i < 60 && !(bMirror.el >= 1 && bMirror.ov >= 1 && bMirror.m >= 1 && bMirror.hasSyncOv); i++) { await sleep(1000); bMirror = await readB(); }
   rec('sync · presenter mirrors control edits', bMirror.el >= 1 && bMirror.ov >= 1 && bMirror.m >= 1 && bMirror.hasSyncOv, JSON.stringify(bMirror));
   // CRITICAL regression: control's edits must SURVIVE (not be wiped back by the mirror)
   const aSurvive = await A.p.evaluate(() => ({ el: Store.activeScene().elements.length, ov: Store.overlays().length, m: Store.models3d().length }));
   rec('sync · control edits survive (no wipe-back)', aSurvive.el >= 1 && aSurvive.ov >= 1 && aSurvive.m >= 1, JSON.stringify(aSurvive));
   // control clears → presenter clears
   await A.p.evaluate(() => { Store.clearElements(); if (Store.clearModels3d) Store.clearModels3d(); (Store.overlays() || []).slice().forEach(o => Store.removeOverlay(o.id)); });
-  await sleep(3000);
-  const bClear = await B.p.evaluate(() => ({ el: Store.activeScene().elements.length, ov: Store.overlays().length, m: Store.models3d().length }));
+  const readClear = () => B.p.evaluate(() => ({ el: Store.activeScene().elements.length, ov: Store.overlays().length, m: Store.models3d().length }));
+  let bClear = await readClear();
+  for (let i = 0; i < 60 && !(bClear.el === 0 && bClear.ov === 0 && bClear.m === 0); i++) { await sleep(1000); bClear = await readClear(); }
   rec('sync · presenter reflects clear', bClear.el === 0 && bClear.ov === 0 && bClear.m === 0, JSON.stringify(bClear));
   try { if (A.isolated) await A.ctx.close(); else await A.p.close(); if (B.isolated) await B.ctx.close(); else await B.p.close(); } catch (e) {}
 
@@ -66,7 +71,7 @@ async function freshPage(b, url) {
   const sl = await C.p.evaluate(async () => {
     Store.addElement({ type: 'marker', ll: [31, 47], color: '#fff' });
     Store.addElement({ type: 'arrow', a: [30, 46], b: [32, 49], color: '#f00' });
-    Store.addOverlay({ name: 'PROJ', url: 'data:,', bounds: [[28, 44], [34, 50]] });
+    Store.addOverlay({ name: 'PROJ', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', bounds: [[28, 44], [34, 50]] });
     const it = (window.MODELS3D_CATALOG || [])[0]; if (it) Store.addModel3d({ src: 'assets3d/' + it.file, name: 'PM', lat: 31, lng: 47, scale: 3, mode: '2d', on: true });
     Store.renameScene(Store.scenes()[0].id, 'SavedScene');
     const saved = JSON.parse(JSON.stringify(Store.exportState()));

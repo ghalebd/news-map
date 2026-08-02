@@ -9,7 +9,7 @@
 (() => {
   const S = window.Store, L2 = window.GameMap.map, I = window.ICONS;
   const D2R = Math.PI / 180;
-  const KEY = 'tnFJbEP9ELhQqkA6rPY2';
+  const KEY = 'SIyj4p6cKZm7sBsge2Zn';
   // "wireframe" in 3D = a near-black vector base with glowing contour lines draped on the
   // terrain (the lines follow the elevation, so mountains read as a topographic wireframe).
   const realStyle = id => (id === 'wireframe' ? 'dataviz-dark' : id);
@@ -31,21 +31,50 @@
   function ensure() {
     if (map) return;
     const c = L2.getCenter();
-    map = new maplibregl.Map({
-      container: cont, style: styleUrl(S.state.mapStyle || 'satellite'),
-      center: [c.lng, c.lat], zoom: Math.max(2.6, L2.getZoom() - 1), pitch: cfg3().pitch, bearing: 0,
-      minZoom: 3, maxPitch: 75, attributionControl: false, antialias: true, dragRotate: true, renderWorldCopies: true,
-    });
+    // If WebGL is unavailable (GPU blocklist, driver reset, or too many live contexts — this app runs
+    // MapLibre PLUS several three.js renderers and browsers cap around 8-16) the constructor throws
+    // straight out of the 3D button's onclick. `map` then stays null and every later click re-throws,
+    // so the button just does nothing, silently, forever. Fail loudly and recoverably instead.
+    try {
+      map = new maplibregl.Map({
+        container: cont, style: styleUrl(S.state.mapStyle || 'satellite'),
+        center: [c.lng, c.lat], zoom: Math.max(2.6, L2.getZoom() - 1), pitch: cfg3().pitch, bearing: 0,
+        minZoom: 3, maxPitch: 75, attributionControl: false, antialias: true, dragRotate: true, renderWorldCopies: true,
+      });
+    } catch (err) {
+      map = null;
+      console.error('[map3d] could not create the 3D map', err);
+      window.UI && UI.toast && UI.toast('3D unavailable on this machine (WebGL failed)');
+      return;
+    }
+    // A GPU driver reset kills the canvas permanently otherwise — tell the operator instead of showing black.
+    try {
+      const cv = map.getCanvas();
+      cv.addEventListener('webglcontextlost', e => { e.preventDefault(); console.error('[map3d] WebGL context lost'); window.UI && UI.toast && UI.toast('3D graphics context lost — leave and re-enter 3D'); }, false);
+      cv.addEventListener('webglcontextrestored', () => { console.warn('[map3d] WebGL context restored'); try { map.resize(); } catch (e) {} }, false);
+    } catch (e) {}
     map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: '© MapTiler © OpenStreetMap' }));
     window.__m3 = map; builtStyle = S.state.mapStyle || 'satellite';   // debug/inspection hook
-    map.on('error', e => { const err = e && e.error; if (err && (err.name === 'AbortError' || /abort/i.test(err.message || ''))) return; });   // swallow benign style-swap aborts
+    // Registering ANY 'error' listener replaces MapLibre's own console.error, so the previous no-op body
+    // silently swallowed the entire error channel — a 403 on style.json, a dead terrain source or a 404
+    // overlay all vanished, and the operator just got a black rectangle. Keep the benign abort filter,
+    // surface everything else.
+    map.on('error', e => {
+      const err = e && e.error; if (err && (err.name === 'AbortError' || /abort/i.test(err.message || ''))) return;   // benign style-swap aborts
+      // An overlay deleted (or its style swapped) while its image was still decoding reports a failure
+      // against a source that no longer exists — a teardown race the operator can do nothing about.
+      // Report only failures for sources that are still live, so the channel stays trustworthy.
+      if (e && e.sourceId) { try { if (!map.getSource(e.sourceId)) return; } catch (x) { return; } }
+      console.error('[map3d] MapLibre error' + (e && e.sourceId ? ' [source: ' + e.sourceId + ']' : '') + ':', (err && err.message) || err || e);
+    });
     map.on('style.load', onStyle);
     map.on('move', () => { try { if (window.Draw && Draw.reposition) Draw.reposition(); } catch (e) {} });   // keep the selection context bar following the camera in 3D
     // re-seat 3D models on the terrain once elevation tiles load / after camera moves
     // (queryTerrainElevation returns 0 until tiles arrive). Loop-safe: only re-ground
     // once per movement/idle cycle, so update3D's repaint can't re-trigger us.
     let regroundPending = true;
-    map.on('movestart', () => { regroundPending = true; });
+    map.on('movestart', () => { regroundPending = true; if (window.markMapMotion) markMapMotion(true); });   // drop glass refraction while the globe moves (see app.css .map-moving)
+    map.on('moveend', () => { if (window.markMapMotion) markMapMotion(false); });
     map.on('sourcedata', e => { if (e.sourceId === 'dem' && e.isSourceLoaded) regroundPending = true; });
     map.on('idle', () => { if (on && regroundPending) { regroundPending = false; try { if (window.Models3D) Models3D.refresh(); } catch (e) {} } });
     bridgeDrawing();
@@ -319,7 +348,9 @@
   function syncFrom3D() { const c = map.getCenter(); L2.setView([c.lat, c.lng], Math.round(map.getZoom() + 1), { animate: false }); }
 
   function enter() {
-    ensure(); on = true; document.body.classList.add('mode-3d'); cont.classList.add('on');
+    ensure();
+    if (!map) return;   // WebGL unavailable — ensure() already told the operator; stay in 2D rather than half-entering a broken 3D mode
+    on = true; document.body.classList.add('mode-3d'); cont.classList.add('on');
     const cur = S.state.mapStyle || 'satellite'; if (builtStyle !== cur) { try { map.setStyle(styleUrl(cur)); builtStyle = cur; } catch (e) {} }   // pick up a style changed since last 3D session (on enter only — avoids mid-session aborts)
     map.resize(); syncTo3D(false);
     if (map.isStyleLoaded()) { addSceneLayers(); mirror(); }
@@ -356,7 +387,10 @@
   // Track the active scene's signature so we can ease the 3D camera to the new scene on 'sync' too
   // (previously the presenter's 3D view stayed frozen on the old scene while the control cut scenes).
   let lastSceneSig = null;
-  function sceneSig() { const sc = S.activeScene(); const v = sc && sc.view; return (S.sceneIndex ? S.sceneIndex() : 0) + '|' + (v ? [v.lat, v.lng, v.zoom].join(',') : ''); }
+  // sceneIndex(id) needs the id — called bare it findIndex'd against `undefined` and always returned -1,
+  // collapsing the signature to bare coordinates. Two scenes framed identically (a duplicate, or two
+  // scenes both left at the 29.5/45/z5 default) then looked identical and the 3D camera never re-eased.
+  function sceneSig() { const sc = S.activeScene(); const v = sc && sc.view; return (sc ? sc.id : '-') + '|' + (v ? [v.lat, v.lng, v.zoom].join(',') : ''); }
   function easeToActiveScene() { const sc = S.activeScene(); if (on && map && sc && sc.view) map.easeTo({ center: [sc.view.lng, sc.view.lat], zoom: Math.max(1, sc.view.zoom - 1), duration: 900 }); }
   S.on((st, evt) => {
     if (evt === 'threed') { exaggeration = cfg3().exaggeration; if (on && map) { try { map.setTerrain({ source: 'dem', exaggeration }); } catch (e) {} map.easeTo({ pitch: cfg3().pitch, duration: 300 }); applyLabels3D(); applyProjection(); applyPerf(); } return; }

@@ -7,6 +7,7 @@
 (() => {
   const S = window.Store, I = window.ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // style names arrive via sync → escape
   const isControl = window.APP_ROLE === 'control';
 
   const qbar = document.querySelector('.qtools');
@@ -29,7 +30,7 @@
     pop.innerHTML = '';
     if (inBar) pop.appendChild(h('div', 'lbar-pop__hd', 'Base map'));
     S.cfg().mapStyles.filter(m => m.on !== false).forEach(m => {
-      const it = h('button', (inBar ? 'lbar-pop__i' : 'mapstyle-pop__i') + (m.id === S.state.mapStyle ? ' is-on' : ''), `${I.layers}<span>${m.name}</span>`);
+      const it = h('button', (inBar ? 'lbar-pop__i' : 'mapstyle-pop__i') + (m.id === S.state.mapStyle ? ' is-on' : ''), `${I.layers}<span>${esc(m.name)}</span>`);
       it.onclick = () => { S.setMapStyle(m.id); pop.hidden = true; };
       pop.appendChild(it);
     });

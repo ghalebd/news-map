@@ -3,7 +3,7 @@ const puppeteer=require('puppeteer-core');const CHROME='/Applications/Google Chr
 async function load(url){const p=await b.newPage();await p.setViewport({width:1280,height:840});p.on('dialog',d=>d.accept().catch(()=>{}));await p.goto(url,{waitUntil:'domcontentloaded'});await sleep(1000);await p.evaluate(()=>{try{localStorage.clear();}catch(e){}});await p.reload({waitUntil:'domcontentloaded'});await sleep(2400);return p;}
 
 // FIX A: control claims TSKEY immediately on a local edit (room-independent)
-const c=await load('http://localhost:8000/v2/control.html?room=autotest-ctl');
+const c=await load('http://localhost:8000/v2/control.html?allowsync&room=autotest-ctl');   // ?allowsync: this test legitimately asserts the control PUBLISHES, into an isolated room
 const a=await c.evaluate(()=>{const TSKEY='newsmap.v3.syncts';if(!Store.scenes().length)Store.addScene({lat:31,lng:47,zoom:6});const t0=Date.now();Store.addModel3d({src:'x',name:'M',lat:31,lng:47,scale:3,mode:'2d',on:true});const ts=parseInt(localStorage.getItem(TSKEY)||'0',10);const t1=Date.now();return {claimedImmediately: ts>=t0 && ts<=t1, ts_minus_t0: ts-t0};});
 console.log('FIX A · control claims TSKEY synchronously on edit:', a.claimedImmediately, '(ts-t0='+a.ts_minus_t0+'ms)');
 await c.close();

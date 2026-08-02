@@ -6,7 +6,7 @@
 (() => {
   const S = window.Store, I = window.ICONS;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
   const aspectOf = url => new Promise((res, rej) => { const im = new Image(); im.onload = () => res((im.naturalWidth / im.naturalHeight) || 1); im.onerror = rej; im.src = url; });
   // parse a single Google-style coordinate string "lat, lng" (also tolerates ° and N/S/E/W)
   const parseLatLng = s => { const m = String(s || '').match(/(-?\d+(?:\.\d+)?)\s*°?\s*([NnSs])?\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*°?\s*([EeWw])?/); if (!m) return null; let lat = +m[1], lng = +m[3]; if (/[Ss]/.test(m[2] || '')) lat = -Math.abs(lat); if (/[Ww]/.test(m[4] || '')) lng = -Math.abs(lng); return (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) ? [lat, lng] : null; };
@@ -234,7 +234,7 @@
       const row = h('div', 'cfg-qrow' + (it.hidden ? ' is-off' : '') + (it.sep ? ' is-sep' : ''));
       row.draggable = true; row.dataset.qid = it.id;
       row.appendChild(h('span', 'cfg-qrow__grip', '⋮⋮'));
-      row.appendChild(h('span', 'cfg-qrow__n', it.label));
+      row.appendChild(h('span', 'cfg-qrow__n', esc(it.label)));
       row.ondragstart = e => { dragId = it.id; row.classList.add('is-drag'); e.dataTransfer.effectAllowed = 'move'; };
       row.ondragend = () => { dragId = null; row.classList.remove('is-drag'); lst.querySelectorAll('.is-over').forEach(r => r.classList.remove('is-over')); };
       row.ondragover = e => { e.preventDefault(); if (dragId && dragId !== it.id) row.classList.add('is-over'); };
@@ -262,8 +262,8 @@
     q.bd.appendChild(h('div', 'cfg-subhd', 'Add a settings panel to the bar'));
     const plist = h('div', 'cfg-qbar'); const pinned = pinnedSet(); let lastCat = null;
     sectionCatalog().forEach(s => {
-      if (s.cat !== lastCat) { plist.appendChild(h('div', 'cfg-qcat', s.cat)); lastCat = s.cat; }
-      const row = h('div', 'cfg-qrow'); row.appendChild(h('span', 'cfg-qrow__n', s.title));
+      if (s.cat !== lastCat) { plist.appendChild(h('div', 'cfg-qcat', esc(s.cat))); lastCat = s.cat; }
+      const row = h('div', 'cfg-qrow'); row.appendChild(h('span', 'cfg-qrow__n', esc(s.title)));
       const on = pinned.has(s.id); const add = h('button', 'cfg-ordb' + (on ? ' is-on' : ''), on ? I.eye : I.plus); add.title = on ? 'Remove from bar' : 'Add to bar';
       add.onclick = () => { togglePin(s.title, s.icon); renderTab(); }; row.appendChild(add); plist.appendChild(row);
     });
@@ -319,7 +319,7 @@
   function tabMap(C, ct) {
     const m1 = section('Active map type', I.layers);
     const seg = h('div', 'cfg-seg'); live.seg = seg;
-    C.mapStyles.filter(m => m.on !== false).forEach(m => { const b = h('button', 'cfg-seg__b' + (m.id === S.state.mapStyle ? ' on' : ''), m.name); b.dataset.id = m.id; b.onclick = () => { S.setMapStyle(m.id); seg.querySelectorAll('.cfg-seg__b').forEach(y => y.classList.toggle('on', y === b)); }; seg.appendChild(b); });
+    C.mapStyles.filter(m => m.on !== false).forEach(m => { const b = h('button', 'cfg-seg__b' + (m.id === S.state.mapStyle ? ' on' : ''), esc(m.name)); b.dataset.id = m.id; b.onclick = () => { S.setMapStyle(m.id); seg.querySelectorAll('.cfg-seg__b').forEach(y => y.classList.toggle('on', y === b)); }; seg.appendChild(b); });
     m1.bd.appendChild(seg); ct.appendChild(m1.sec);
     const m2 = section('Enabled styles', I.layers);
     const list = h('div', 'cfg-list');
@@ -431,13 +431,13 @@
   function tabAssets(C, ct) {
     const { sec, bd } = section('Categories', I.folder);
     const chips = h('div', 'cfg-chips');
-    C.assetCats.forEach(cat => { const c = h('span', 'cfg-chip', `${cat}<button class="x" title="Remove">×</button>`); c.querySelector('.x').onclick = () => { S.removeAssetCat(cat); renderTab(); }; chips.appendChild(c); });
+    C.assetCats.forEach(cat => { const c = h('span', 'cfg-chip', `${esc(cat)}<button class="x" title="Remove">×</button>`); c.querySelector('.x').onclick = () => { S.removeAssetCat(cat); renderTab(); }; chips.appendChild(c); });
     const addc = h('div', 'cfg-add', '<input placeholder="New category">'); const acb = h('button', null, 'Add'); addc.appendChild(acb);
     acb.onclick = () => { const v = addc.querySelector('input').value.trim(); if (v) { S.addAssetCat(v); renderTab(); } };
     bd.append(chips, addc); ct.appendChild(sec);
     const u = section('Upload image', I.upload);
     const file = h('input'); file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
-    const cat = h('select', 'cfg-sel'); C.assetCats.forEach(z => { const o = h('option', null, z); o.value = z; cat.appendChild(o); });
+    const cat = h('select', 'cfg-sel'); C.assetCats.forEach(z => { const o = h('option', null, esc(z)); o.value = z; cat.appendChild(o); });
     const name = h('input', 'cfg-name'); name.placeholder = 'Name (optional)';
     const pick = h('button', 'cfg-uploadbtn', `${I.upload}<span>Choose image…</span>`); pick.onclick = () => file.click();
     file.onchange = async () => { const f = file.files[0]; if (!f) return; try { S.addCustomAsset({ name: name.value.trim() || f.name.replace(/\.[^.]+$/, ''), cat: cat.value || C.assetCats[0], url: await readImage(f) }); renderTab(); } catch (e) { alert('Could not read image.'); } };
@@ -715,7 +715,7 @@
     const sel = h('select', 'cfg-sel');
     const off = h('option', null, 'Off — release camera'); off.value = ''; sel.appendChild(off);
     const targets = (window.Follow && Follow.targets) ? Follow.targets() : [];
-    targets.forEach(t => { const o = h('option', null, t.name); o.value = t.kind + '|' + t.id; if (f.on && f.kind === t.kind && String(f.id) === String(t.id)) o.selected = true; sel.appendChild(o); });
+    targets.forEach(t => { const o = h('option', null, esc(t.name)); o.value = t.kind + '|' + t.id; if (f.on && f.kind === t.kind && String(f.id) === String(t.id)) o.selected = true; sel.appendChild(o); });
     sel.onchange = () => { const v = sel.value; if (!v) { S.setFollow({ on: false, kind: null, id: null }); return; } const ix = v.indexOf('|'); S.setFollow({ on: true, kind: v.slice(0, ix), id: v.slice(ix + 1) }); };
     bd.appendChild(rowWith('Follow target', sel));
     bd.appendChild(h('div', 'hint', 'Smooth motion eases route + timeline playback in/out (off = linear). Follow locks the camera onto a moving target — a model along its route, or a live ship / flight — and keeps it centred on both the flat and 3D maps; the presenter follows in lockstep. Pick a target to start, “Off” to release.'));
@@ -813,7 +813,7 @@
     orderedCats().forEach(c => {
       const collapsed = !searching && catCollapsed(c.key);
       const band = h('div', 'cfg-band' + (collapsed ? '' : ' open'));
-      const hd = h('div', 'cfg-bandhd', `<span class="cfg-bandgrip" title="Drag to move this category">${I.gripH}</span><span class="cfg-bandlbl">${c.label}</span><span class="cfg-bandchev">${I.chevron}</span>`);
+      const hd = h('div', 'cfg-bandhd', `<span class="cfg-bandgrip" title="Drag to move this category">${I.gripH}</span><span class="cfg-bandlbl">${esc(c.label)}</span><span class="cfg-bandchev">${I.chevron}</span>`);
       hd.onclick = e => { if (e.target.closest('.cfg-bandgrip')) return; toggleCat(c.key); };
       band.appendChild(hd);
       const body = h('div', 'cfg-bandbody'); if (collapsed) body.style.display = 'none';
@@ -885,6 +885,12 @@
     });
   }
   renderTab();
+  // models3d.js / models-anim.js are DEFERRED (they need the deferred three.min.js), so they run AFTER
+  // this file. The first renderTab() above therefore sees window.Models3D === undefined and never wires
+  // up the catalogue thumbnails — all 69 entries stayed blank squares for the whole session, and a model
+  // whose route was already playing showed "Play". Deferred scripts finish before DOMContentLoaded, so
+  // one re-render there picks them all up.
+  if (!window.Models3D || !window.ModelsAnim) window.addEventListener('DOMContentLoaded', () => renderTab(), { once: true });
   renderBarButtons();   // place any pinned section buttons on the tool bar
   window.addEventListener('resize', relayout);
 

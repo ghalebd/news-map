@@ -20,6 +20,8 @@
   border-left: 1px solid var(--stroke); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5);
   transform: translateX(102%); transition: transform var(--t) var(--ease-out);
 }
+/* drop the per-frame SVG displacement while the map is moving (see app.css .map-moving note) */
+body.map-moving .cfg-drawer { -webkit-backdrop-filter: blur(30px) saturate(1.4) brightness(1.04); backdrop-filter: blur(30px) saturate(1.4) brightness(1.04); }
 .cfg-drawer.open { transform: none; }
 
 /* ===== enhanced side panel (LEFT) ===== */

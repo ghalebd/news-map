@@ -22,10 +22,38 @@
   }
 
   const lerp = (a, b, t) => a + (b - a) * t;
+
+  // A manual pan means the operator is taking the camera by hand — release the follow lock so the
+  // two don't fight. Follow's own setCenter/panTo are programmatic and never emit 'dragstart', so
+  // this fires only on a real pointer drag. 2D map is hooked now; the 3D map lazily once it exists.
+  function hookUserPan() {
+    try { const m = window.GameMap && GameMap.map; if (m && !m.__followHook) { m.__followHook = 1; m.on('dragstart', () => { if (cfg().on) window.Follow.stop(); }); } } catch (e) {}
+    // 3D CANNOT use 'dragstart': the tick loop below calls setCenter every frame, and MapLibre's setCenter
+    // → jumpTo → stop() cancels the gesture before its drag handler ever recognises one. Measured: zero
+    // dragstart events during a real pointer drag, so the operator could not move the globe AT ALL while
+    // following. Detect the drag ourselves from raw pointer movement instead.
+    try {
+      const m = window.Map3D && Map3D.map;
+      if (m && !m.__followHook) {
+        m.__followHook = 1;
+        const cv = m.getCanvas();
+        let down = false, px = 0, py = 0;
+        cv.addEventListener('mousedown', e => { down = true; px = e.clientX; py = e.clientY; });
+        window.addEventListener('mouseup', () => { down = false; });
+        cv.addEventListener('mousemove', e => {
+          if (!down || !cfg().on) return;
+          if (Math.hypot(e.clientX - px, e.clientY - py) > 4) window.Follow.stop();   // 4px = a drag, not a click-to-select
+        });
+        cv.addEventListener('touchmove', () => { if (cfg().on) window.Follow.stop(); }, { passive: true });
+      }
+    } catch (e) {}
+  }
+
   let raf = null;
   function tick() {
     const f = cfg(); if (!f.on) { raf = null; return; }   // self-gating: stop the loop when follow is off
     raf = requestAnimationFrame(tick);
+    hookUserPan();   // idempotent — attaches the 3D drag-release the first frame the globe exists
     // CAMERA PRIORITY: a deliberately-playing timeline or camera-path owns the camera — yield to it
     // so the two don't fight over the centre every frame (the visible jitter the operator reported).
     const c = S.cfg(); if ((c.timeline && c.timeline.playing) || (c.campath && c.campath.playing)) return;
@@ -46,6 +74,7 @@
     } catch (e) {}
   }
   function kick() { if (raf == null && cfg().on) raf = requestAnimationFrame(tick); }
+  hookUserPan();   // wire the 2D drag-release immediately (3D map is hooked from tick once created)
   kick();
   // start/stop the loop in lockstep with the synced follow flag (presenter mirrors control)
   S.on((st, evt) => { if (evt === 'follow' || evt === 'sync') kick(); });
@@ -54,6 +83,12 @@
   window.Follow = {
     set(kind, id, opts) { const c = S.cfg(); if (c.timeline && c.timeline.playing) S.setTimeline({ playing: false }); if (c.campath && c.campath.playing) S.setCampath({ playing: false }); S.setFollow(Object.assign({ on: true, kind, id }, opts || {})); },
     stop() { S.setFollow({ on: false, id: null, kind: null }); },
+    // Release the lock for a DELIBERATE camera move (search, saved place, fly-to-model, reset-to-scene).
+    // The rAF loop re-centres every frame and Leaflet/MapLibre both abort an in-flight flyTo the moment
+    // panTo/setCenter is called, so without this the destination is reached for one frame and snapped
+    // straight back — the operator sees the search/fly button do nothing. hookUserPan cannot cover this:
+    // a programmatic flyTo never emits 'dragstart'.
+    release() { if (cfg().on) window.Follow.stop(); },
     isFollowing(kind, id) { const f = cfg(); return !!(f.on && f.kind === kind && f.id === id); },
     active() { return !!cfg().on; },
     // live list of followable targets for the settings dropdown

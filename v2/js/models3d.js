@@ -506,7 +506,19 @@
     sync2D(); syncRoutes2D();
     if (window.Map3D && Map3D.on) { update3D(); if (isGlobe()) updateGlobeIcons(); }   // globe icons follow model add/move/rotate
   }
-  S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') syncAll(); });
+  // A 'models3d' event means the operator changed a model (HUD D-pad, heading/size, settings, drag).
+  // The timeline writes transient poses through tick() and never cleared them, so once a model had a
+  // keyframe it stayed frozen at that pose and eff() kept overriding the Store — every HUD edit updated
+  // the numbers and moved nothing. While playback is NOT running the Store is authoritative, so release
+  // the overlay. Route/timeline playback re-applies its pose on the very next frame, so this is invisible
+  // during actual playback.
+  function releasePosesIfIdle() {
+    const tl = (S.cfg().timeline) || {};
+    if (tl.playing || !poses.size) return;
+    const o = {}; poses.forEach((_, id) => { o[id] = null; });
+    tick(o);
+  }
+  S.on((st, evt) => { if (evt === 'models3d') releasePosesIfIdle(); if (evt === 'models3d' || evt === 'sync') syncAll(); });
 
   // transient render override for animation / drag (no Store writes).
   // poseMap: { id: pose|null }. Re-places only the affected models.

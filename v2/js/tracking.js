@@ -11,6 +11,7 @@
   const S = window.Store, M = window.GameMap, I = window.ICONS;
   const map = M.map;
   const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // ship names / destinations / callsigns come from external AIS + flight feeds → escape before tooltip HTML
   const isControl = window.APP_ROLE === 'control';
   const AIS_PROXY = 'wss://newsmap-ais-proxy.dida-newsmap.workers.dev';   // key lives server-side in the Worker secret — never in this code
   const RT_CAP = 80;      // max simultaneous route lines (visible ships)
@@ -56,6 +57,7 @@
     reconnectT: null, pruneT: null, resubT: null, STALE: 5 * 60 * 1000,
     set(v) { if (v === this.on) return; this.on = v; v ? this.start() : this.stop(); setCounts(); },
     start() {
+      window.loadScript && window.loadScript('lib/searoute.min.js').catch(() => {});   // sea-lane lib (484KB) — fetched only when ships turn on; route draw waits for window.searoute
       this.route = this.route || L.layerGroup();
       this.trails = this.trails || L.layerGroup();
       this.pins = this.pins || L.layerGroup();
@@ -81,7 +83,7 @@
       catch (e) { setStatus('ships', 'err'); return; }
       setStatus('ships', 'wait');
       this.socket.binaryType = 'arraybuffer';
-      this.socket.onopen = () => { this.subscribe(); setStatus('ships', 'live'); };
+      this.socket.onopen = () => { this._retries = 0; this.subscribe(); setStatus('ships', 'live'); };   // reset the reconnect backoff on a good connection
       this.socket.onmessage = ev => {
         try {
           let txt = typeof ev.data === 'string' ? ev.data : (ev.data instanceof ArrayBuffer ? new TextDecoder().decode(ev.data) : null);
@@ -90,7 +92,9 @@
         } catch (e) {}
       };
       this.socket.onerror = () => setStatus('ships', 'err');
-      this.socket.onclose = () => { if (this.on) { setStatus('ships', 'wait'); clearTimeout(this.reconnectT); this.reconnectT = setTimeout(() => this.connect(), 3000); } };
+      // exponential backoff (3s → 6s → 12s … capped at 60s). A flat 3s retry hammered the AIS proxy for
+      // the whole broadcast when it was down or over quota, slowing its own recovery.
+      this.socket.onclose = () => { if (this.on) { setStatus('ships', 'wait'); clearTimeout(this.reconnectT); const wait = Math.min(60000, 3000 * Math.pow(2, this._retries || 0)); this._retries = (this._retries || 0) + 1; this.reconnectT = setTimeout(() => this.connect(), wait); } };
     },
     subscribe() {
       if (!this.socket || this.socket.readyState !== 1) return;
@@ -128,8 +132,8 @@
     etaText(eta) { if (!eta || !eta.Month) return ''; const p = n => String(n).padStart(2, '0'); return `${p(eta.Day)}/${p(eta.Month)} ${p(eta.Hour)}:${p(eta.Minute)} UTC`; },
     tipHtml(s) {
       const sp = typeof s.speed === 'number' ? s.speed.toFixed(1) + ' kn' : '—';
-      let h = `<b>${s.name}</b><br><span class="trk-sub">${sp}</span>`;
-      if (s.dest) { const d = s.destPort ? s.destPort.name : s.dest; h += `<br><span class="trk-dest">→ ${d}</span>`; const e = this.etaText(s.eta); if (e) h += `<br><span class="trk-eta">ETA ${e}</span>`; }
+      let h = `<b>${esc(s.name)}</b><br><span class="trk-sub">${sp}</span>`;
+      if (s.dest) { const d = s.destPort ? s.destPort.name : s.dest; h += `<br><span class="trk-dest">→ ${esc(d)}</span>`; const e = this.etaText(s.eta); if (e) h += `<br><span class="trk-eta">ETA ${esc(e)}</span>`; }
       return h;
     },
     upsert(mmsi, info) {
@@ -192,7 +196,7 @@
       this.resolveDest(s); s._destChanged = true; this.ensureRoute(s);
       if (s.routeLine && s.routeLine.setStyle) s.routeLine.setStyle(rtFocus());
       if (s.destPort && this.pins) {
-        const lbl = `<span class="port-pin__lbl">${s.destPort.name}${this.etaText(s.eta) ? ' · ETA ' + this.etaText(s.eta) : ''}</span>`;
+        const lbl = `<span class="port-pin__lbl">${esc(s.destPort.name)}${this.etaText(s.eta) ? ' · ETA ' + esc(this.etaText(s.eta)) : ''}</span>`;
         L.marker([s.destPort.lat, s.destPort.lng], { interactive: false, icon: L.divIcon({ className: 'port-pin', html: `<i></i>${lbl}`, iconSize: [14, 14], iconAnchor: [7, 7] }) }).addTo(this.pins);
       }
     },
@@ -239,7 +243,7 @@
       while (f.trail.length > TS().trailPoints) f.trail.shift();
       if (!this.ftrails) return;
       const t = TS();
-      drawVector(f, this.ftrails, t.flightColor, f.heading, f.velocity || 0, t.vectorMins * 25);
+      drawVector(f, this.ftrails, t.flightColor, f.heading, f.velocity || 0, t.vectorMins * 60);   // drawVector's last arg is SECONDS (ships use *60); *25 made the aircraft lead 2.4x shorter than the setting said
       if (!t.showHistory || f.trail.length < 2) { if (f.line) { this.ftrails.removeLayer(f.line); f.line = null; } if (f.head) { this.ftrails.removeLayer(f.head); f.head = null; } return; }
       const recent = f.trail.slice(-10), lw = t.lineWeight, lo = t.lineOpacity;
       const ls = { color: t.flightColor, weight: Math.max(.8, lw), opacity: Math.min(.5, lo * .9), lineCap: 'round', lineJoin: 'round', interactive: false };
@@ -259,7 +263,7 @@
       // airplanes.live — free, no auth, sends CORS (access-control-allow-origin: *). The old
       // OpenSky-via-codetabs fallback is dead (OpenSky now needs auth; codetabs 400s) so it was
       // removed — it only added noise and hid the working source. Two quick tries on transient fails.
-      const parse = d => (d.ac || d.aircraft || []).filter(a => a.lat != null && a.lon != null).map(a => ({ icao: a.hex, callsign: (a.flight || a.r || '').trim(), lat: a.lat, lng: a.lon, alt: a.alt_baro || 0, velocity: (a.gs || 0) * 0.5144, heading: a.track || a.true_heading || 0, type: a.t || '' }));
+      const parse = d => (d.ac || d.aircraft || []).filter(a => a.lat != null && a.lon != null).map(a => ({ icao: a.hex, callsign: (a.flight || a.r || '').trim(), lat: a.lat, lng: a.lon, alt: (typeof a.alt_baro === 'number' && isFinite(a.alt_baro) ? a.alt_baro : 0), velocity: (a.gs || 0) * 0.5144, heading: a.track || a.true_heading || 0, type: a.t || '' }));   // readsb sends the STRING "ground" for aircraft on the deck — truthy, so `|| 0` let it through and every consumer produced NaN (tooltip "NaNft", and a NaN mercator matrix made them vanish from 3D)
       const url = `https://api.airplanes.live/v2/point/${c.lat.toFixed(2)}/${c.lng.toFixed(2)}/${Math.round(distNM)}`;
       let ac = null;
       for (let attempt = 0; attempt < 2 && ac == null; attempt++) {
@@ -274,7 +278,7 @@
     },
     upsert(icao, info) {
       let f = this.flights.get(icao);
-      const tip = `<b>${info.callsign || 'Unknown'}</b><br>${info.type || '?'} · ${Math.round(info.alt)}ft · ${Math.round(info.velocity * 1.94)}kt`;
+      const tip = `<b>${esc(info.callsign || 'Unknown')}</b><br>${esc(info.type || '?')} · ${Math.round(info.alt)}ft · ${Math.round(info.velocity * 1.94)}kt`;
       if (!f) {
         f = { icao, trail: [[info.lat, info.lng]], ...info };
         f.marker = L.marker([info.lat, info.lng], { icon: icon('plane', info.heading), zIndexOffset: 200, keyboard: false });

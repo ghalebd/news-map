@@ -9,7 +9,7 @@ const b=await puppeteer.launch({headless:'new',executablePath:CHROME,
 const p=await b.newPage();await p.setViewport({width:1440,height:900});
 p.on('dialog',d=>d.accept().catch(()=>{}));
 const er=[];p.on('pageerror',e=>er.push(''+e));
-await p.goto('http://localhost:8000/v2/control.html',{waitUntil:'networkidle2'});
+await p.goto('http://localhost:8000/v2/control.html?nosync',{waitUntil:'networkidle2'});   // ?nosync is MANDATORY: control.html is a sync SENDER — without it this test writes into the live broadcast room
 await p.evaluate(()=>{localStorage.clear();});
 await p.reload({waitUntil:'networkidle2'});await sleep(2500);
 // REAL USER STEP: switch to PRESENTER (live) mode via the actual mode button
@@ -151,7 +151,7 @@ await p.screenshot({path:'/tmp/v2_control_portrait.png'});
 await p.setViewport({width:1440,height:900});await sleep(500);
 
 const pres=await b.newPage();await pres.setViewport({width:1440,height:900});
-await pres.goto('http://localhost:8000/v2/index.html',{waitUntil:'domcontentloaded'});await sleep(2500);
+await pres.goto('http://localhost:8000/v2/index.html?nosync',{waitUntil:'domcontentloaded'});await sleep(2500);
 await pres.screenshot({path:'/tmp/v2_presenter_wide.png'});
 await pres.close();
 

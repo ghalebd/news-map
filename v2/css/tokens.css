@@ -56,6 +56,7 @@
 
   /* ---- z-index scale ---- */
   --z-map: 1;
+  --z-fx: 900;        /* full-screen picture FX (spotlight mask) — above the map, BELOW every control */
   --z-panel: 1000;
   --z-bar: 1100;
   --z-flyout: 2000;

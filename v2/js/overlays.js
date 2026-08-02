@@ -84,10 +84,15 @@
   }
 
   /* ---- on-map alignment: move + resize handles for the active overlay ---- */
-  let editId = null;
+  let editId = null, editDragging = false;   // editDragging: a handle is under the pointer right now
   const editGrp = L.layerGroup();
   const handleIcon = (glyph, cls) => L.divIcon({ className: 'ov-handle ' + cls, html: glyph, iconSize: [28, 28], iconAnchor: [14, 14] });
   function renderEdit() {
+    // render() runs on EVERY 'config' emit — i.e. every knob in the settings console, and every remote
+    // sync. clearLayers() detaches the very marker Leaflet is mid-drag on, so 'dragend' never fires, the
+    // interim bounds (held only in `tmp`) are lost and the overlay snaps back: the operator's alignment
+    // work silently disappears. Never rebuild while a handle is being dragged.
+    if (editDragging) return;
     editGrp.clearLayers();
     const o = editId && list().find(x => x.id === editId);
     if (!o || o.on === false || !o.bounds) { if (map.hasLayer(editGrp)) map.removeLayer(editGrp); return; }
@@ -99,12 +104,14 @@
     let tmp = null;
     const mv = L.marker(bb.getCenter(), { icon: handleIcon(I.move, 'ov-handle--move'), draggable: true, zIndexOffset: 1000 });
     mv.on('drag', e => { const c = e.latlng, b = o.bounds, hLat = (b[1][0] - b[0][0]) / 2, hLng = (b[1][1] - b[0][1]) / 2; tmp = [[c.lat - hLat, c.lng - hLng], [c.lat + hLat, c.lng + hLng]]; live(tmp); });
-    mv.on('dragend', () => { if (tmp) S.updateOverlay(o.id, { bounds: tmp }); });
+    mv.on('dragstart', () => { editDragging = true; });
+    mv.on('dragend', () => { editDragging = false; if (tmp) S.updateOverlay(o.id, { bounds: tmp }); });
     editGrp.addLayer(mv);
     let tmp2 = null;
     const rz = L.marker(bb.getNorthEast(), { icon: handleIcon(I.resize, 'ov-handle--size'), draggable: true, zIndexOffset: 1000 });
     rz.on('drag', e => { const p = e.latlng, s = o.bounds[0]; tmp2 = [[s[0], s[1]], [Math.max(s[0] + 0.0005, p.lat), Math.max(s[1] + 0.0005, p.lng)]]; live(tmp2); });
-    rz.on('dragend', () => { if (tmp2) S.updateOverlay(o.id, { bounds: tmp2 }); });
+    rz.on('dragstart', () => { editDragging = true; });
+    rz.on('dragend', () => { editDragging = false; if (tmp2) S.updateOverlay(o.id, { bounds: tmp2 }); });
     editGrp.addLayer(rz);
   }
 
