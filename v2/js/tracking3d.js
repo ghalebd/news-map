@@ -12,7 +12,7 @@
   const D2R = Math.PI / 180;
   const MAXS = 3000, MAXF = 3000;
   const SHIP_GLB = 'cargo-ship.glb', PLANE_GLB = 'a-330.glb';   // cargo ship: Alex Safayan / Poly Pizza (CC-BY)
-  const SHIP_FWD = 180, PLANE_FWD = 180;            // heading calibration (deg) per model
+  const SHIP_FWD = 180, PLANE_FWD = 180;            // heading calibration (deg) per model — see setInst()
   const SHIP_MUL = 0.42, PLANE_MUL = 0.42;          // size factor (km slider × this) — kept small/proportional
   const PLANE_ALT_CAP = 2600;                       // metres — keep aircraft at a sensible visual height
   const cfg = () => Object.assign({ on: true, shipKm: 5, planeKm: 4 }, S.cfg().track3d || {});
@@ -137,7 +137,13 @@
     const mc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], altM || 0);   // sea level (fast — no per-instance terrain query)
     const sc = Math.max(10, (km || 1) * 1000) * mc.meterInMercatorCoordinateUnits();
     tmpP.set(mc.x, mc.y, mc.z);
-    tmpQ.setFromAxisAngle(upZ, (fwd - (heading || 0)) * D2R);
+    // Heading is ADDED, not subtracted. Both merged GLBs end up nose-along +Y (mergeScene's rotateX puts
+    // a glTF's −Z forward on +Y) and mercator's +Y is SOUTH, so the yaw that renders a compass bearing is
+    // (bearing + 180) — hence fwd = 180. The old `fwd - heading` rendered bearing = −heading: north and
+    // south sit ON the mirror axis so they looked right, while every east/west target steamed the
+    // opposite way to its own trail line and to its (correct) 2D icon. Measured against the bundled
+    // three.js r137: course 090 now renders 090 (east), 270 → 270 (west), 0 and 180 unchanged.
+    tmpQ.setFromAxisAngle(upZ, (fwd + (heading || 0)) * D2R);
     tmpS.set(sc, sc, sc);
     tmpM.compose(tmpP, tmpQ, tmpS);
     mesh.setMatrixAt(i, tmpM);

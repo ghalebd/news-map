@@ -119,7 +119,10 @@ const Draw = (() => {
       case 'sketch':  return L.polyline(el.pts, o);
       case 'measure': { const g = L.layerGroup(); g.addLayer(L.polyline([el.a, el.b], { ...o, dashArray: '4 4' })); g.addLayer(L.marker(el.b, { icon: labelIcon(fmtDist(map.distance(L.latLng(el.a), L.latLng(el.b))), el.color) })); return g; }
       case 'text':    return L.marker(el.ll, { icon: labelIcon(el.text, el.color) });
-      case 'asset':   { const w = +el.w || 54, rot = +el.rot || 0; const tint = el.tint ? `<span class="asset-tint" style="background:${col(el.tint)};opacity:${(el.tintStr == null ? 65 : el.tintStr) / 100};-webkit-mask:url('${esc(el.src)}') center/contain no-repeat;mask:url('${esc(el.src)}') center/contain no-repeat;transform:rotate(${rot}deg)"></span>` : ''; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<span class="asset-im" style="width:${w}px;height:auto"><img class="asset-img" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg)">${tint}</span>${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
+      // draggable=false: an <img> inside a divIcon is natively draggable (leaflet.css only guards the icon
+      // ROOT, and -webkit-user-drag doesn't inherit), and once an HTML5 image drag starts the browser sends
+      // dragend instead of mouseup — grabbing an asset left map.dragging DISABLED. (models3d.js:307 same.)
+      case 'asset':   { const w = +el.w || 54, rot = +el.rot || 0; const tint = el.tint ? `<span class="asset-tint" style="background:${col(el.tint)};opacity:${(el.tintStr == null ? 65 : el.tintStr) / 100};-webkit-mask:url('${esc(el.src)}') center/contain no-repeat;mask:url('${esc(el.src)}') center/contain no-repeat;transform:rotate(${rot}deg)"></span>` : ''; return L.marker(el.ll, { icon: L.divIcon({ className: 'map-asset', html: `<span class="asset-im" style="width:${w}px;height:auto"><img class="asset-img" draggable="false" src="${esc(el.src)}" style="width:${w}px;height:auto;transform:rotate(${rot}deg);-webkit-user-drag:none">${tint}</span>${el.name ? `<span>${esc(el.name)}</span>` : ''}`, iconSize: [w, w], iconAnchor: [w / 2, w / 2] }) }); }
       case 'frontline': return frontLine(L.latLng(el.a), L.latLng(el.b), { color: el.color });
       case 'country': { const c = col(el.color); const lyr = L.geoJSON({ type: 'Feature', geometry: el.geom }, { style: { color: c, weight: 2, fillColor: c, fillOpacity: 0.32 } }); if (el.name) lyr.bindTooltip(esc(el.name), { sticky: true, className: 'trk-tip' }); return lyr; }
     }
@@ -128,7 +131,11 @@ const Draw = (() => {
   function frontLine(a, b, o) {
     const g = L.layerGroup();
     g.addLayer(L.polyline([a, b], { color: o.color, weight: 4, opacity: 1 }));
-    const steps = 9, d = map.distance(a, b) * 0.045, ang = Math.atan2(b.lat - a.lat, b.lng - a.lng) + Math.PI / 2;
+    // BEARING IN METRIC SPACE — the tooth offset below is applied per-axis in metres (lng squeezed by
+    // cos lat), so taking the perpendicular in raw DEGREE space mixed the two frames and skewed every
+    // tooth: measured ~9° off perpendicular at 50°N (Ukraine), ~20° at 75°N, and it worsens with the
+    // diagonal of the front. Only exact N-S / E-W fronts ever looked right, which is why it passed for long.
+    const steps = 9, d = map.distance(a, b) * 0.045, mlat = (a.lat + b.lat) / 2, ang = Math.atan2(b.lat - a.lat, (b.lng - a.lng) * Math.cos(mlat * Math.PI / 180)) + Math.PI / 2;
     for (let i = 0; i < steps; i++) { const t = (i + 0.5) / steps, lat = a.lat + (b.lat - a.lat) * t, lng = a.lng + (b.lng - a.lng) * t; const tl = lat + Math.sin(ang) * d / 111000, tg = lng + Math.cos(ang) * d / (111000 * Math.cos(lat * Math.PI / 180) || 1); g.addLayer(L.polyline([[lat, lng], [tl, tg]], { color: o.color, weight: 3, opacity: 1 })); }
     return g;
   }
@@ -175,12 +182,19 @@ const Draw = (() => {
   // screen proximity), select it, or deselect if none. Works in 2D and 3D.
   function pickAt(latlng, tol) {
     const sc = S.activeScene(); if (!sc) return null;
-    const sp = screenPt(latlng.lat, latlng.lng), T = tol || 22; let best = null, bd = T;
-    (sc.elements || []).forEach(el => {
+    const sp = screenPt(latlng.lat, latlng.lng), T = tol || 22; let best = null, bd = T, bi = -1;
+    // a tie goes to the LAST element in sc.elements — that is the one drawn on top, so it is the one under
+    // the cursor (duplicates land exactly on their original and were otherwise unreachable).
+    const win = (score, el, i) => { if (score < bd || (best && score === bd && i > bi)) { bd = score; best = el; bi = i; } };
+    (sc.elements || []).forEach((el, i) => {
       const geom = el.geom || (el.pts && (el.type === 'polygon' || el.type === 'country') ? { type: 'Polygon', coordinates: [el.pts.map(p => [p[1], p[0]])] } : null);
-      if ((el.type === 'country' || el.type === 'polygon') && geomHit(geom, latlng.lng, latlng.lat)) { best = el; bd = 0; return; }
+      // an area hit scores just INSIDE the tolerance, never 0: at 0 nothing drawn later could ever beat it
+      // (a screen distance is never < 0), so a marker or label dropped on a highlighted country was
+      // unselectable — the country won every click and the element on top could not be recoloured,
+      // relabelled or dragged without leaving 3D.
+      if ((el.type === 'country' || el.type === 'polygon') && geomHit(geom, latlng.lng, latlng.lat)) { win(T - 1e-6, el, i); return; }
       const pts = []; if (el.ll) pts.push(el.ll); if (el.a) pts.push(el.a); if (el.b) pts.push(el.b); if (el.pts) el.pts.forEach(p => pts.push(p));
-      pts.forEach(p => { const q = screenPt(p[0], p[1]); const d = Math.hypot(q.x - sp.x, q.y - sp.y); if (d < bd) { bd = d; best = el; } });
+      pts.forEach(p => { const q = screenPt(p[0], p[1]); const d = Math.hypot(q.x - sp.x, q.y - sp.y); win(d, el, i); });
     });
     if (best) { selectEl(best, findLayer(best.id)); return best; }
     deselect(); return null;
@@ -223,6 +237,7 @@ const Draw = (() => {
     if (dragEl) { const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) S.updateElement(dragEl.id, patch, true); dragEl = null; dragPrev = null; pendingHist = false; map.dragging.enable(); return; }   // noHist: snapshot already taken on the first movement
     if (!dragStart) return; if (ghost) { drawn.removeLayer(ghost); ghost = null; } commit(tool, dragStart, e.latlng); dragStart = null; sketchPts = null; map.dragging.enable();
   });
+  function commitDragEl() { if (!dragEl) return; const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; }); if (Object.keys(patch).length) { try { S.updateElement(dragEl.id, patch, true); } catch (err) {} } }   // noHist: snapshot already taken on the first movement
   // RELEASE SAFETY NET — Leaflet's 'mouseup' above only fires when the pointer is released over the
   // map container. The tool bar, settings drawer and zoom cluster are position:fixed SIBLINGS of #map,
   // so a drag released over any of them (or outside the window) never reached it: `map.dragging` stayed
@@ -233,13 +248,14 @@ const Draw = (() => {
     try { if (e.target && map.getContainer().contains(e.target)) return; } catch (err) {}   // the real map handler already ran
     // an element moved live: keep the move the operator can already see. A half-drawn NEW shape has no
     // valid end point, so resetGesture cancels it rather than committing garbage geometry.
-    if (dragEl) {
-      const patch = {}; ['ll', 'a', 'b', 'pts'].forEach(k => { if (dragEl[k] != null) patch[k] = dragEl[k]; });
-      if (Object.keys(patch).length) { try { S.updateElement(dragEl.id, patch, true); } catch (err) {} }
-    }
-    resetGesture();
+    commitDragEl(); resetGesture();
   });
-  window.addEventListener('blur', () => { if (dragEl || dragStart) resetGesture(); });   // dragged clean out of the window
+  // Same net for the releases that never produce a mouseup AT ALL: 'blur' = dragged clean out of the window;
+  // 'pointercancel'/'dragstart' = the browser took the pointer over (native image drag, OS gesture) and from
+  // then on only sends dragend — the old code stayed armed with map.dragging DISABLED and the grabbed
+  // element still glued to the cursor. Committing here matches the mouseup net: the operator can already
+  // see the move, so it must reach the store or the next sync would snap it back.
+  ['blur', 'pointercancel', 'dragstart'].forEach(ev => window.addEventListener(ev, () => { if (!dragEl && !dragStart) return; commitDragEl(); resetGesture(); }));
   map.on('click', e => {
     if (skipClick) { skipClick = false; return; }   // came from selecting/erasing an element
     if (tool === 'marker') S.addElement({ type: 'marker', ll: [e.latlng.lat, e.latlng.lng], color: S.state.color, icon: markerIcon || undefined });
@@ -254,8 +270,14 @@ const Draw = (() => {
     const cont = map.getContainer();
     const llOf = t => { const r = cont.getBoundingClientRect(); return map.containerPointToLatLng([t.clientX - r.left, t.clientY - r.top]); };
     let active = false, moved = false, last = null;
+    // TOUCH ABORT — a touch gesture can end without ever reaching touchend, and no mouseup exists on a
+    // touch panel to net it: the browser/OS steals it (touchcancel), or a SECOND finger lands mid-draw —
+    // that bail set active=false, and touchend's own `!active` guard then returned too, leaving dragStart
+    // armed and map.dragging DISABLED for good = a dead, un-pannable map on air.
+    const abort = () => { active = false; if (dragEl || dragStart) { commitDragEl(); resetGesture(); } };
+    cont.addEventListener('touchcancel', abort, { passive: true });
     cont.addEventListener('touchstart', e => {
-      if (tool === 'select' || e.touches.length !== 1) { active = false; return; }
+      if (tool === 'select' || e.touches.length !== 1) { if (active) abort(); active = false; return; }
       if (!(window.APP_ROLE === 'control' || permits(tool))) return;
       e.preventDefault(); active = true; moved = false; last = llOf(e.touches[0]);
       if (DRAG.includes(tool)) map.fire('mousedown', { latlng: last });

@@ -52,7 +52,27 @@
       return sc;
     })();
     rawCache.set(id, p);
+    watchLoad(m, p);
     return p;
+  }
+  // A GLB that 404s, is corrupt, or simply never answers used to fail in COMPLETE silence — no
+  // placeholder, no console line, no toast — while the panel still listed the model as "on" and
+  // nothing existed on air. Warn once per id (racing a timeout so a stalled fetch is caught too) and
+  // re-render. The load itself is never cancelled: a slow model that lands after the warning still shows.
+  const LOAD_TIMEOUT = 20000;
+  const loadFailed = new Set();   // ids already warned about — don't re-toast on every re-render / 3D re-attach
+  function watchLoad(m, p) {
+    if (/^(top)?thumb:/.test(String(m.id))) return;   // catalog preview renders draw their own empty tile
+    let settled = false;
+    const warn = why => {
+      if (settled || loadFailed.has(m.id)) return;
+      loadFailed.add(m.id);
+      console.error('Models3D: "' + (m.name || m.id) + '" failed to load — ' + why);
+      try { if (window.UI && UI.toast) UI.toast('3D model "' + (m.name || 'model') + '" failed to load (' + why + ')'); } catch (e) {}
+      syncAll();
+    };
+    const t = setTimeout(() => warn('timed out'), LOAD_TIMEOUT);
+    p.then(() => { settled = true; clearTimeout(t); loadFailed.delete(m.id); }, e => { clearTimeout(t); warn((e && e.message) || 'load error'); });
   }
   // apply a render style by swapping in per-instance materials (so the shared
   // master is never mutated). 'wireframe' draws the mesh as a glowing wireframe.
@@ -225,6 +245,7 @@
     const mk = markers.get(id); if (mk) { L2.removeLayer(mk); markers.delete(id); }
     const g = groups.get(id); if (g) { if (layer && layer.scene) { layer.scene.remove(g.group); if (g.shadow) layer.scene.remove(g.shadow); } groups.delete(id); }   // clone — not disposed
     if (rawCache.has(id)) { rawCache.get(id).then(disposeObject).catch(() => {}); rawCache.delete(id); }   // master owns the GPU resources
+    loadFailed.delete(id);   // a re-upload of the same id must be free to warn again if it also fails
     dropBillboards(id);
     // free the globe symbol-layer images for this model (both style variants) — MapLibre's sprite atlas
     // keeps them forever otherwise, leaking a GPU texture per model/style over a long broadcast session.
@@ -235,10 +256,13 @@
 
   /* ============ 2D billboard: offscreen three.js -> PNG ============ */
   const BB = 256;
-  // heading calibration for the TOP-DOWN map/globe billboard: rotZ already carries the route
-  // bearing as (bearing+180); this offset turns the top-down render so the model's NOSE points
-  // along the travel bearing on screen (north-up). Tuned empirically against the F-16 planform.
+  // heading calibration for the TOP-DOWN map/globe billboard. rotZ IS the compass bearing (route
+  // playback writes the raw travel bearing into it), and the frame correction now lives in the
+  // negated rotation inside billboard() — so no extra offset is needed here.
   const TOP_OFF = 0;
+  // LRU cap for the rendered-PNG cache. Kept well above the 70-file catalog's thumbnails so opening
+  // the 3D library never re-renders every model while an animated one cycles its heading buckets.
+  const BB_MAX = 260;
   let rdr = null, bscene = null, bcam = null, bcamTop = null;
   function ensureOffscreen() {
     if (rdr) return true;
@@ -256,7 +280,7 @@
     } catch (e) { console.warn('Models3D offscreen failed', e); return false; }
     return true;
   }
-  const billboards = new Map();   // `${id}:${rotZ}:${style}:${view}` -> Promise<dataURL>
+  const billboards = new Map();   // `${id}:${rotZ}:${style}:${view}` -> Promise<dataURL>  (LRU: oldest key first)
   function billboard(m, rotZ, view) {
     const top = view === 'top';
     // quantise the top-down heading to 6° buckets: a model animating along a route changes rotZ every
@@ -264,16 +288,24 @@
     // PNG encode. 60 cached variants are visually indistinguishable on a small icon and reused instantly.
     const rz = top ? Math.round((rotZ || 0) / 6) * 6 : Math.round(rotZ || 0);
     const key = m.id + ':' + rz + ':' + (m.style || 'solid') + ':' + (view || 'hero');
-    if (billboards.has(key)) return billboards.get(key);
+    if (billboards.has(key)) { const hit = billboards.get(key); billboards.delete(key); billboards.set(key, hit); return hit; }   // re-insert = mark most-recently-used
     const p = (async () => {
       if (!ensureOffscreen()) return null;
       const raw = await loadRaw(m); const obj = buildInner(raw, m.style);
-      obj.rotation.y = (rz + (top ? TOP_OFF : 0)) * D2R;
+      // NEGATED: the top-down camera looks down +Y with up = -Z, so a POSITIVE three.js Y-rotation
+      // sweeps the model ANTI-clockwise on screen — rotZ used to render as bearing -rotZ, i.e. east and
+      // west mirrored (only 0/180 ever looked right, which is also what made the calibrator run
+      // backwards). With the sign flipped the rendered heading IS rotZ, matching the globe icons and
+      // the 3D mesh. The image itself was never mirrored, so only the angle needs correcting here.
+      obj.rotation.y = -(rz + (top ? TOP_OFF : 0)) * D2R;
       const root = new THREE.Group(); root.add(obj); bscene.add(root);
       try { rdr.render(bscene, top ? bcamTop : bcam); return rdr.domElement.toDataURL('image/png'); }
       finally { bscene.remove(root); }
     })().catch(() => null);
     billboards.set(key, p);
+    // A model animating a full 360° route mints ~60 of these 256×256 PNG data-URLs per style, and
+    // nothing released them until the model was purged (~1–2 MB retained per animated model, forever).
+    while (billboards.size > BB_MAX) { const k = billboards.keys().next().value; if (k === key) break; billboards.delete(k); }
     return p;
   }
 
@@ -365,8 +397,8 @@
     ensureShadow();
     g = { group: new THREE.Group(), inner: null, raw: null, styleVal: m.style || 'solid', loading: true, shadow: new THREE.Mesh(shadowGeo, shadowMat) };
     g.shadow.visible = false; g.group.visible = false; scene.add(g.shadow); scene.add(g.group); groups.set(m.id, g);
-    loadRaw(m).then(raw => { g.raw = raw; g.inner = buildInner(raw, m.style); g.group.add(g.inner); g.loading = false; update3D(); })
-      .catch(() => { g.failed = true; g.loading = false; });
+    loadRaw(m).then(raw => { g.raw = raw; g.failed = null; g.inner = buildInner(raw, m.style); g.group.add(g.inner); g.loading = false; update3D(); })
+      .catch(e => { g.failed = (e && e.message) || 'load error'; g.loading = false; });   // reason kept for the _groups test hook; the operator-facing warning comes from watchLoad()
     return g;
   }
   function update3D() {
@@ -394,14 +426,20 @@
         // cause — 2D billboards are fixed-pixel so they always showed, 3D used raw geographic size).
         const mPerPx = 156543.03392 * Math.cos(e.lat * D2R) / Math.pow(2, glmap.getZoom());
         const meters = Math.max(10, (e.scale || 1) * 1000, 52 * mPerPx);   // scale slider ≈ size in km
+        const sz = meters * mpu;
         g.group.position.set(mc.x, mc.y, mc.z);
-        g.group.scale.set(meters * mpu, meters * mpu, meters * mpu);
+        // Z IS NEGATED — this is the mirror fix. MapLibre's mercator world is +X east / +Y SOUTH: a
+        // LEFT-handed geographic frame, so a three.js model dropped into it renders as its own mirror
+        // image — port and starboard swapped, and the heading sweeping backwards (rotZ came out as
+        // bearing 180−rotZ, east/west reversed). A mirror can't be undone by a rotation, which is why no
+        // modelFix value could ever make the 3D mesh and the 2D map agree. Flipping the group's Z
+        // (applied AFTER the child's yaw, before the X-rotation below) undoes it; three.js reverses the
+        // triangle winding itself for a negative-determinant world matrix, so faces + lighting stay right.
+        g.group.scale.set(sz, sz, -sz);
         g.group.rotation.x = Math.PI / 2;                     // Y-up model -> Z-up world (stand upright)
         g.inner.rotation.order = 'YXZ';                       // heading → pitch → roll (aircraft attitude)
-        // YAW IS NEGATED: MapLibre's mercator world has +Y pointing SOUTH (left-handed vs three.js),
-        // so a +rotZ here turned the model COUNTER-clockwise on screen — east/west came out mirrored
-        // (north/south are on the flip axis so they looked fine, which hid the bug). Negating rotZ makes
-        // the flat-3D heading match the 2D map + globe exactly. (pitch/roll unaffected — about other axes.)
+        // yaw negated against the mirrored frame above: the pair renders bearing = +rotZ (compass,
+        // clockwise from north) — the same convention as the 2D billboard and the globe icons.
         g.inner.rotation.set((e.pitch || 0) * D2R, (-(e.rotZ || 0)) * D2R, (e.roll || 0) * D2R);
         g.group.visible = true;
         // ground shadow: a soft blob on the terrain below the model, cast away from
@@ -546,16 +584,35 @@
     topThumbModel: (m, rotZ) => billboard(m, rotZ || 0, 'top'),   // top-down render of ANY model object (catalog or upload) — drives the orientation calibrator preview
     has2D: id => markers.has(id),
     marker: id => markers.get(id) || null,   // for the control HUD's selection highlight
-    nearestId(point, px) { if (!glmap) return null; let best = null, bd = px || 60; models().forEach(m => { if (m.on === false || m.mode === '2d') return; try { const p = glmap.project([m.lng, m.lat]); const d = Math.hypot(p.x - point.x, p.y - point.y); if (d < bd) { bd = d; best = m.id; } } catch (e) {} }); return best; },
+    // hit-test the RENDERED pose (eff), not the stored lat/lng: during route/timeline playback the model
+    // is drawn at a transient pose, so testing m.lat/m.lng left the clickable hotspot parked at the start
+    // of the route — clicking the moving jet selected nothing.
+    nearestId(point, px) { if (!glmap) return null; let best = null, bd = px || 60; models().forEach(m => { if (m.on === false || m.mode === '2d') return; try { const e = eff(m); const p = glmap.project([e.lng, e.lat]); const d = Math.hypot(p.x - point.x, p.y - point.y); if (d < bd) { bd = d; best = m.id; } } catch (er) {} }); return best; },
     _groups: groups,       // test hook
   };
   syncAll();
 
-  // housekeeping (control window only): delete GLB blobs no longer referenced by any
-  // model, so failed/half uploads don't accumulate in IndexedDB over time.
+  // housekeeping (control window only): delete GLB blobs no longer referenced by any model, so
+  // failed/half uploads don't accumulate in IndexedDB over time.
+  // IndexedDB holds the ONLY copy of an uploaded model's binary, while models() only reflects
+  // localStorage — the authoritative room snapshot arrives asynchronously over the network. The old
+  // fixed 4s timer therefore DELETED a model that had been uploaded just before a reload whenever sync
+  // was slow. Now the sweep refuses to run until the room has actually answered (a snapshot adopt, or
+  // the sync badge going live; ?nosync means there is no room and local state is authoritative), it
+  // spares every id seen in ANY snapshot this session, and if the room never answers it simply never
+  // sweeps — leaking a stale blob is recoverable, deleting a live one is not.
   if (window.APP_ROLE === 'control') {
-    setTimeout(async () => {
-      try { const ids = new Set(models().map(m => m.id)); const ks = await window.Assets3D.keys(); ks.forEach(k => { if (!ids.has(k)) window.Assets3D.del(k); }); } catch (e) {}
-    }, 4000);
+    const seen = new Set();   // grace list: every model id observed this session
+    const note = () => models().forEach(m => seen.add(m.id));
+    note();
+    S.on((st, evt) => { if (evt === 'models3d' || evt === 'sync') note(); });
+    const roomAnswered = () => /[?&]nosync/.test(location.search) || !!document.querySelector('#syncdot.syncdot--live');
+    let tries = 0;
+    const sweep = async () => {
+      note();
+      if (!roomAnswered()) { if (++tries < 20) setTimeout(sweep, 3000); return; }   // ~60s of patience, then give up quietly
+      try { const ks = await window.Assets3D.keys(); ks.forEach(k => { if (!seen.has(k)) window.Assets3D.del(k); }); } catch (e) {}
+    };
+    setTimeout(sweep, 8000);
   }
 })();

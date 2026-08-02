@@ -39,10 +39,12 @@
   function curFix(m) { return ((S.cfg().modelFix || {})[S.modelKey(m)] || 0); }
   function flip() { const m = sel(); if (!m) return; S.setModelFix(S.modelKey(m), (curFix(m) + 90) % 360); }
   function setFix(m, deg) { if (m) S.setModelFix(S.modelKey(m), deg); }
-  // calibrator click: the preview shows the model at heading-north (total = 180 + fix). The user clicks
-  // where the NOSE is; that point sits at `clickAngle` clockwise from straight-up. Increasing the total
-  // rotation turns the on-screen nose clockwise, so to bring the nose to "up" (travel) we subtract that
-  // angle from the fix. Click position → exact angle → arbitrary-precision aim (also fixes off-axis models).
+  // calibrator click: the preview shows the model exactly as the flat map draws it at heading NORTH
+  // (rendered at `fix`, see renderCalib). The user clicks where the NOSE is; that point sits at
+  // `clickAngle` clockwise from straight-up (the green travel arrow). The top-down render now turns
+  // CLOCKWISE as the rotation grows, so subtracting the clicked angle lands the nose on the arrow.
+  // It used to turn the other way, which made this subtraction DOUBLE the error instead of cancelling
+  // it — the nose jumped to its mirror position and only 0°/180° ever appeared to work.
   function onCalibClick(e) {
     const m = sel(); if (!m || !calibPv) return;
     e.preventDefault();
@@ -52,12 +54,15 @@
     const clickAngle = Math.atan2(dx, -dy) * 180 / Math.PI;   // 0 = up, +90 = right (clockwise)
     setFix(m, curFix(m) - clickAngle);
   }
-  // refresh the top-down preview at the model's current calibrated heading (north). Async + token-guarded
-  // so a stale render can't overwrite a newer one (rapid selection / repeated clicks).
+  // refresh the top-down preview: the model at heading NORTH — byte-for-byte the render the flat map
+  // produces at rotZ 0 (rotZ 0 + fix), so "nose on the green arrow" here means "nose along travel" on
+  // air. The old +180 predated the frame fix and pointed the preview the opposite way from the map, so
+  // a perfectly aimed preview shipped a model that flew tail-first. Async + token-guarded so a stale
+  // render can't overwrite a newer one (rapid selection / repeated clicks).
   function renderCalib() {
     const m = sel(); if (!m || !calibImg || !window.Models3D || !Models3D.topThumbModel) return;
     const tok = ++calibToken;
-    Promise.resolve(Models3D.topThumbModel(m, 180 + curFix(m))).then(url => {
+    Promise.resolve(Models3D.topThumbModel(m, curFix(m))).then(url => {
       if (tok === calibToken && url && calibImg) calibImg.src = url;
     }).catch(() => {});
   }
@@ -75,8 +80,11 @@
   function deselect() { selId = null; highlight(); hide(); }
 
   /* ---- 3D: click-to-select + drag-to-move (Select tool only) ---- */
-  let dragId = null;
-  function nearest(point, max) { const g = gl(); if (!g) return null; let best = null, bd = 1e9; models().forEach(m => { if (m.on === false || m.mode === '2d') return; const p = g.project([m.lng, m.lat]); const d = Math.hypot(p.x - point.x, p.y - point.y); if (d < bd) { bd = d; best = m; } }); return (best && bd < max) ? best : null; }
+  let dragId = null, dragLast = null;   // dragLast was an implicit global (assigned in the mousemove handler, never declared)
+  // Hit-test through Models3D.nearestId: it tests the RENDERED pose (transient route/timeline/drag pose),
+  // so a model mid-flight can be grabbed where it actually is. Testing the stored m.lng/m.lat left the
+  // clickable hotspot parked at the route's start point — clicking the moving jet selected nothing.
+  function nearest(point, max) { if (!gl() || !(window.Models3D && Models3D.nearestId)) return null; const id = Models3D.nearestId(point, max); return id ? (models().find(m => m.id === id) || null) : null; }
   function bindPick3d() {
     const g = gl(); if (!g || pick3dBound) return; pick3dBound = true;
     g.on('mousedown', e => {
@@ -306,5 +314,8 @@
   const _piv = setInterval(() => { bindPick3d(); if (pick3dBound) clearInterval(_piv); }, 1500);
   onStore();
 
-  window.ModelControl = { select, deselect, drawPath: (id) => { select(id); drawRoute(); }, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); else window.UI && UI.toast && UI.toast('No 3D models yet — add one from the 3D library first'); }, get selected() { return selId; } };
+  window.ModelControl = { select, deselect, drawPath: (id) => { select(id); drawRoute(); }, toggle: () => { const m = sel(); if (visible) hide(); else if (m) show(); else if (models()[0]) select(models()[0].id); else window.UI && UI.toast && UI.toast('No 3D models yet — add one from the 3D library first'); }, get selected() { return selId; },
+    // map3d.js's 3D drawing bridge guards on this: while a route is being drawn, its click handler must not
+    // also drop a marker/label/country highlight at the release point. Without this getter that guard is a no-op.
+    get routeMode() { return !!routeMode; } };
 })();
