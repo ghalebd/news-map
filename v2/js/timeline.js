@@ -13,11 +13,12 @@
   const S = window.Store, I = window.ICONS, L2 = window.GameMap && window.GameMap.map;
   if (!S || !L2) return;
   const isCtrl = window.APP_ROLE === 'control';
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // model names arrive via sync/import → escape
+  // js/util.js — esc because model names arrive via sync/import. `ease` MUST be the shared one: route
+  // playback (models-anim.js) eases the same model in the same shot this file keyframes the camera
+  // against, so two private copies could drift apart and desync the two playbacks. easeMode() is not
+  // destructured because nothing here calls it directly — only ease() does, inside util.js.
+  const { h, esc, models, gl, ease } = window.U;
   const TL = () => S.timeline();
-  const models = () => (S.models3d ? S.models3d() : []);
-  const gl = () => (window.Map3D && Map3D.on && Map3D.map) ? Map3D.map : null;
 
   /* ---- capture / apply camera (map-agnostic: zoom stored as Leaflet zoom) ---- */
   function curCam() { const g = gl(); if (g) { const c = g.getCenter(); return { lat: c.lat, lng: c.lng, zoom: g.getZoom() + 1, pitch: g.getPitch(), bearing: g.getBearing() }; } const c = L2.getCenter(); return { lat: c.lat, lng: c.lng, zoom: L2.getZoom(), pitch: 0, bearing: 0 }; }
@@ -26,9 +27,7 @@
 
   /* ---- interpolation ---- */
   const angLerp = (a, b, f) => { const d = ((b - a + 540) % 360) - 180; return a + d * f; };
-  // motion easing (shared with route playback): smooth ease-in/out between keyframes, or linear
-  const easeMode = () => ((S.cfg && S.cfg().easing) || 'inout');
-  function ease(t) { if (easeMode() !== 'inout') return t; t = Math.max(0, Math.min(1, t)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  // motion easing (shared with route playback) now lives in js/util.js — see the destructure above
   function lerpKeys(keys, t, fields, ang) {
     if (!keys.length) return null;
     const ks = keys.slice().sort((a, b) => a.t - b.t);

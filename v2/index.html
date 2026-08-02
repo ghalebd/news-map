@@ -16,8 +16,8 @@
   <link rel="icon" href="../favicon.ico">
   <link rel="stylesheet" href="../lib/leaflet.min.css">
   <link rel="stylesheet" href="lib/maplibre-gl.css">
-  <link rel="stylesheet" href="css/tokens.css?v=70">
-  <link rel="stylesheet" href="css/app.css?v=70">
+  <link rel="stylesheet" href="css/tokens.css?v=71">
+  <link rel="stylesheet" href="css/app.css?v=71">
   <style>/* boot veil — hides the default→saved style/view swap on load (no FOUC / "old version" flash) */
     #boot{position:fixed;inset:0;background:#0a0e16;z-index:100000;transition:opacity .4s ease}
     #boot.gone{opacity:0;pointer-events:none}</style>
@@ -36,47 +36,52 @@
 
   <script src="../lib/leaflet.min.js"></script>
   <script src="lib/maplibre-gl.min.js"></script>
-  <script src="js/icons.js?v=70"></script>
-  <script src="js/help.js?v=70"></script>
-  <script src="js/lbar.js?v=70"></script>
-  <script src="js/theme.js?v=70"></script>
-  <script src="js/map.js?v=70"></script>
-  <script src="js/store.js?v=70"></script>
-  <script src="js/sync-client.js?v=70"></script>
+  <!-- util.js MUST stay the first project script (before icons.js and everything after it): every
+       module opens its IIFE with `const {…} = window.U`, which throws at LOAD if U is not there yet.
+       It is non-defer on purpose, so it also precedes every `defer` module further down. -->
+  <script src="js/util.js?v=71"></script>
+  <script src="js/icons.js?v=71"></script>
+  <script src="js/help.js?v=71"></script>
+  <script src="js/lbar.js?v=71"></script>
+  <script src="js/theme.js?v=71"></script>
+  <script src="js/map.js?v=71"></script>
+  <script src="js/store.js?v=71"></script>
+  <script src="js/sync-client.js?v=71"></script>
   <script>/* idempotent lazy loader — keeps heavy on-demand libs (html2canvas 194KB, searoute 484KB) off the boot path; used by ui.js export + tracking.js routes */
     window.loadScript = window.loadScript || (function () { const cache = {}; return src => cache[src] || (cache[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { delete cache[src]; rej(new Error('load failed: ' + src)); }; document.head.appendChild(s); })); })();</script>
   <script src="data/countries.js"></script>
   <script src="data/flags.js"></script>
-  <script src="js/ui.js?v=70"></script>
-  <script src="js/draw.js?v=70"></script>
-  <script src="js/app.js?v=70"></script>
-  <script src="js/map-style.js?v=70"></script>
-  <script src="js/locator.js?v=70"></script>
-  <script src="js/scene-inspector.js?v=70"></script>
-  <script src="js/geocode.js?v=70"></script>
-  <script src="js/campath.js?v=70"></script>
+  <script src="js/ui.js?v=71"></script>
+  <script src="js/draw.js?v=71"></script>
+  <script src="js/app.js?v=71"></script>
+  <script src="js/map-style.js?v=71"></script>
+  <script src="js/locator.js?v=71"></script>
+  <script src="js/scene-inspector.js?v=71"></script>
+  <script src="js/geocode.js?v=71"></script>
+  <script src="js/campath.js?v=71"></script>
   <script src="data/ports.js"></script>
-  <script src="js/ports-lookup.js?v=70"></script>
-  <script src="js/tracking.js?v=70"></script>
-  <script src="js/overlays.js?v=70"></script>
-  <script src="js/map3d.js?v=70"></script>
+  <script src="js/ports-lookup.js?v=71"></script>
+  <script src="js/tracking.js?v=71"></script>
+  <script src="js/overlays.js?v=71"></script>
+  <script src="js/map3d.js?v=71"></script>
   <script src="lib/three.min.js" defer></script>
   <script src="lib/GLTFLoader.js" defer></script>
   <script src="lib/DRACOLoader.js" defer></script>
   <script src="data/models3d-catalog.js"></script>
-  <script src="js/assets3d.js?v=70"></script>
-  <script src="js/models3d.js?v=70" defer></script>
-  <script src="js/models-anim.js?v=70" defer></script>
-  <script src="js/follow.js?v=70"></script>
-  <script src="js/tracking3d.js?v=70" defer></script>
-  <script src="js/timeline.js?v=70"></script>
-  <script src="js/fx.js?v=70"></script>
-  <script src="js/seafx.js?v=70"></script>
-  <script src="js/daynight.js?v=70"></script>
-  <script src="js/chrome.js?v=70"></script>
-  <script src="js/qbar.js?v=70"></script>
-  <script src="js/movable.js?v=70"></script>
-  <script src="js/config-apply.js?v=70"></script>
+  <script src="js/assets3d.js?v=71"></script>
+  <script src="js/models3d-geo.js?v=71" defer></script>
+  <script src="js/models3d.js?v=71" defer></script>
+  <script src="js/models-anim.js?v=71" defer></script>
+  <script src="js/follow.js?v=71"></script>
+  <script src="js/tracking3d.js?v=71" defer></script>
+  <script src="js/timeline.js?v=71"></script>
+  <script src="js/fx.js?v=71"></script>
+  <script src="js/seafx.js?v=71"></script>
+  <script src="js/daynight.js?v=71"></script>
+  <script src="js/chrome.js?v=71"></script>
+  <script src="js/qbar.js?v=71"></script>
+  <script src="js/movable.js?v=71"></script>
+  <script src="js/config-apply.js?v=71"></script>
   <script>/* fade the boot veil once modules have applied the saved config */
     (function(){var v=document.getElementById('boot');if(!v)return;var fade=function(){v.classList.add('gone');setTimeout(function(){if(v.parentNode)v.remove();},500);};
       requestAnimationFrame(function(){setTimeout(fade,650);});setTimeout(fade,3500);})();</script>

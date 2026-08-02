@@ -8,8 +8,9 @@
    the rotary dial that needs it lives here.
    ============================================================ */
 (() => {
-  // own copy of the tiny DOM helper — this file loads BEFORE config-panel.js, so it cannot borrow its one
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  // js/util.js — this file loads BEFORE config-panel.js so it cannot borrow that file's helper, but
+  // util.js is the first project script of all, so both take the same one from there.
+  const { h } = window.U;
 
   /* ---- interaction latch ----
      The rotary dial, the drag grips and the drawer resize handle are pointer-captured plain

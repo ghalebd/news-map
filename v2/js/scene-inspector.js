@@ -6,7 +6,7 @@
    ============================================================ */
 (() => {
   const S = window.Store, I = window.ICONS;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
+  const { h } = window.U;   // js/util.js — this module builds DOM but never interpolates a synced string, so it takes h only
   const isControl = window.APP_ROLE === 'control';
 
   const panel = h('div', 'sceneins glass'); panel.hidden = true; document.body.appendChild(panel);

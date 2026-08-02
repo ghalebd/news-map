@@ -10,7 +10,10 @@
 (() => {
   const S = window.Store;
   if (!S || !window.Models3D) return;
-  const models = () => (S.models3d ? S.models3d() : []);
+  // js/util.js — `ease` MUST be the shared one: timeline.js keyframes the camera against the very model
+  // this file drives along its route, so two private easing copies could drift and desync the two
+  // playbacks. util.js is a non-defer script, so it has run long before this deferred file does.
+  const { models, ease } = window.U;
   const isCtrl = window.APP_ROLE === 'control';
 
   // equirectangular helpers (small distances — fine for interpolation/bearing)
@@ -74,9 +77,7 @@
     return pose;
   }
 
-  // motion easing (shared with the timeline): smooth ease-in/out or linear
-  const easeMode = () => ((S.cfg && S.cfg().easing) || 'inout');
-  function ease(t) { if (easeMode() !== 'inout') return t; t = Math.max(0, Math.min(1, t)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  // motion easing (shared with the timeline) now lives in js/util.js — see the destructure at the top
 
   const lastPoses = {};   // id -> current animated pose (for the follow camera)
   let prevActive = new Set(), raf = null, idleFrames = 0;

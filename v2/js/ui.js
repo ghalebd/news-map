@@ -4,8 +4,7 @@
    ============================================================ */
 (() => {
   const S = window.Store;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { h, esc } = window.U;   // js/util.js — destructured so the bodies below keep the bare names, and so a broken script order throws at load
 
   /* ---------- toast ---------- */
   const toastWrap = h('div', 'toast-wrap'); document.body.appendChild(toastWrap);

@@ -13,14 +13,14 @@
   if (window.APP_ROLE !== 'control') return;   // operator tool only
   const S = window.Store, I = window.ICONS, L2 = window.GameMap && window.GameMap.map;
   if (!S || !L2) return;
-  const h = (t, c, html) => { const e = document.createElement(t); if (c) e.className = c; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));   // model names arrive via sync/import → escape
-  const models = () => (S.models3d ? S.models3d() : []);
+  // js/util.js — esc because model names arrive via sync/import; models()/gl() were verbatim copies of
+  // timeline.js's. clamp stays LOCAL: store.js's copy takes the same (v,lo,hi) order but is not
+  // byte-identical and disagrees when lo > hi, so the two were NOT merged.
+  const { h, esc, models, gl } = window.U;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   let selId = null, visible = false, inited = false, prevIds = new Set(), pick3dBound = false;
   const sel = () => models().find(m => m.id === selId) || null;
-  const gl = () => (window.Map3D && Map3D.on && Map3D.map) ? Map3D.map : null;
 
   /* ---- geometry: nudge distance tracks the current zoom ---- */
   function span() { const m = gl(); const b = m ? m.getBounds() : L2.getBounds(); return [b.getNorth() - b.getSouth(), b.getEast() - b.getWest()]; }

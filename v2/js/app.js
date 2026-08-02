@@ -4,8 +4,7 @@
    ============================================================ */
 (() => {
   const I = window.ICONS, S = window.Store, M = window.GameMap;
-  const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+  const { h, esc } = window.U;   // js/util.js — destructured (not U.h(…)) so every call site below is unchanged, and so a broken script order throws HERE at load instead of mid-broadcast
 
   /* ---------- brand + status ---------- */
   const brand = h('div', 'brand', `<img alt="logo" onerror="this.style.display='none'">`); document.body.appendChild(brand);

@@ -9,7 +9,7 @@
 (() => {
   const S = window.Store, THREE = window.THREE;
   if (!S || !THREE || !THREE.GLTFLoader) { return; }
-  const D2R = Math.PI / 180;
+  const { D2R } = window.U;   // js/util.js
   const MAXS = 3000, MAXF = 3000;
   const SHIP_GLB = 'cargo-ship.glb', PLANE_GLB = 'a-330.glb';   // cargo ship: Alex Safayan / Poly Pizza (CC-BY)
   const SHIP_FWD = 180, PLANE_FWD = 180;            // heading calibration (deg) per model — see setInst()
