@@ -1,7 +1,7 @@
 // Real tool exercise + conflict detection — drives the actual UI (real button clicks + real
 // map gestures) and checks for tool/panel conflicts. Run: node tmp/tools-test.js (server :8000)
 const puppeteer = require('puppeteer-core');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const R = []; const rec = (n, ok, info) => R.push({ n, ok: !!ok, info: info || '' });
 

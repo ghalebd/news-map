@@ -2,7 +2,7 @@
 // models+overlays), mode/projection stress, off-screen panel clamping. Catches crashes &
 // conflicts that only appear when many features are ON at once. Run with server on :8000.
 const puppeteer = require('puppeteer-core');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const R = []; const rec = (n, ok, info) => R.push({ n, ok: !!ok, info: info || '' });
 const FILTER = /CORS|ERR_FAILED|ERR_ABORTED|fetch|airplanes|opensky|aisstream|codetabs|maptiler|Failed to load resource|status of 40|tile/i;

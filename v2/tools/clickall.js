@@ -7,7 +7,7 @@
    confirmations (reset settings, clear screen) never actually fire. Genuinely destructive or navigating
    controls are skipped by label. */
 const puppeteer = require('puppeteer-core');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const BASE = process.env.NM_BASE || 'http://localhost:8000/v2';   // NM_BASE lets this run against a worktree copy on another port (baseline comparisons)
 

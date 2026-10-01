@@ -1,6 +1,6 @@
-const puppeteer=require('puppeteer-core');const CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const puppeteer=require('puppeteer-core');const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{const b=await puppeteer.launch({headless:'new',executablePath:CHROME,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
-async function load(url){const p=await b.newPage();await p.setViewport({width:1280,height:840});p.on('dialog',d=>d.accept().catch(()=>{}));await p.goto(url,{waitUntil:'domcontentloaded'});await sleep(1000);await p.evaluate(()=>{try{localStorage.clear();}catch(e){}});await p.reload({waitUntil:'domcontentloaded'});await sleep(2400);return p;}
+async function load(url){const p=await b.newPage();await p.setViewport({width:1280,height:840});p.on('dialog',d=>d.accept().catch(()=>{}));await p.goto(url,{waitUntil:'domcontentloaded'});await sleep(1000);await p.evaluate(k=>{try{localStorage.clear();if(k)localStorage.setItem('newsmap.v3.roomkey',k);}catch(e){}},process.env.NM_ROOM_KEY||'');await p.reload({waitUntil:'domcontentloaded'});await sleep(2400);return p;}
 
 // FIX A: control claims TSKEY immediately on a local edit (room-independent)
 const c=await load('http://localhost:8000/v2/control.html?allowsync&room=autotest-ctl');   // ?allowsync: this test legitimately asserts the control PUBLISHES, into an isolated room

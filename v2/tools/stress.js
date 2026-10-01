@@ -1,6 +1,6 @@
 // stress.js — synthetic AIS message-storm soak (SAFE: hard watchdog + capped duration)
 const puppeteer=require('puppeteer-core');
-const CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const HARD_EXIT=setTimeout(()=>{console.log('WATCHDOG: hard exit');process.exit(2);},150000);
 let browser=null;
