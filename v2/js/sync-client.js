@@ -12,6 +12,12 @@
 (() => {
   if (/[?&]nosync/.test(location.search)) return;
   const KEY = 'newsmap.v3', TSKEY = 'newsmap.v3.syncts';
+  // ROOM KEY — the write guard's shared secret. It lives ONLY in this browser's localStorage: never in
+  // the repo and never in the served JS, which is the one place a static client can actually keep a
+  // secret (anything embedded in the source is public the moment the page loads — see the MapTiler key).
+  // The operator enters it once per browser; the presenter never needs it because reads stay open.
+  const RKEY = 'newsmap.v3.roomkey';
+  const roomKey = () => { try { return localStorage.getItem(RKEY) || ''; } catch (e) { return ''; } };
   const ROOM = (new URLSearchParams(location.search).get('room') || 'aljazeera-main').slice(0, 64);
   const BASE = 'https://newsmap-sync.dida-newsmap.workers.dev/?room=' + encodeURIComponent(ROOM);
   // AUTOMATION WRITE-GUARD: a headless/automated browser must never publish into a room — a test
@@ -54,7 +60,7 @@
     catch (e) { badge('wait'); return null; }
   }
   // Persistent, unmissable alarm on the OPERATOR console only — never on the presenter (which is on air).
-  let pushFails = 0, alarmEl = null;
+  let pushFails = 0, alarmEl = null, keyPromptOpen = false;
   function alarm(on, why) {
     if (!IS_SENDER) return;
     if (!on) { if (alarmEl) { alarmEl.remove(); alarmEl = null; } return; }
@@ -81,7 +87,22 @@
     // reached air. Cloudflare KV's free tier is 1000 writes/day and this pushes on every edit, so a
     // quota rejection mid-show is a realistic scenario, not a theoretical one.
     try {
-      const r = await fetch(BASE, { method: 'POST', body: JSON.stringify({ type: 'snapshot', ts, data }) });
+      // the key rides as ?k= rather than a header: a custom header forces a CORS preflight that the
+      // previous worker build rejects, so this stays publishable during the worker rollout window.
+      const k = roomKey();
+      const r = await fetch(BASE + (k ? '&k=' + encodeURIComponent(k) : ''), { method: 'POST', body: JSON.stringify({ type: 'snapshot', ts, data }) });
+      if (r.status === 401) {
+        // the worker's write guard is live and this browser has no (or a wrong) key — ask the OPERATOR
+        // once, store it, retry. A wrong key just re-prompts on the next edit; nothing is lost meanwhile.
+        if (IS_SENDER && !keyPromptOpen && window.UI && UI.input) {
+          keyPromptOpen = true;
+          const v = await UI.input({ title: 'Room key required to publish', placeholder: 'Enter the sync room key' });
+          keyPromptOpen = false;
+          if (v && v.trim()) { try { localStorage.setItem(RKEY, v.trim()); } catch (e) {} return push(ts); }
+        }
+        throw new Error('HTTP 401 — room key missing or wrong');
+      }
+      if (r.status === 403) throw new Error('HTTP 403 — this origin is not allowed to publish');
       if (!r.ok) throw new Error('HTTP ' + r.status);
       pushFails = 0; badge('live'); alarm(false);
     } catch (e) {
@@ -108,6 +129,11 @@
     clearTimeout(pt); pt = setTimeout(() => push(), 1200);   // coalesce rapid edits → fewer KV writes
   });
 
+  // operator-facing handle (console or a future settings field): Sync.setRoomKey('...') / Sync.setRoomKey(null)
+  window.Sync = {
+    setRoomKey(v) { try { v ? localStorage.setItem(RKEY, String(v).trim()) : localStorage.removeItem(RKEY); } catch (e) {} pushFails = 0; alarm(false); },
+    hasRoomKey() { return !!roomKey(); },
+  };
   setInterval(poll, 3000);
 
   function badge(st) {

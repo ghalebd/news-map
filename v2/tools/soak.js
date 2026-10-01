@@ -1,6 +1,6 @@
 // soak.js — 10-minute full-feature endurance loop with leak detection (SAFE: watchdog)
 const puppeteer=require('puppeteer-core');
-const CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const HARD=setTimeout(()=>{console.log('WATCHDOG EXIT');process.exit(2);},720000);
 let browser=null;process.on('exit',()=>{try{browser&&browser.process()&&browser.process().kill('SIGKILL');}catch(e){}});

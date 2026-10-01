@@ -4,3 +4,8 @@ node_modules/
 .netlify/
 /tmp/
 *.tmp
+
+# tooling noise — never ship
+.claude-flow/
+.wrangler/
+ci-shots/

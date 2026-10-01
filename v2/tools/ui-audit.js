@@ -1,6 +1,6 @@
 // ui-audit.js — REAL user-level UI test: actual clicks, real mouse drags, screenshots
 const puppeteer=require('puppeteer-core');
-const CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const R=[];const rec=(n,ok,i)=>R.push({name:n,ok:!!ok,info:i||''});
 (async()=>{

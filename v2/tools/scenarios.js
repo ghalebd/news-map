@@ -6,7 +6,7 @@
    SAFETY: every page uses ?nosync, EXCEPT the mirror scenario which uses ?allowsync with a
    throwaway room. The default room is the operator's LIVE broadcast — never touch it. */
 const puppeteer = require('puppeteer-core');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const BASE = 'http://localhost:8000/v2';
 const ROOM = 'autotest-scenarios-9k';   // isolated throwaway room — never the live aljazeera-main
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -26,6 +26,7 @@ async function open(browser, url) {
   p.on('console', m => { if (m.type() === 'error' && !/AbortError|abort|Failed to load resource/i.test(m.text())) pageErrors.push('CE ' + m.text()); });
   await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.waitForFunction(() => window.Store && window.GameMap, { timeout: 30000 });
+  await p.evaluate(k => { try { if (k) localStorage.setItem('newsmap.v3.roomkey', k); } catch (e) {} }, process.env.NM_ROOM_KEY || '');   // room key for the worker's write guard (CI secret / local env); harmless when unset
   await sleep(2200);
   return p;
 }

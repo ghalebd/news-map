@@ -1,7 +1,7 @@
 // Deep integration pass: (1) real two-window cloud sync in an ISOLATED room (separate storage),
 // (2) 3D enter/exit memory-leak cycling, (3) save/load + snapshot round-trips.
 const puppeteer = require('puppeteer-core');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const R = []; const rec = (n, ok, info) => { R.push({ n, ok: !!ok, info: info || '' }); console.log((ok ? '✓' : '✗') + ' ' + n + (info && !ok ? '   << ' + info : '')); };
 const ROOM = 'autotest-deep-7x'; // isolated throwaway room — never the live aljazeera-main
@@ -10,6 +10,7 @@ async function freshPage(b, url) {
   let ctx = b; try { ctx = await (b.createBrowserContext ? b.createBrowserContext() : b.createIncognitoBrowserContext()); } catch (e) { ctx = b; }
   const p = await ctx.newPage(); await p.setViewport({ width: 1280, height: 840 }); p.on('dialog', d => d.accept().catch(() => {}));
   await p.goto(url, { waitUntil: 'domcontentloaded' }); await sleep(2600);
+  await p.evaluate(k => { try { if (k) localStorage.setItem('newsmap.v3.roomkey', k); } catch (e) {} }, process.env.NM_ROOM_KEY || '');   // room key for the worker's write guard (CI secret / local env); harmless when unset
   return { p, ctx, isolated: ctx !== b };
 }
 

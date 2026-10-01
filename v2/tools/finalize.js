@@ -1,7 +1,7 @@
 // Final pass: the three hard-to-automate flows — PNG/PDF export, real GLB file upload,
 // and touch-screen drawing. Run with server on :8000.
 const puppeteer = require('puppeteer-core');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const GLB = '/Users/dida/news-map-deploy/v2/assets3d/missile-agm-65.glb';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const R = []; const rec = (n, ok, info) => { R.push({ n, ok: !!ok }); console.log((ok ? '✓' : '✗') + ' ' + n + (info && !ok ? '   << ' + info : '')); };
